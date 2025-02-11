@@ -1,8 +1,23 @@
-use std::io::{self, Write};
+use std::{
+    env,
+    io::{self, Write},
+};
 
 /// Run Clac.
 fn main() {
-    run_repl();
+    let mut args = env::args().skip(1);
+
+    match args.next() {
+        None => run_repl(),
+        Some(mut line) => {
+            for arg in args {
+                line.push(' ');
+                line.push_str(&arg);
+            }
+
+            execute_line(&line);
+        }
+    }
 }
 
 /// Run Clac in REPL mode.
@@ -29,6 +44,7 @@ fn run_repl() {
         }
 
         execute_line(line.trim());
+        println!();
     }
 }
 
@@ -44,5 +60,5 @@ fn read_line() -> String {
 
 /// Execute a line of text.
 fn execute_line(line: &str) {
-    println!("`{line}`\n");
+    println!("`{line}`");
 }

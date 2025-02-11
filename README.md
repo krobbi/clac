@@ -3,8 +3,9 @@ Command-line calculator.
 
 # Contents
 1. [About](#about)
-2. [Goals](#goals)
-3. [License](#license)
+2. [Usage](#usage)
+3. [Goals](#goals)
+4. [License](#license)
 
 # About
 Clac is a command-line calculator that is being created as a personal project
@@ -14,11 +15,25 @@ with it:
 * No support for custom functions and variables.
 * No way to evaluate an expression from a command-line session.
 
-Clac is not fully implemented and currently behaves as a 'cat' program.
+# Usage
+Clac is run from the command-line:
+```shell
+clac [EXPRESSION]
+```
+
+If Clac is given one or more arguments, they are treated as a single expression
+with spaces between the arguments. The expression is evaluated, and Clac exits
+automatically.
+
+If Clac is not given any arguments, the user can enter expressions in a loop
+until manually exiting.
+
+Clac is not yet fully implemented and prints the given expression instead of
+evaluating it.
 
 # Goals
 * [x] Read arithmetic expressions in a loop.
-* [ ] Read optional command-line arguments as expressions.
+* [x] Read optional command-line arguments as expressions.
 * [ ] Parse tokens from expressions.
 * [ ] Parse expression trees from tokens.
 * [ ] Evaluate expression trees.
