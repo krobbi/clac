@@ -1,0 +1,21 @@
+# Rust:
+target/*
+*.exe
+*.pdb
+*.rs.bk
+
+# Ignore:
+ignore/*
+
+# IDE:
+.idea/*
+.vscode/*
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.suo
+
+# OS:
+.DS_Store
+desktop.ini
+Thumbs.db

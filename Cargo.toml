@@ -1,0 +1,20 @@
+[package]
+name = "clac"
+version = "0.1.0"
+authors = ["Chris Roberts"]
+edition = "2021"
+description = "Command-line calculator"
+repository = "https://github.com/krobbi/clac"
+license = "MIT"
+keywords = ["calculator"]
+categories = ["command-line-utilities", "mathematics"]
+publish = false
+
+[dependencies]
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+panic = "abort"
+strip = "symbols"
