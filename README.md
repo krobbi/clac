@@ -28,13 +28,13 @@ automatically.
 If Clac is not given any arguments, the user can enter expressions in a loop
 until manually exiting.
 
-Clac is not yet fully implemented and prints the given expression instead of
-evaluating it.
+Clac is not yet fully implemented and prints the given expression as a list of
+tokens.
 
 # Goals
 * [x] Read arithmetic expressions in a loop.
 * [x] Read optional command-line arguments as expressions.
-* [ ] Parse tokens from expressions.
+* [x] Parse tokens from expressions.
 * [ ] Parse expression trees from tokens.
 * [ ] Evaluate expression trees.
 * [ ] Add a context for defining and using variables.

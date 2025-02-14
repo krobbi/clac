@@ -1,26 +1,32 @@
+mod lexer;
+mod token;
+
 use std::{
     env,
     io::{self, Write},
 };
 
-/// Run Clac.
+use lexer::Lexer;
+use token::Token;
+
+/// Runs Clac.
 fn main() {
     let mut args = env::args().skip(1);
 
     match args.next() {
         None => run_repl(),
-        Some(mut line) => {
+        Some(mut source) => {
             for arg in args {
-                line.push(' ');
-                line.push_str(&arg);
+                source.push(' ');
+                source.push_str(&arg);
             }
 
-            execute_line(&line);
+            execute_source(&source);
         }
     }
 }
 
-/// Run Clac in REPL mode.
+/// Runs Clac in REPL mode.
 fn run_repl() {
     #[cfg(target_os = "windows")]
     const EXIT_SHORTCUT: &str = "Ctrl+Z";
@@ -37,18 +43,18 @@ fn run_repl() {
             panic!("failed to flush output: {error}");
         }
 
-        let line = read_line();
+        let source = read_line();
 
-        if line.is_empty() {
+        if source.is_empty() {
             break;
         }
 
-        execute_line(line.trim());
+        execute_source(&source);
         println!();
     }
 }
 
-/// Read a line of text from standard input.
+/// Reads a line of text from standard input.
 fn read_line() -> String {
     let mut line = String::new();
 
@@ -58,7 +64,16 @@ fn read_line() -> String {
     }
 }
 
-/// Execute a line of text.
-fn execute_line(line: &str) {
-    println!("`{line}`");
+/// Executes statement source code.
+fn execute_source(source: &str) {
+    let mut lexer = Lexer::new(source);
+
+    loop {
+        let token = lexer.next();
+        println!("{token}");
+
+        if matches!(token, Token::End) {
+            break;
+        }
+    }
 }
