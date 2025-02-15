@@ -25,9 +25,9 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Number(value) => value.fmt(f),
-            Self::Paren(expr) => write!(f, "({expr})"),
+            Self::Paren(expr) => expr.fmt(f),
             Self::Negate(expr) => write!(f, "(-{expr})"),
-            Self::Binary { lhs, op, rhs } => write!(f, "({lhs}{op}{rhs})"),
+            Self::Binary { lhs, op, rhs } => write!(f, "({lhs} {op} {rhs})"),
         }
     }
 }
@@ -35,6 +35,12 @@ impl fmt::Display for Expr {
 /// A binary operator.
 #[derive(Clone, Copy)]
 pub enum BinOp {
+    /// An addition operator.
+    Add,
+
+    /// A subtraction operator.
+    Subtract,
+
     /// A multiplication operator.
     Multiply,
 
@@ -45,6 +51,8 @@ pub enum BinOp {
 impl fmt::Display for BinOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Add => '+'.fmt(f),
+            Self::Subtract => '-'.fmt(f),
             Self::Multiply => '*'.fmt(f),
             Self::Divide => '/'.fmt(f),
         }
@@ -56,6 +64,8 @@ impl TryFrom<Token> for BinOp {
 
     fn try_from(value: Token) -> Result<Self, Self::Error> {
         match value {
+            Token::Add => Ok(Self::Add),
+            Token::Subtract => Ok(Self::Subtract),
             Token::Multiply => Ok(Self::Multiply),
             Token::Divide => Ok(Self::Divide),
             _ => Err(()),

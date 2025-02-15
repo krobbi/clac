@@ -35,7 +35,7 @@ tokens.
 * [x] Read arithmetic expressions in a loop.
 * [x] Read optional command-line arguments as expressions.
 * [x] Parse tokens from expressions.
-* [ ] Parse expression trees from tokens.
+* [x] Parse expression trees from tokens.
 * [ ] Evaluate expression trees.
 * [ ] Add a context for defining and using variables.
 * [ ] Add support for defining and using functions to the context.

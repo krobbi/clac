@@ -78,7 +78,25 @@ impl<'a> Parser<'a> {
 
     /// Parses an expression.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_term_expr()
+        self.parse_sum_expr()
+    }
+
+    /// Parses a sum expression.
+    fn parse_sum_expr(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_term_expr()?;
+
+        while let Token::Add | Token::Subtract = self.next {
+            let op = BinOp::try_from(self.advance()?).unwrap();
+            let rhs = self.parse_term_expr()?;
+
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+            }
+        }
+
+        Ok(lhs)
     }
 
     /// Parses a term expression.
