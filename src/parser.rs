@@ -1,7 +1,7 @@
 use std::{error, fmt, mem};
 
 use crate::{
-    expr::Expr,
+    expr::{BinOp, Expr},
     lexer::{LexError, Lexer},
     token::Token,
 };
@@ -78,7 +78,25 @@ impl<'a> Parser<'a> {
 
     /// Parses an expression.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_negate_expr()
+        self.parse_term_expr()
+    }
+
+    /// Parses a term expression.
+    fn parse_term_expr(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_negate_expr()?;
+
+        while let Token::Multiply | Token::Divide = self.next {
+            let op = BinOp::try_from(self.advance()?).unwrap();
+            let rhs = self.parse_negate_expr()?;
+
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+            }
+        }
+
+        Ok(lhs)
     }
 
     /// Parses a negation expression.
