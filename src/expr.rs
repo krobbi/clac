@@ -2,11 +2,14 @@ use std::fmt;
 
 /// A mathematical expression.
 pub enum Expr {
-    /// A number.
+    /// A number expression.
     Number(f64),
 
     /// A parenthesized expression.
     Paren(Box<Expr>),
+
+    /// A negation expression.
+    Negate(Box<Expr>),
 }
 
 impl fmt::Display for Expr {
@@ -14,6 +17,7 @@ impl fmt::Display for Expr {
         match self {
             Self::Number(value) => value.fmt(f),
             Self::Paren(expr) => write!(f, "({expr})"),
+            Self::Negate(expr) => write!(f, "(-{expr})"),
         }
     }
 }

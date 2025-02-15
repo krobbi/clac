@@ -1,4 +1,4 @@
-use std::{error, fmt};
+use std::{error, fmt, mem};
 
 use crate::{
     expr::Expr,
@@ -8,7 +8,7 @@ use crate::{
 
 /// Parses a statement from statement source code.
 pub fn parse_source(source: &str) -> Result<Expr, ParseError> {
-    let mut parser = Parser::new(source);
+    let mut parser = Parser::new(source)?;
     parser.parse_stmt()
 }
 
@@ -56,14 +56,17 @@ impl From<LexError> for ParseError {
 struct Parser<'a> {
     /// The lexer.
     lexer: Lexer<'a>,
+
+    /// The next token.
+    next: Token,
 }
 
 impl<'a> Parser<'a> {
     /// Creates a new parser from statement source code.
-    fn new(source: &'a str) -> Self {
-        Self {
-            lexer: Lexer::new(source),
-        }
+    fn new(source: &'a str) -> Result<Self, LexError> {
+        let mut lexer = Lexer::new(source);
+        let next = lexer.next()?;
+        Ok(Self { lexer, next })
     }
 
     /// Parses a statement.
@@ -75,7 +78,18 @@ impl<'a> Parser<'a> {
 
     /// Parses an expression.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_primary_expr()
+        self.parse_negate_expr()
+    }
+
+    /// Parses a negation expression.
+    fn parse_negate_expr(&mut self) -> Result<Expr, ParseError> {
+        if let Token::Subtract = self.next {
+            self.advance()?;
+            let expr = self.parse_negate_expr()?;
+            Ok(Expr::Negate(Box::new(expr)))
+        } else {
+            self.parse_primary_expr()
+        }
     }
 
     /// Parses a primary expression.
@@ -93,7 +107,7 @@ impl<'a> Parser<'a> {
 
     /// Consumes and returns the next token.
     fn advance(&mut self) -> Result<Token, LexError> {
-        self.lexer.next()
+        Ok(mem::replace(&mut self.next, self.lexer.next()?))
     }
 
     /// Consumes the next expected token.
