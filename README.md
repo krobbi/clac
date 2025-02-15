@@ -28,8 +28,10 @@ automatically.
 If Clac is not given any arguments, the user can enter expressions in a loop
 until manually exiting.
 
-Clac is not yet fully implemented and prints the given expression as a list of
-tokens.
+Clac currently supports the following features:
+* Numbers with decimal points.
+* 4 basic operators (`+`, `-`, `*`, `/`).
+* Parentheses.
 
 # Goals
 * [x] Read arithmetic expressions in a loop.
