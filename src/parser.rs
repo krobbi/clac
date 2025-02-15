@@ -82,6 +82,11 @@ impl<'a> Parser<'a> {
     fn parse_primary_expr(&mut self) -> Result<Expr, ParseError> {
         match self.advance()? {
             Token::Number(value) => Ok(Expr::Number(value)),
+            Token::OpenParen => {
+                let expr = self.parse_expr()?;
+                self.expect(Token::CloseParen)?;
+                Ok(Expr::Paren(Box::new(expr)))
+            }
             token => Err(ParseError::NonExpression(token)),
         }
     }
