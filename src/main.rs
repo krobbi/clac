@@ -38,11 +38,7 @@ fn run_repl() {
 
     loop {
         print!("clac> ");
-
-        if let Err(error) = io::stdout().flush() {
-            panic!("failed to flush output: {error}");
-        }
-
+        io::stdout().flush().unwrap();
         let source = read_line();
 
         if source.is_empty() {
@@ -57,11 +53,8 @@ fn run_repl() {
 /// Reads a line of text from standard input.
 fn read_line() -> String {
     let mut line = String::new();
-
-    match io::stdin().read_line(&mut line) {
-        Ok(_) => line,
-        Err(error) => panic!("failed to read line: {error}"),
-    }
+    io::stdin().read_line(&mut line).unwrap();
+    line
 }
 
 /// Executes statement source code.
@@ -69,11 +62,10 @@ fn execute_source(source: &str) {
     let mut lexer = Lexer::new(source);
 
     loop {
-        let token = lexer.next();
-        println!("{token}");
-
-        if matches!(token, Token::End) {
-            break;
+        match lexer.next() {
+            Ok(Token::End) => break,
+            Ok(token) => println!("{token}"),
+            Err(error) => eprintln!("Lex error: {error}"),
         }
     }
 }

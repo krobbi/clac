@@ -1,4 +1,4 @@
-use std::str;
+use std::{error, fmt, str};
 
 use crate::token::Token;
 
@@ -17,24 +17,24 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token.
-    pub fn next(&mut self) -> Token {
+    pub fn next(&mut self) -> Result<Token, LexError> {
         let char = loop {
             match self.advance() {
-                None => return Token::End,
+                None => return Ok(Token::End),
                 Some(char) if char.is_whitespace() => continue,
                 Some(char) => break char,
             }
         };
 
         match char {
-            '0'..='9' => self.next_number(char),
-            '(' => Token::OpenParen,
-            ')' => Token::CloseParen,
-            '+' => Token::Add,
-            '-' => Token::Subtract,
-            '*' => Token::Multiply,
-            '/' => Token::Divide,
-            _ => Token::End, // TODO: Handle this case as an error instead.
+            '0'..='9' => Ok(self.next_number(char)),
+            '(' => Ok(Token::OpenParen),
+            ')' => Ok(Token::CloseParen),
+            '+' => Ok(Token::Add),
+            '-' => Ok(Token::Subtract),
+            '*' => Ok(Token::Multiply),
+            '/' => Ok(Token::Divide),
+            _ => Err(LexError::UnexpectedChar(char)),
         }
     }
 
@@ -69,6 +69,25 @@ impl<'a> Lexer<'a> {
     /// Consumes and returns the next character.
     fn advance(&mut self) -> Option<char> {
         self.chars.next()
+    }
+}
+
+/// A syntax error encountered while lexing.
+#[derive(Debug, Clone, Copy)]
+pub enum LexError {
+    /// A character was encountered that does not form a valid token.
+    UnexpectedChar(char),
+}
+
+impl error::Error for LexError {}
+
+impl fmt::Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::UnexpectedChar(char) => {
+                write!(f, "unexpected character '{}'", char.escape_default())
+            }
+        }
     }
 }
 
