@@ -59,7 +59,7 @@ fn read_line() -> String {
 /// Executes statement source code.
 fn execute_source(source: &str) {
     match parser::parse_source(source) {
-        Ok(expr) => println!("{expr}"),
+        Ok(expr) => println!("{}", expr.evaluate()),
         Err(error) => eprintln!("Syntax error: {error}"),
     }
 }

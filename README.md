@@ -36,7 +36,7 @@ tokens.
 * [x] Read optional command-line arguments as expressions.
 * [x] Parse tokens from expressions.
 * [x] Parse expression trees from tokens.
-* [ ] Evaluate expression trees.
+* [x] Evaluate expression trees.
 * [ ] Add a context for defining and using variables.
 * [ ] Add support for defining and using functions to the context.
 * [ ] Add a library of built-in functions and variables (square root, pi, etc.)

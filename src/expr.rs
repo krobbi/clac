@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::token::Token;
 
 /// A mathematical expression.
@@ -21,13 +19,18 @@ pub enum Expr {
     },
 }
 
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Expr {
+    /// Evaluates the expression.
+    pub fn evaluate(&self) -> f64 {
         match self {
-            Self::Number(value) => value.fmt(f),
-            Self::Paren(expr) => expr.fmt(f),
-            Self::Negate(expr) => write!(f, "(-{expr})"),
-            Self::Binary { lhs, op, rhs } => write!(f, "({lhs} {op} {rhs})"),
+            Self::Number(value) => *value,
+            Self::Paren(expr) => expr.evaluate(),
+            Self::Negate(expr) => -expr.evaluate(),
+            Self::Binary { lhs, op, rhs } => {
+                let lhs = lhs.evaluate();
+                let rhs = rhs.evaluate();
+                op.execute(lhs, rhs)
+            }
         }
     }
 }
@@ -48,13 +51,14 @@ pub enum BinOp {
     Divide,
 }
 
-impl fmt::Display for BinOp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl BinOp {
+    /// Executes the binary operator.
+    fn execute(self, lhs: f64, rhs: f64) -> f64 {
         match self {
-            Self::Add => '+'.fmt(f),
-            Self::Subtract => '-'.fmt(f),
-            Self::Multiply => '*'.fmt(f),
-            Self::Divide => '/'.fmt(f),
+            Self::Add => lhs + rhs,
+            Self::Subtract => lhs - rhs,
+            Self::Multiply => lhs * rhs,
+            Self::Divide => lhs / rhs,
         }
     }
 }
