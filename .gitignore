@@ -1,11 +1,11 @@
+# Ignore:
+ignore/*
+
 # Rust:
 target/*
 *.exe
 *.pdb
 *.rs.bk
-
-# Ignore:
-ignore/*
 
 # IDE:
 .idea/*
