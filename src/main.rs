@@ -1,8 +1,23 @@
-use std::io::{self, Write};
+use std::{
+    env,
+    io::{self, Write},
+};
 
 /// Runs Clac.
 fn main() {
-    run_repl();
+    let mut args = env::args().skip(1);
+
+    match args.next() {
+        None => run_repl(),
+        Some(mut source) => {
+            for arg in args {
+                source.push(' ');
+                source.push_str(&arg);
+            }
+
+            execute_source(&source);
+        }
+    }
 }
 
 /// Runs Clac in REPL mode.
@@ -13,12 +28,12 @@ fn run_repl() {
     #[cfg(not(target_os = "windows"))]
     const EXIT_SHORTCUT: &str = "Ctrl+D";
 
-    println!("Clac - command-line calculator\nEnter `{EXIT_SHORTCUT}` to exit.\n");
+    println!("Clac - command-line calculator\nEnter `{EXIT_SHORTCUT}` to exit.");
 
     let mut source = String::new();
 
     loop {
-        print!("clac> ");
+        print!("\nclac> ");
         io::stdout().flush().unwrap();
 
         source.clear();
@@ -28,6 +43,13 @@ fn run_repl() {
             break;
         }
 
-        println!("'{}'\n", source.trim());
+        execute_source(source.trim_ascii_end());
     }
+
+    println!("\nReceived `{EXIT_SHORTCUT}`, exiting...");
+}
+
+/// Executes Clac source code.
+fn execute_source(source: &str) {
+    println!("'{source}'");
 }
