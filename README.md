@@ -20,7 +20,7 @@ If Clac is not given any arguments, the user can enter expressions in a loop
 until manually exiting.
 
 # Goals
-* [ ] Read expressions in a loop.
+* [x] Read expressions in a loop.
 * [ ] Read command-line arguments as expressions.
 * [ ] Parse tokens from expressions.
 * [ ] Parse abstract syntax trees (ASTs) from tokens.
