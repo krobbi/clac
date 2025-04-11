@@ -60,11 +60,10 @@ fn execute_source(source: &str) {
     let mut lexer = Lexer::new(source);
 
     loop {
-        let token = lexer.next();
-        println!("{token:?}");
-
-        if let Token::Eof = token {
-            break;
+        match lexer.next() {
+            Ok(Token::Eof) => break,
+            Ok(t) => println!("{t:?}"),
+            Err(e) => eprintln!("Syntax error: {e}"),
         }
     }
 }

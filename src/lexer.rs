@@ -1,4 +1,4 @@
-use std::{iter, str};
+use std::{error, fmt, iter, str};
 
 use crate::token::Token;
 
@@ -17,24 +17,24 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token from the token stream.
-    pub fn next(&mut self) -> Token {
+    pub fn next(&mut self) -> Result<Token, LexError> {
         let first_char = loop {
             match self.chars.next() {
-                None => return Token::Eof,
+                None => return Ok(Token::Eof),
                 Some(c) if c.is_whitespace() => {}
                 Some(c) => break c,
             }
         };
 
         match first_char {
-            c if c.is_ascii_digit() => self.number(c),
-            '(' => Token::OpenParen,
-            ')' => Token::CloseParen,
-            '+' => Token::Plus,
-            '-' => Token::Minus,
-            '*' => Token::Star,
-            '/' => Token::Slash,
-            _ => todo!("lex error handling"),
+            c if c.is_ascii_digit() => Ok(self.number(c)),
+            '(' => Ok(Token::OpenParen),
+            ')' => Ok(Token::CloseParen),
+            '+' => Ok(Token::Plus),
+            '-' => Ok(Token::Minus),
+            '*' => Ok(Token::Star),
+            '/' => Ok(Token::Slash),
+            c => Err(LexError::CharNotTokenStart(c)),
         }
     }
 
@@ -55,5 +55,24 @@ impl<'a> Lexer<'a> {
         }
 
         Token::Literal(number.parse().unwrap())
+    }
+}
+
+/// A syntax error encountered while lexing source code.
+#[derive(Debug)]
+pub enum LexError {
+    /// A character was encountered that does not begin a token.
+    CharNotTokenStart(char),
+}
+
+impl error::Error for LexError {}
+
+impl fmt::Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::CharNotTokenStart(c) => {
+                write!(f, "unexpected character '{}'", c.escape_default())
+            }
+        }
     }
 }
