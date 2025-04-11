@@ -1,7 +1,13 @@
+mod lexer;
+mod token;
+
 use std::{
     env,
     io::{self, Write},
 };
+
+use lexer::Lexer;
+use token::Token;
 
 /// Runs Clac.
 fn main() {
@@ -43,7 +49,7 @@ fn run_repl() {
             break;
         }
 
-        execute_source(source.trim_ascii_end());
+        execute_source(&source);
     }
 
     println!("\nReceived `{EXIT_SHORTCUT}`, exiting...");
@@ -51,5 +57,14 @@ fn run_repl() {
 
 /// Executes Clac source code.
 fn execute_source(source: &str) {
-    println!("'{source}'");
+    let mut lexer = Lexer::new(source);
+
+    loop {
+        let token = lexer.next();
+        println!("{token:?}");
+
+        if let Token::Eof = token {
+            break;
+        }
+    }
 }

@@ -17,12 +17,12 @@ with spaces between the arguments. The expression is evaluated, and Clac exits
 automatically.
 
 If Clac is not given any arguments, the user can enter expressions in a loop
-until manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS).
+until manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
 
 # Goals
 * [x] Read expressions in a loop.
 * [x] Read command-line arguments as expressions.
-* [ ] Parse tokens from expressions.
+* [x] Parse tokens from expressions.
 * [ ] Parse abstract syntax trees (ASTs) from tokens.
 * [ ] Evaluate ASTs.
 * [ ] Allow variables to be defined and used.
