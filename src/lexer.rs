@@ -17,7 +17,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token from the token stream.
-    pub fn next(&mut self) -> Result<Token, LexError> {
+    fn next_token(&mut self) -> Result<Token, LexError> {
         let first_char = loop {
             match self.chars.next() {
                 None => return Ok(Token::Eof),
@@ -38,7 +38,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Returns the next number literal token from the token stream.
+    /// Creates a new number literal token from its first digit.
     fn number(&mut self, first_digit: char) -> Token {
         let mut number = first_digit.to_string();
 
@@ -55,6 +55,14 @@ impl<'a> Lexer<'a> {
         }
 
         Token::Literal(number.parse().unwrap())
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Result<Token, LexError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(self.next_token())
     }
 }
 

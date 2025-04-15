@@ -57,10 +57,8 @@ fn run_repl() {
 
 /// Executes Clac source code.
 fn execute_source(source: &str) {
-    let mut lexer = Lexer::new(source);
-
-    loop {
-        match lexer.next() {
+    for token in Lexer::new(source) {
+        match token {
             Ok(Token::Eof) => break,
             Ok(t) => println!("{t:?}"),
             Err(e) => eprintln!("Syntax error: {e}"),
