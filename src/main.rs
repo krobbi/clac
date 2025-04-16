@@ -1,4 +1,5 @@
 mod bin_op;
+mod eval;
 mod expr;
 mod lexer;
 mod parser;
@@ -60,7 +61,7 @@ fn execute_source(source: &str) {
     match parser::parse_source(source) {
         Ok(program) => {
             for expr in program {
-                println!("{expr}");
+                println!("{}", eval::eval_expr(&expr));
             }
         }
         Err(e) => eprintln!("Syntax error: {e}"),

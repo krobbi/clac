@@ -53,11 +53,11 @@ atom_primary = "(", expr, ")" | Literal ;
 ```
 
 # Goals
-* [x] Read expressions in a loop.
-* [x] Read command-line arguments as expressions.
-* [x] Parse tokens from expressions.
-* [x] Parse abstract syntax trees (ASTs) from tokens.
-* [ ] Evaluate ASTs.
+* [x] Read code in a loop.
+* [x] Read command-line arguments as code.
+* [x] Parse tokens from code.
+* [x] Parse expressions from tokens.
+* [x] Evaluate expressions.
 * [ ] Allow variables to be defined and used.
 * [ ] Allow functions to be defined and used.
 * [ ] Add a library of intrinsic variables and functions (pi, sine, etc.)
