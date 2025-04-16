@@ -1,4 +1,5 @@
 mod bin_op;
+mod expr;
 mod lexer;
 mod parser;
 mod token;

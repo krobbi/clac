@@ -2,12 +2,13 @@ use std::{error, fmt, iter, mem};
 
 use crate::{
     bin_op::{self, BinOp},
+    expr::Expr,
     lexer::{LexError, Lexer},
     token::Token,
 };
 
 /// Parses a program from source code.
-pub fn parse_source(source: &str) -> Result<Vec<String>, ParseError> {
+pub fn parse_source(source: &str) -> Result<Vec<Expr>, ParseError> {
     Parser::new(source).parse_program()
 }
 
@@ -63,7 +64,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a program.
-    fn parse_program(&mut self) -> Result<Vec<String>, ParseError> {
+    fn parse_program(&mut self) -> Result<Vec<Expr>, ParseError> {
         let mut program = vec![];
 
         while !self.check(&Token::Eof)? {
@@ -74,12 +75,12 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a top-level expression.
-    fn parse_expr(&mut self) -> Result<String, ParseError> {
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
         self.parse_infix(0)
     }
 
     /// Parses an infix expression.
-    fn parse_infix(&mut self, min_prec: u8) -> Result<String, ParseError> {
+    fn parse_infix(&mut self, min_prec: u8) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_atom()?;
 
         while let Ok(op) = BinOp::try_from(self.peek()?) {
@@ -96,22 +97,30 @@ impl<'a> Parser<'a> {
 
             self.next()?; // Skip operator token.
             let rhs = self.parse_infix(min_prec)?;
-            lhs = format!("({lhs} {op} {rhs})");
+
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+            };
         }
 
         Ok(lhs)
     }
 
     /// Parses an atom expression.
-    fn parse_atom(&mut self) -> Result<String, ParseError> {
+    fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         match self.next()? {
-            Token::Literal(value) => Ok(value.to_string()),
+            Token::Literal(value) => Ok(Expr::Literal(value)),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
                 self.expect(Token::CloseParen)?;
                 Ok(expr)
             }
-            Token::Minus => Ok(format!("-{}", self.parse_atom()?)),
+            Token::Minus => {
+                let expr = self.parse_atom()?;
+                Ok(Expr::Negate(Box::new(expr)))
+            }
             t => Err(ParseError::NonExpression(t)),
         }
     }
