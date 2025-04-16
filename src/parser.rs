@@ -16,6 +16,9 @@ pub enum ParseError {
     /// An error caused by a lexing error.
     Lex(LexError),
 
+    /// A token was encountered that does not match an expected token kind.
+    Unexpected { expected: Token, actual: Token },
+
     /// A token was encountered that does not begin an expected expression.
     NonExpression(Token),
 }
@@ -24,7 +27,7 @@ impl error::Error for ParseError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::Lex(e) => Some(e),
-            Self::NonExpression(_) => None,
+            _ => None,
         }
     }
 }
@@ -33,6 +36,7 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Lex(e) => e.fmt(f),
+            Self::Unexpected { expected, actual } => write!(f, "expected {expected}, got {actual}"),
             Self::NonExpression(t) => write!(f, "expected an expression, got {t}"),
         }
     }
@@ -77,6 +81,11 @@ impl<'a> Parser<'a> {
     fn parse_atom(&mut self) -> Result<String, ParseError> {
         match self.next()? {
             Token::Literal(value) => Ok(value.to_string()),
+            Token::OpenParen => {
+                let expr = self.parse_expr()?;
+                self.expect(Token::CloseParen)?;
+                Ok(format!("(group {expr})"))
+            }
             Token::Minus => Ok(format!("(negate {})", self.parse_atom()?)),
             t => Err(ParseError::NonExpression(t)),
         }
@@ -87,6 +96,17 @@ impl<'a> Parser<'a> {
         match self.lexer.peek().unwrap() {
             Ok(t) => Ok(mem::discriminant(t) == mem::discriminant(kind)),
             Err(e) => Err(e.clone()),
+        }
+    }
+
+    /// Consumes the next token with an expected token kind.
+    fn expect(&mut self, expected: Token) -> Result<(), ParseError> {
+        let actual = self.next()?;
+
+        if mem::discriminant(&actual) == mem::discriminant(&expected) {
+            Ok(())
+        } else {
+            Err(ParseError::Unexpected { expected, actual })
         }
     }
 

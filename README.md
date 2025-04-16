@@ -43,7 +43,7 @@ expression without needing parentheses. The implementation merges these rules
 into one function for better performance. *)
 atom         = atom_negate ;
 atom_negate  = "-", atom_negate | atom_primary ;
-atom_primary = Literal ;
+atom_primary = "(", expr, ")" | Literal ;
 ```
 
 # Goals
