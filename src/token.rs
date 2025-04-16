@@ -1,8 +1,10 @@
+use std::fmt;
+
 /// A syntactic element of source code.
 #[derive(Debug)]
 pub enum Token {
     /// A literal value.
-    Literal(#[allow(dead_code, reason = "field is used in debug printing")] f64),
+    Literal(f64),
 
     /// An opening parenthesis `(`.
     OpenParen,
@@ -24,4 +26,19 @@ pub enum Token {
 
     /// An end of source code marker.
     Eof,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Literal(value) => write!(f, "literal '{value}'"),
+            Self::OpenParen => write!(f, "opening '('"),
+            Self::CloseParen => write!(f, "closing ')'"),
+            Self::Plus => write!(f, "'+'"),
+            Self::Minus => write!(f, "'-'"),
+            Self::Star => write!(f, "'*'"),
+            Self::Slash => write!(f, "'/'"),
+            Self::Eof => write!(f, "end-of-file"),
+        }
+    }
 }

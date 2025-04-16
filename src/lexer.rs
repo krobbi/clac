@@ -34,7 +34,7 @@ impl<'a> Lexer<'a> {
             '-' => Ok(Token::Minus),
             '*' => Ok(Token::Star),
             '/' => Ok(Token::Slash),
-            c => Err(LexError::CharNotTokenStart(c)),
+            c => Err(LexError::NonToken(c)),
         }
     }
 
@@ -70,7 +70,7 @@ impl Iterator for Lexer<'_> {
 #[derive(Debug)]
 pub enum LexError {
     /// A character was encountered that does not begin a token.
-    CharNotTokenStart(char),
+    NonToken(char),
 }
 
 impl error::Error for LexError {}
@@ -78,9 +78,7 @@ impl error::Error for LexError {}
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::CharNotTokenStart(c) => {
-                write!(f, "unexpected character '{}'", c.escape_default())
-            }
+            Self::NonToken(c) => write!(f, "unexpected character '{}'", c.escape_default()),
         }
     }
 }

@@ -1,13 +1,11 @@
 mod lexer;
+mod parser;
 mod token;
 
 use std::{
     env,
     io::{self, Write},
 };
-
-use lexer::Lexer;
-use token::Token;
 
 /// Runs Clac.
 fn main() {
@@ -57,11 +55,8 @@ fn run_repl() {
 
 /// Executes Clac source code.
 fn execute_source(source: &str) {
-    for token in Lexer::new(source) {
-        match token {
-            Ok(Token::Eof) => break,
-            Ok(t) => println!("{t:?}"),
-            Err(e) => eprintln!("Syntax error: {e}"),
-        }
+    match parser::parse_source(source) {
+        Ok(ast) => println!("{ast}"),
+        Err(e) => eprintln!("Syntax error: {e}"),
     }
 }
