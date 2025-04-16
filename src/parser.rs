@@ -77,6 +77,7 @@ impl<'a> Parser<'a> {
     fn parse_atom(&mut self) -> Result<String, ParseError> {
         match self.next()? {
             Token::Literal(value) => Ok(value.to_string()),
+            Token::Minus => Ok(format!("(negate {})", self.parse_atom()?)),
             t => Err(ParseError::NonExpression(t)),
         }
     }
