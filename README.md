@@ -9,15 +9,39 @@ with it:
 # Usage
 Clac is run from the command-line:
 ```shell
-clac [EXPRESSION]
+clac [CODE]
 ```
 
-If Clac is given one or more arguments, they are treated as a single expression
-with spaces between the arguments. The expression is evaluated, and Clac exits
+If Clac is given one or more arguments, they are treated as a single piece of
+code with spaces between the arguments. The program is run, and Clac exits
 automatically.
 
-If Clac is not given any arguments, the user can enter expressions in a loop
-until manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
+If Clac is not given any arguments, the user can enter code in a loop until
+manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
+
+# Language
+Clac aims to implement a language that is somewhere between a calculator and a
+small scripting language. A Clac program consists of zero or more expressions,
+which are evaluated and printed in sequence.
+
+The [EBNF](https://en.wikipedia.org/wiki/Extended_Backus-Naur_form) grammar
+below is a reference for the language's syntax:
+```EBNF
+(* Clac Language Reference Grammar *)
+
+(* A program is the CLI arguments space-delimited, or a REPL line. *)
+program = { expr }, Eof ;
+
+(* Every item in a program is parsed as an expression. The `expr` rule is used
+as shorthand for the lowest precedence expression. *)
+expr = atom ;
+
+(* TODO: Infix expressions. *)
+
+(* An atom is a high-precedence expression that can be used inside any infix
+expression without needing parentheses. *)
+atom = Literal ;
+```
 
 # Goals
 * [x] Read expressions in a loop.

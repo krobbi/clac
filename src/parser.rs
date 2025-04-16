@@ -1,13 +1,13 @@
-use std::{error, fmt, iter};
+use std::{error, fmt, iter, mem};
 
 use crate::{
     lexer::{LexError, Lexer},
     token::Token,
 };
 
-/// Parses an expression from source code.
-pub fn parse_source(source: &str) -> Result<String, ParseError> {
-    Parser::new(source).parse_atom()
+/// Parses a program from source code.
+pub fn parse_source(source: &str) -> Result<Vec<String>, ParseError> {
+    Parser::new(source).parse_program()
 }
 
 /// A syntax error encountered while parsing.
@@ -57,6 +57,22 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses a program.
+    fn parse_program(&mut self) -> Result<Vec<String>, ParseError> {
+        let mut program = vec![];
+
+        while !self.check(&Token::Eof)? {
+            program.push(self.parse_expr()?);
+        }
+
+        Ok(program)
+    }
+
+    /// Parses a top-level expression.
+    fn parse_expr(&mut self) -> Result<String, ParseError> {
+        self.parse_atom()
+    }
+
     /// Parses an atom expression.
     fn parse_atom(&mut self) -> Result<String, ParseError> {
         match self.next()? {
@@ -65,7 +81,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Returns the next token.
+    /// Returns whether the next token matches a token kind.
+    fn check(&mut self, kind: &Token) -> Result<bool, LexError> {
+        match self.lexer.peek().unwrap() {
+            Ok(t) => Ok(mem::discriminant(t) == mem::discriminant(kind)),
+            Err(e) => Err(e.clone()),
+        }
+    }
+
+    /// Consumes and returns the next token.
     fn next(&mut self) -> Result<Token, LexError> {
         self.lexer.next().unwrap()
     }

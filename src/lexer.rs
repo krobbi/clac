@@ -67,7 +67,7 @@ impl Iterator for Lexer<'_> {
 }
 
 /// A syntax error encountered while lexing source code.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LexError {
     /// A character was encountered that does not begin a token.
     NonToken(char),

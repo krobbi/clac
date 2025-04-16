@@ -56,7 +56,11 @@ fn run_repl() {
 /// Executes Clac source code.
 fn execute_source(source: &str) {
     match parser::parse_source(source) {
-        Ok(ast) => println!("{ast}"),
+        Ok(program) => {
+            for expr in program {
+                println!("{expr}");
+            }
+        }
         Err(e) => eprintln!("Syntax error: {e}"),
     }
 }
