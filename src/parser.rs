@@ -1,6 +1,7 @@
 use std::{error, fmt, iter, mem};
 
 use crate::{
+    bin_op::{self, BinOp},
     lexer::{LexError, Lexer},
     token::Token,
 };
@@ -74,7 +75,31 @@ impl<'a> Parser<'a> {
 
     /// Parses a top-level expression.
     fn parse_expr(&mut self) -> Result<String, ParseError> {
-        self.parse_atom()
+        self.parse_infix(0)
+    }
+
+    /// Parses an infix expression.
+    fn parse_infix(&mut self, min_prec: u8) -> Result<String, ParseError> {
+        let mut lhs = self.parse_atom()?;
+
+        while let Ok(op) = BinOp::try_from(self.peek()?) {
+            let op_prec = op.prec().level();
+
+            if op_prec < min_prec {
+                break;
+            }
+
+            let min_prec = match op.assoc() {
+                bin_op::Assoc::Left => op_prec + 1,
+                bin_op::Assoc::Right => op_prec,
+            };
+
+            self.next()?; // Skip operator token.
+            let rhs = self.parse_infix(min_prec)?;
+            lhs = format!("({lhs} {op} {rhs})");
+        }
+
+        Ok(lhs)
     }
 
     /// Parses an atom expression.
@@ -84,19 +109,29 @@ impl<'a> Parser<'a> {
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
                 self.expect(Token::CloseParen)?;
-                Ok(format!("(group {expr})"))
+                Ok(expr)
             }
-            Token::Minus => Ok(format!("(negate {})", self.parse_atom()?)),
+            Token::Minus => Ok(format!("-{}", self.parse_atom()?)),
             t => Err(ParseError::NonExpression(t)),
         }
     }
 
-    /// Returns whether the next token matches a token kind.
-    fn check(&mut self, kind: &Token) -> Result<bool, LexError> {
+    /// Returns the next token without consuming it.
+    fn peek(&mut self) -> Result<&Token, LexError> {
         match self.lexer.peek().unwrap() {
-            Ok(t) => Ok(mem::discriminant(t) == mem::discriminant(kind)),
+            Ok(t) => Ok(t),
             Err(e) => Err(e.clone()),
         }
+    }
+
+    /// Consumes and returns the next token.
+    fn next(&mut self) -> Result<Token, LexError> {
+        self.lexer.next().unwrap()
+    }
+
+    /// Returns whether the next token matches a token kind.
+    fn check(&mut self, kind: &Token) -> Result<bool, LexError> {
+        Ok(mem::discriminant(self.peek()?) == mem::discriminant(kind))
     }
 
     /// Consumes the next token with an expected token kind.
@@ -108,10 +143,5 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParseError::Unexpected { expected, actual })
         }
-    }
-
-    /// Consumes and returns the next token.
-    fn next(&mut self) -> Result<Token, LexError> {
-        self.lexer.next().unwrap()
     }
 }

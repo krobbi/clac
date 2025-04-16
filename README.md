@@ -34,13 +34,19 @@ program = { expr }, Eof ;
 
 (* Every item in a program is parsed as an expression. The `expr` rule is used
 as shorthand for the lowest precedence expression. *)
-expr = atom ;
+expr = infix ;
 
-(* TODO: Infix expressions. *)
+(* An infix expression is an expression with an operand on each side of a
+single operator. Infix expressions are grouped based on the mathematical order
+of operations. The implementation uses precedence climbing for these rules for
+better maintainability. *)
+infix         = infix_sum ;
+infix_sum     = infix_product, { ( "+" | "-" ), infix_product } ;
+infix_product = atom, { ( "*" | "/" ), atom } ;
 
 (* An atom is a high-precedence expression that can be used inside any infix
 expression without needing parentheses. The implementation merges these rules
-into one function for better performance. *)
+into one function for smaller code size and better performance. *)
 atom         = atom_negate ;
 atom_negate  = "-", atom_negate | atom_primary ;
 atom_primary = "(", expr, ")" | Literal ;
@@ -55,6 +61,10 @@ atom_primary = "(", expr, ")" | Literal ;
 * [ ] Allow variables to be defined and used.
 * [ ] Allow functions to be defined and used.
 * [ ] Add a library of intrinsic variables and functions (pi, sine, etc.)
+
+# Credits
+* Infix parser based on
+[pseudocode by Eli Bendersky](https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing).
 
 # License
 Clac is released under the MIT License. See [LICENSE.txt](/LICENSE.txt) for a
