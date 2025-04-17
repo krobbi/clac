@@ -1,8 +1,8 @@
 mod bin_op;
-mod eval;
 mod expr;
 mod lexer;
 mod parser;
+mod runtime;
 mod token;
 
 use std::{
@@ -10,25 +10,28 @@ use std::{
     io::{self, Write},
 };
 
+use runtime::Runtime;
+
 /// Runs Clac.
 fn main() {
+    let mut runtime = Runtime::new();
     let mut args = env::args().skip(1);
 
     match args.next() {
-        None => run_repl(),
+        None => run_repl(&mut runtime),
         Some(mut source) => {
             for arg in args {
                 source.push(' ');
                 source.push_str(&arg);
             }
 
-            execute_source(&source);
+            execute_source(&source, &mut runtime);
         }
     }
 }
 
-/// Runs Clac in REPL mode.
-fn run_repl() {
+/// Runs Clac in REPL mode with a runtime environment.
+fn run_repl(runtime: &mut Runtime) {
     #[cfg(target_os = "windows")]
     const EXIT_SHORTCUT: &str = "Ctrl+Z";
 
@@ -50,18 +53,21 @@ fn run_repl() {
             break;
         }
 
-        execute_source(&source);
+        execute_source(&source, runtime);
     }
 
     println!("\nReceived `{EXIT_SHORTCUT}`, exiting...");
 }
 
-/// Executes Clac source code.
-fn execute_source(source: &str) {
+/// Executes Clac source code with a runtime environment.
+fn execute_source(source: &str, runtime: &mut Runtime) {
     match parser::parse_source(source) {
         Ok(program) => {
             for expr in program {
-                println!("{}", eval::eval_expr(&expr));
+                if let Err(e) = runtime.execute_expr(expr) {
+                    eprintln!("Runtime error: {e}");
+                    return;
+                }
             }
         }
         Err(e) => eprintln!("Syntax error: {e}"),

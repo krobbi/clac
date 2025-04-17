@@ -22,8 +22,30 @@ manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
 # Language
 Clac aims to implement a language that is somewhere between a calculator and a
 small scripting language. A Clac program consists of zero or more expressions,
-which are evaluated and printed in sequence.
+which are evaluated and printed in sequence:
+```
+clac> 1 + 2 * 3  (1 + 2) * 3
+7
+9
+```
 
+## Variables
+Variables can be defined or assigned with the `=` operator:
+```
+clac> x = 5  x * x  x = 2 * x
+5
+25
+10
+```
+
+Variable names take the typical form of one or more ASCII letters or
+underscores, with digits being allowed after the first character. All variables
+are currently global.
+
+Variable assignments currently return their assigned value, resulting in it
+being printed. This may change in a future version.
+
+## Grammar
 The [EBNF](https://en.wikipedia.org/wiki/Extended_Backus-Naur_form) grammar
 below is a reference for the language's syntax:
 ```EBNF
@@ -59,7 +81,7 @@ atom_primary = "(", expr, ")" | Literal | Ident ;
 * [x] Parse tokens from code.
 * [x] Parse expressions from tokens.
 * [x] Evaluate expressions.
-* [ ] Allow variables to be defined and used.
+* [x] Allow variables to be defined and used.
 * [ ] Allow functions to be defined and used.
 * [ ] Add a library of intrinsic variables and functions (pi, sine, etc.)
 
