@@ -112,6 +112,7 @@ impl<'a> Parser<'a> {
     fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         match self.next()? {
             Token::Literal(value) => Ok(Expr::Literal(value)),
+            Token::Ident(name) => Ok(Expr::Ident(name)),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
                 self.expect(Token::CloseParen)?;

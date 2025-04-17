@@ -50,7 +50,7 @@ expression without needing parentheses. The implementation merges these rules
 into one function for smaller code size and better performance. *)
 atom         = atom_prefix ;
 atom_prefix  = "-", atom_prefix | atom_primary ;
-atom_primary = "(", expr, ")" | Literal ;
+atom_primary = "(", expr, ")" | Literal | Ident ;
 ```
 
 # Goals

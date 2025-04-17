@@ -5,6 +5,9 @@ pub enum Expr {
     /// A literal expression.
     Literal(f64),
 
+    /// An identifier expression.
+    Ident(String),
+
     /// A unary negation expression.
     Negate(Box<Expr>),
 

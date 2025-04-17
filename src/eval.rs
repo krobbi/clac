@@ -4,6 +4,10 @@ use crate::{bin_op::BinOp, expr::Expr};
 pub fn eval_expr(expr: &Expr) -> f64 {
     match expr {
         Expr::Literal(value) => *value,
+        Expr::Ident(name) => {
+            println!("{name}"); // TODO: Implement identifiers.
+            0.0
+        }
         Expr::Negate(expr) => -eval_expr(expr),
         Expr::Binary { lhs, op, rhs } => {
             let lhs = eval_expr(lhs);
