@@ -40,15 +40,15 @@ expr = infix ;
 single operator. Infix expressions are grouped based on the mathematical order
 of operations. The implementation uses precedence climbing for these rules for
 better maintainability. *)
-infix         = infix_sum ;
-infix_sum     = infix_product, { ( "+" | "-" ), infix_product } ;
-infix_product = atom, { ( "*" | "/" ), atom } ;
+infix      = infix_sum ;
+infix_sum  = infix_term, { ( "+" | "-" ), infix_term } ;
+infix_term = atom, { ( "*" | "/" ), atom } ;
 
 (* An atom is a high-precedence expression that can be used inside any infix
 expression without needing parentheses. The implementation merges these rules
 into one function for smaller code size and better performance. *)
-atom         = atom_negate ;
-atom_negate  = "-", atom_negate | atom_primary ;
+atom         = atom_prefix ;
+atom_prefix  = "-", atom_prefix | atom_primary ;
 atom_primary = "(", expr, ")" | Literal ;
 ```
 

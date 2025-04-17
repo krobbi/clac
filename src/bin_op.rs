@@ -23,7 +23,7 @@ impl BinOp {
     pub fn prec(self) -> Prec {
         match self {
             Self::Add | Self::Subtract => Prec::Sum,
-            Self::Multiply | Self::Divide => Prec::Product,
+            Self::Multiply | Self::Divide => Prec::Term,
         }
     }
 
@@ -73,7 +73,7 @@ pub enum Prec {
     Sum,
 
     /// The precedence of the multiplication and division operators.
-    Product,
+    Term,
 }
 
 impl Prec {
