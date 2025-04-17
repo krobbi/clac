@@ -52,6 +52,7 @@ impl From<LexError> for ParseError {
 
 /// A structure that generates expressions from source code.
 struct Parser<'a> {
+    /// The lexer.
     lexer: iter::Peekable<Lexer<'a>>,
 }
 
