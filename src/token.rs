@@ -6,6 +6,9 @@ pub enum Token {
     /// A literal value.
     Literal(f64),
 
+    /// An identifier.
+    Ident(String),
+
     /// An opening parenthesis `(`.
     OpenParen,
 
@@ -35,6 +38,7 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Literal(value) => write!(f, "literal '{value}'"),
+            Self::Ident(name) => write!(f, "identifier '{name}'"),
             Self::OpenParen => write!(f, "opening '('"),
             Self::CloseParen => write!(f, "closing ')'"),
             Self::Eq => write!(f, "'='"),

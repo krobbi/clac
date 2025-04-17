@@ -28,6 +28,7 @@ impl<'a> Lexer<'a> {
 
         match first_char {
             c if c.is_ascii_digit() => Ok(self.number(c)),
+            c if is_ident_start(c) => Ok(self.ident(c)),
             '(' => Ok(Token::OpenParen),
             ')' => Ok(Token::CloseParen),
             '=' => Ok(Token::Eq),
@@ -57,6 +58,17 @@ impl<'a> Lexer<'a> {
 
         Token::Literal(number.parse().unwrap())
     }
+
+    /// Creates a new identifier token from its first character.
+    fn ident(&mut self, first_char: char) -> Token {
+        let mut name = first_char.to_string();
+
+        while let Some(c) = self.chars.next_if(|c| is_ident_continue(*c)) {
+            name.push(c);
+        }
+
+        Token::Ident(name)
+    }
 }
 
 impl Iterator for Lexer<'_> {
@@ -82,4 +94,14 @@ impl fmt::Display for LexError {
             Self::NonToken(c) => write!(f, "unexpected character '{}'", c.escape_default()),
         }
     }
+}
+
+/// Returns whether a character is a valid identifier start.
+fn is_ident_start(c: char) -> bool {
+    c == '_' || c.is_ascii_alphabetic()
+}
+
+/// Returns whether a character is a valid identifier continuation.
+fn is_ident_continue(c: char) -> bool {
+    is_ident_start(c) || c.is_ascii_digit()
 }
