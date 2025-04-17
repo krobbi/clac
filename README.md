@@ -38,11 +38,12 @@ expr = infix ;
 
 (* An infix expression is an expression with an operand on each side of a
 single operator. Infix expressions are grouped based on the mathematical order
-of operations. The implementation uses precedence climbing for these rules for
-better maintainability. *)
-infix      = infix_sum ;
-infix_sum  = infix_term, { ( "+" | "-" ), infix_term } ;
-infix_term = atom, { ( "*" | "/" ), atom } ;
+of operations and conventions from other languages. The implementation uses
+precedence climbing for these rules for better maintainability. *)
+infix            = infix_assignment ;
+infix_assignment = infix_sum, [ "=", infix_assignment ] ;
+infix_sum        = infix_term, { ( "+" | "-" ), infix_term } ;
+infix_term       = atom, { ( "*" | "/" ), atom } ;
 
 (* An atom is a high-precedence expression that can be used inside any infix
 expression without needing parentheses. The implementation merges these rules

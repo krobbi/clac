@@ -1,10 +1,11 @@
-use std::fmt;
-
 use crate::token::Token;
 
 /// A binary operator.
 #[derive(Clone, Copy)]
 pub enum BinOp {
+    /// An assignment operator.
+    Assign,
+
     /// An addition operator.
     Add,
 
@@ -22,31 +23,17 @@ impl BinOp {
     /// Returns the binary operator's precedence.
     pub fn prec(self) -> Prec {
         match self {
+            Self::Assign => Prec::Assignment,
             Self::Add | Self::Subtract => Prec::Sum,
             Self::Multiply | Self::Divide => Prec::Term,
         }
     }
 
     /// Returns the binary operator's associativity.
-    #[allow(
-        clippy::unused_self,
-        reason = "self argument will be necessary in a future version"
-    )]
     pub fn assoc(self) -> Assoc {
-        // All binary operators are currently left-associative.
-        // TODO: Add a condition here and remove the `#[allow]` attribute from
-        // `Assoc` when right-associative operators are added.
-        Assoc::Left
-    }
-}
-
-impl fmt::Display for BinOp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Add => write!(f, "+"),
-            Self::Subtract => write!(f, "-"),
-            Self::Multiply => write!(f, "*"),
-            Self::Divide => write!(f, "/"),
+            Self::Assign => Assoc::Right,
+            _ => Assoc::Left,
         }
     }
 }
@@ -56,6 +43,7 @@ impl TryFrom<&Token> for BinOp {
 
     fn try_from(value: &Token) -> Result<Self, Self::Error> {
         match value {
+            Token::Eq => Ok(Self::Assign),
             Token::Plus => Ok(Self::Add),
             Token::Minus => Ok(Self::Subtract),
             Token::Star => Ok(Self::Multiply),
@@ -65,10 +53,14 @@ impl TryFrom<&Token> for BinOp {
     }
 }
 
-/// A binary operator's precedence level.
+/// A binary operator's precedence level. The precedence levels *must* be
+/// declared in order from lowest to highest.
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum Prec {
+    /// The precedence of the assigment operator.
+    Assignment,
+
     /// The precedence of the addition and subtraction operators.
     Sum,
 
@@ -90,9 +82,5 @@ pub enum Assoc {
     Left,
 
     /// A right-to-left associativity.
-    #[allow(
-        dead_code,
-        reason = "no right-associative operators have been added yet"
-    )]
     Right,
 }

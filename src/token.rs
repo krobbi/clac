@@ -12,6 +12,9 @@ pub enum Token {
     /// A closing parenthesis `)`.
     CloseParen,
 
+    /// An equals sign `=`.
+    Eq,
+
     /// A plus sign `+`.
     Plus,
 
@@ -34,6 +37,7 @@ impl fmt::Display for Token {
             Self::Literal(value) => write!(f, "literal '{value}'"),
             Self::OpenParen => write!(f, "opening '('"),
             Self::CloseParen => write!(f, "closing ')'"),
+            Self::Eq => write!(f, "'='"),
             Self::Plus => write!(f, "'+'"),
             Self::Minus => write!(f, "'-'"),
             Self::Star => write!(f, "'*'"),

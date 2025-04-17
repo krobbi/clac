@@ -30,6 +30,7 @@ impl<'a> Lexer<'a> {
             c if c.is_ascii_digit() => Ok(self.number(c)),
             '(' => Ok(Token::OpenParen),
             ')' => Ok(Token::CloseParen),
+            '=' => Ok(Token::Eq),
             '+' => Ok(Token::Plus),
             '-' => Ok(Token::Minus),
             '*' => Ok(Token::Star),
