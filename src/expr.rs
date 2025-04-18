@@ -1,9 +1,9 @@
-use crate::bin_op::BinOp;
+use crate::{bin_op::BinOp, value::Value};
 
 /// An expression.
 pub enum Expr {
-    /// A literal expression.
-    Literal(f64),
+    /// A literal value expression.
+    Literal(Value),
 
     /// An identifier expression.
     Ident(String),

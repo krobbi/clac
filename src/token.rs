@@ -1,10 +1,12 @@
 use std::fmt;
 
+use crate::value::Value;
+
 /// A syntactic element of source code.
 #[derive(Debug)]
 pub enum Token {
     /// A literal value.
-    Literal(f64),
+    Literal(Value),
 
     /// An identifier.
     Ident(String),

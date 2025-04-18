@@ -4,6 +4,7 @@ mod lexer;
 mod parser;
 mod runtime;
 mod token;
+mod value;
 
 use std::{
     env,

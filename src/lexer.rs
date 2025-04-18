@@ -1,6 +1,6 @@
 use std::{error, fmt, iter, str};
 
-use crate::token::Token;
+use crate::{token::Token, value::Value};
 
 /// A structure that generates a stream of tokens from source code.
 pub struct Lexer<'a> {
@@ -56,7 +56,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Token::Literal(number.parse().unwrap())
+        Token::Literal(Value::Number(number.parse().unwrap()))
     }
 
     /// Creates a new identifier token from its first character.

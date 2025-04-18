@@ -10,13 +10,13 @@ pub enum BinOp {
     Add,
 
     /// A subtraction operator.
-    Subtract,
+    Sub,
 
     /// A multiplication operator.
-    Multiply,
+    Mul,
 
     /// A division operator.
-    Divide,
+    Div,
 }
 
 impl BinOp {
@@ -24,8 +24,8 @@ impl BinOp {
     pub fn prec(self) -> Prec {
         match self {
             Self::Assign => Prec::Assignment,
-            Self::Add | Self::Subtract => Prec::Sum,
-            Self::Multiply | Self::Divide => Prec::Term,
+            Self::Add | Self::Sub => Prec::Sum,
+            Self::Mul | Self::Div => Prec::Term,
         }
     }
 
@@ -45,9 +45,9 @@ impl TryFrom<&Token> for BinOp {
         match value {
             Token::Eq => Ok(Self::Assign),
             Token::Plus => Ok(Self::Add),
-            Token::Minus => Ok(Self::Subtract),
-            Token::Star => Ok(Self::Multiply),
-            Token::Slash => Ok(Self::Divide),
+            Token::Minus => Ok(Self::Sub),
+            Token::Star => Ok(Self::Mul),
+            Token::Slash => Ok(Self::Div),
             _ => Err(()),
         }
     }
