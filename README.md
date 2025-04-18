@@ -21,20 +21,45 @@ manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
 
 # Language
 Clac aims to implement a language that is somewhere between a calculator and a
-small scripting language. A Clac program consists of zero or more expressions,
-which are evaluated and printed in sequence:
+small scripting language. A Clac program consists of zero or more expressions:
 ```
-clac> 1 + 2 * 3  (1 + 2) * 3
-7
-9
+clac> 1.5 + 2 * 3  (1.5 + 2) * 3
+7.5
+10.5
 ```
 
+The expressions are evaluated in sequence, and their returned values are
+printed.
+
+## Data Types
+The Clac language is dynamically typed. Expressions can return different types
+of values, and the types are only checked at runtime when it is necessary to do
+so. There are currently 2 data types:
+
+### Number
+The number type is the fundamental type of the Clac language. The type holds a
+64-bit floating-point number, which is mostly used for evaluating mathematical
+expressions.
+
+### Void
+The void type holds no value. The type exists to allow statements
+(statements return no value and are called to use their side-effects) to be
+implemented in Clac's expression-oriented language. Variable assignment, for
+example, can be considered a statement because it returns the void type.
+
+The void type has additional restrictions to enforce statement semantics that
+do not apply to the number type:
+* The void type cannot be used as an argument to an expression.
+* The void type cannot be stored in a variable.
+* The void type is not printed when it is evaluated in a program.
+
 ## Variables
-Variables can be defined or assigned with the `=` operator:
+Variables can be assigned with the `=` operator:
 ```
 clac> x = 5  x * x  x = 2 * x
-5
 25
+
+clac> x
 10
 ```
 
@@ -42,8 +67,8 @@ Variable names take the typical form of one or more ASCII letters or
 underscores, with digits being allowed after the first character. All variables
 are currently global.
 
-Variable assignments currently return their assigned value, resulting in it
-being printed. This may change in a future version.
+Variable assignments are considered statements and return the void type. This
+results in the assigned value not being printed.
 
 ## Grammar
 The [EBNF](https://en.wikipedia.org/wiki/Extended_Backus-Naur_form) grammar

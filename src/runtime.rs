@@ -18,8 +18,11 @@ impl Runtime {
 
     /// Executes a top-level expression.
     pub fn execute_expr(&mut self, expr: Expr) -> Result<(), RuntimeError> {
-        let value = self.eval_expr(expr)?;
-        println!("{value}");
+        match self.eval_expr(expr)? {
+            Value::Void => {}
+            value @ Value::Number(_) => println!("{value}"),
+        }
+
         Ok(())
     }
 
@@ -28,8 +31,16 @@ impl Runtime {
         match expr {
             Expr::Literal(value) => Ok(value),
             Expr::Ident(name) => self.eval_ident(name),
-            Expr::Negate(expr) => Ok(-self.eval_expr(*expr)?),
+            Expr::Negate(rhs) => self.eval_negate(*rhs),
             Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
+        }
+    }
+
+    /// Evaluates an expression as an argument that cannot be the void type.
+    fn eval_arg(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
+        match self.eval_expr(expr) {
+            Ok(Value::Void) => Err(RuntimeError::VoidArgument),
+            value => value,
         }
     }
 
@@ -41,12 +52,18 @@ impl Runtime {
         }
     }
 
+    /// Evaluates a unary negation expression.
+    fn eval_negate(&mut self, rhs: Expr) -> Result<Value, RuntimeError> {
+        let rhs = self.eval_expr(rhs)?;
+        -rhs
+    }
+
     /// Evaluates a binary expression.
     fn eval_binary(&mut self, lhs: Expr, op: BinOp, rhs: Expr) -> Result<Value, RuntimeError> {
         // Assignment is handled as a special case because its operands cannot
         // be eagerly evaluated. The left-hand-side is an assignment target, not
-        // an actual expression. The right-hand-side should only be evaluated if
-        // the target is a variable.
+        // an actual expression. The right-hand-side is only evaluated after the
+        // target is validated as a variable.
         if let BinOp::Assign = op {
             return self.eval_assignment(lhs, rhs);
         }
@@ -54,21 +71,21 @@ impl Runtime {
         let lhs = self.eval_expr(lhs)?;
         let rhs = self.eval_expr(rhs)?;
 
-        Ok(match op {
+        match op {
             BinOp::Assign => unreachable!(),
             BinOp::Add => lhs + rhs,
             BinOp::Sub => lhs - rhs,
             BinOp::Mul => lhs * rhs,
             BinOp::Div => lhs / rhs,
-        })
+        }
     }
 
     /// Evaluates an assignment expression.
     fn eval_assignment(&mut self, target: Expr, source: Expr) -> Result<Value, RuntimeError> {
         if let Expr::Ident(name) = target {
-            let value = self.eval_expr(source)?;
-            self.variables.insert(name, value.clone());
-            Ok(value)
+            let value = self.eval_arg(source)?;
+            self.variables.insert(name, value);
+            Ok(Value::Void)
         } else {
             Err(RuntimeError::NonVariableAssignment)
         }
@@ -83,6 +100,9 @@ pub enum RuntimeError {
 
     /// A non-variable assignment target was assigned to.
     NonVariableAssignment,
+
+    /// The void type was used as an argument.
+    VoidArgument,
 }
 
 impl error::Error for RuntimeError {}
@@ -92,16 +112,18 @@ impl fmt::Display for RuntimeError {
         match self {
             Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
             Self::NonVariableAssignment => write!(f, "assigned to a non-variable"),
+            Self::VoidArgument => write!(f, "used the void type as an argument"),
         }
     }
 }
 
 impl ops::Neg for Value {
-    type Output = Self;
+    type Output = Result<Self, RuntimeError>;
 
     fn neg(self) -> Self::Output {
         match self {
-            Self::Number(rhs) => Self::Number(-rhs),
+            Self::Void => Err(RuntimeError::VoidArgument),
+            Self::Number(rhs) => Ok(Self::Number(-rhs)),
         }
     }
 }
@@ -109,11 +131,12 @@ impl ops::Neg for Value {
 macro_rules! value_binop_impl {
     ($trait:path, $fn:ident, $op:tt) => {
         impl $trait for Value {
-            type Output = Self;
+            type Output = Result<Self, RuntimeError>;
 
             fn $fn(self, rhs: Self) -> Self::Output {
                 match (self, rhs) {
-                    (Value::Number(lhs), Value::Number(rhs)) => Value::Number(lhs $op rhs),
+                    (Value::Void, _) | (_, Value::Void) => Err(RuntimeError::VoidArgument),
+                    (Value::Number(lhs), Value::Number(rhs)) => Ok(Value::Number(lhs $op rhs)),
                 }
             }
         }

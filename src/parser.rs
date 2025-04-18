@@ -120,8 +120,8 @@ impl<'a> Parser<'a> {
                 Ok(expr)
             }
             Token::Minus => {
-                let expr = self.parse_atom()?;
-                Ok(Expr::Negate(Box::new(expr)))
+                let rhs = self.parse_atom()?;
+                Ok(Expr::Negate(Box::new(rhs)))
             }
             t => Err(ParseError::NonExpression(t)),
         }
