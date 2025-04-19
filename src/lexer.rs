@@ -32,6 +32,7 @@ impl<'a> Lexer<'a> {
             '(' => Ok(Token::OpenParen),
             ')' => Ok(Token::CloseParen),
             '=' => Ok(Token::Eq),
+            ',' => Ok(Token::Comma),
             '+' => Ok(Token::Plus),
             '-' => Ok(Token::Minus),
             '*' => Ok(Token::Star),

@@ -21,9 +21,10 @@ manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
 
 # Language
 Clac aims to implement a language that is somewhere between a calculator and a
-small scripting language. A Clac program consists of zero or more expressions:
+small scripting language. A Clac program consists of zero or more expressions
+separated by commas:
 ```
-clac> 1.5 + 2 * 3  (1.5 + 2) * 3
+clac> 1.5 + 2 * 3, (1.5 + 2) * 3
 7.5
 10.5
 ```
@@ -56,7 +57,7 @@ do not apply to the number type:
 ## Variables
 Variables can be assigned with the `=` operator:
 ```
-clac> x = 5  x * x  x = 2 * x
+clac> x = 5, x * x, x = 2 * x
 25
 
 clac> x
@@ -74,13 +75,8 @@ results in the assigned value not being printed.
 The [EBNF](https://en.wikipedia.org/wiki/Extended_Backus-Naur_form) grammar
 below is a reference for the language's syntax:
 ```EBNF
-(* Clac Language Reference Grammar *)
-
-(* A program is the CLI arguments space-delimited, or a REPL line. *)
-program = { expr }, Eof ;
-
-(* Every item in a program is parsed as an expression. The `expr` rule is used
-as shorthand for the lowest precedence expression. *)
+program = sequence, Eof ;
+sequence = [ expr, { ",", expr } ] ;
 expr = infix ;
 
 (* An infix expression is an expression with an operand on each side of a

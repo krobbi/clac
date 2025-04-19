@@ -66,16 +66,29 @@ impl<'a> Parser<'a> {
 
     /// Parses a program.
     fn parse_program(&mut self) -> Result<Vec<Expr>, ParseError> {
-        let mut program = vec![];
-
-        while !self.check(&Token::Eof)? {
-            program.push(self.parse_expr()?);
-        }
-
+        let program = self.parse_sequence(&Token::Eof)?;
+        self.expect(Token::Eof)?;
         Ok(program)
     }
 
-    /// Parses a top-level expression.
+    /// Parses a sequence.
+    fn parse_sequence(&mut self, terminator: &Token) -> Result<Vec<Expr>, ParseError> {
+        let mut sequence = vec![];
+
+        if self.check(terminator)? {
+            return Ok(sequence);
+        }
+
+        loop {
+            sequence.push(self.parse_expr()?);
+
+            if !self.eat(&Token::Comma)? {
+                break Ok(sequence);
+            }
+        }
+    }
+
+    /// Parses an expression.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
         self.parse_infix(0)
     }
@@ -145,13 +158,24 @@ impl<'a> Parser<'a> {
         Ok(mem::discriminant(self.peek()?) == mem::discriminant(kind))
     }
 
+    /// Consumes the next token if it matches a token kind and returns whether
+    /// it was consumed.
+    fn eat(&mut self, kind: &Token) -> Result<bool, LexError> {
+        let is_match = self.check(kind)?;
+
+        if is_match {
+            self.next()?;
+        }
+
+        Ok(is_match)
+    }
+
     /// Consumes the next token with an expected token kind.
     fn expect(&mut self, expected: Token) -> Result<(), ParseError> {
-        let actual = self.next()?;
-
-        if mem::discriminant(&actual) == mem::discriminant(&expected) {
+        if self.eat(&expected)? {
             Ok(())
         } else {
+            let actual = self.next()?;
             Err(ParseError::Unexpected { expected, actual })
         }
     }

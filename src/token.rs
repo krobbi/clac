@@ -17,6 +17,9 @@ pub enum Token {
     /// A closing parenthesis `)`.
     CloseParen,
 
+    /// A comma `,`.
+    Comma,
+
     /// An equals sign `=`.
     Eq,
 
@@ -43,6 +46,7 @@ impl fmt::Display for Token {
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             Self::OpenParen => write!(f, "opening '('"),
             Self::CloseParen => write!(f, "closing ')'"),
+            Self::Comma => write!(f, "','"),
             Self::Eq => write!(f, "'='"),
             Self::Plus => write!(f, "'+'"),
             Self::Minus => write!(f, "'-'"),
