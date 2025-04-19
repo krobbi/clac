@@ -29,13 +29,12 @@ clac> 1.5 + 2 * 3, (1.5 + 2) * 3
 10.5
 ```
 
-The expressions are evaluated in sequence, and their returned values are
-printed.
+The expressions are evaluated in order, and their returned values are printed.
 
-## Data Types
+## Types
 The Clac language is dynamically typed. Expressions can return different types
 of values, and the types are only checked at runtime when it is necessary to do
-so. There are currently 2 data types:
+so. There are currently 2 types:
 
 ### Number
 The number type is the fundamental type of the Clac language. The type holds a
@@ -43,16 +42,15 @@ The number type is the fundamental type of the Clac language. The type holds a
 expressions.
 
 ### Void
-The void type holds no value. The type exists to allow statements
-(statements return no value and are called to use their side-effects) to be
-implemented in Clac's expression-oriented language. Variable assignment, for
-example, can be considered a statement because it returns the void type.
+The void type holds no value. Void can be returned by expressions to represent
+returning no value.
 
-The void type has additional restrictions to enforce statement semantics that
-do not apply to the number type:
-* The void type cannot be used as an argument to an expression.
-* The void type cannot be stored in a variable.
-* The void type is not printed when it is evaluated in a program.
+To reinforce the concept of having no value, the void type has restrictions
+that do not apply to other types:
+* Void cannot be passed as an argument to an operator.
+* Void cannot be stored in a variable.
+* Void cannot be printed.
+* Void cannot be constructed with a literal value.
 
 ## Variables
 Variables can be assigned with the `=` operator:
@@ -64,33 +62,27 @@ clac> x
 10
 ```
 
-Variable names take the typical form of one or more ASCII letters or
-underscores, with digits being allowed after the first character. All variables
-are currently global.
+Variable assignments are not printed because they do not return a value. This
+also means that variable assignments cannot be chained:
+```
+clac> x = y = 1
+Runtime error: cannot use void as an argument
+```
 
-Variable assignments are considered statements and return the void type. This
-results in the assigned value not being printed.
+Variable names consist of one or more ASCII letters or underscores with digits
+allowed after the first character. All variables are global.
 
 ## Grammar
-The [EBNF](https://en.wikipedia.org/wiki/Extended_Backus-Naur_form) grammar
-below is a reference for the language's syntax:
 ```EBNF
 program = sequence, Eof ;
 sequence = [ expr, { ",", expr } ] ;
 expr = infix ;
 
-(* An infix expression is an expression with an operand on each side of a
-single operator. Infix expressions are grouped based on the mathematical order
-of operations and conventions from other languages. The implementation uses
-precedence climbing for these rules for better maintainability. *)
 infix            = infix_assignment ;
 infix_assignment = infix_sum, [ "=", infix_assignment ] ;
 infix_sum        = infix_term, { ( "+" | "-" ), infix_term } ;
 infix_term       = atom, { ( "*" | "/" ), atom } ;
 
-(* An atom is a high-precedence expression that can be used inside any infix
-expression without needing parentheses. The implementation merges these rules
-into one function for smaller code size and better performance. *)
 atom         = atom_prefix ;
 atom_prefix  = "-", atom_prefix | atom_primary ;
 atom_primary = "(", expr, ")" | Literal | Ident ;

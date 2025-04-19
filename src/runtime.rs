@@ -36,7 +36,7 @@ impl Runtime {
         }
     }
 
-    /// Evaluates an expression as an argument that cannot be the void type.
+    /// Evaluates an expression as an argument that cannot be void.
     fn eval_arg(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
         match self.eval_expr(expr) {
             Ok(Value::Void) => Err(RuntimeError::VoidArgument),
@@ -101,7 +101,7 @@ pub enum RuntimeError {
     /// A non-variable assignment target was assigned to.
     NonVariableAssignment,
 
-    /// The void type was used as an argument.
+    /// Void was used as an argument.
     VoidArgument,
 }
 
@@ -111,8 +111,8 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
-            Self::NonVariableAssignment => write!(f, "assigned to a non-variable"),
-            Self::VoidArgument => write!(f, "used the void type as an argument"),
+            Self::NonVariableAssignment => f.write_str("cannot assign to a non-variable"),
+            Self::VoidArgument => f.write_str("cannot use void as an argument"),
         }
     }
 }
