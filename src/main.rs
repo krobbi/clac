@@ -39,7 +39,7 @@ fn run_repl(runtime: &mut Runtime) {
     #[cfg(not(target_os = "windows"))]
     const EXIT_SHORTCUT: &str = "Ctrl+D";
 
-    println!("Clac - command-line calculator\nEnter `{EXIT_SHORTCUT}` to exit.");
+    println!("Clac - command-line calculator\nEnter [{EXIT_SHORTCUT}] to exit.");
 
     let mut source = String::new();
 
@@ -57,7 +57,7 @@ fn run_repl(runtime: &mut Runtime) {
         execute_source(&source, runtime);
     }
 
-    println!("\nReceived `{EXIT_SHORTCUT}`, exiting...");
+    println!("\nReceived [{EXIT_SHORTCUT}], exiting...");
 }
 
 /// Executes Clac source code with a runtime environment.
