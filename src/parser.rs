@@ -66,26 +66,27 @@ impl<'a> Parser<'a> {
 
     /// Parses a program.
     fn parse_program(&mut self) -> Result<Vec<Expr>, ParseError> {
-        let program = self.parse_sequence(&Token::Eof)?;
-        self.expect(Token::Eof)?;
-        Ok(program)
+        self.parse_sequence(Token::Eof)
     }
 
-    /// Parses a sequence.
-    fn parse_sequence(&mut self, terminator: &Token) -> Result<Vec<Expr>, ParseError> {
-        let mut sequence = vec![];
+    /// Parses a sequence of expressions and consumes its terminator.
+    fn parse_sequence(&mut self, terminator: Token) -> Result<Vec<Expr>, ParseError> {
+        let mut exprs = vec![];
 
-        if self.check(terminator)? {
-            return Ok(sequence);
+        if self.eat(&terminator)? {
+            return Ok(exprs);
         }
 
         loop {
-            sequence.push(self.parse_expr()?);
+            exprs.push(self.parse_expr()?);
 
             if !self.eat(&Token::Comma)? {
-                break Ok(sequence);
+                break;
             }
         }
+
+        self.expect(terminator)?;
+        Ok(exprs)
     }
 
     /// Parses an expression.
