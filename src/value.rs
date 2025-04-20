@@ -13,7 +13,7 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Void => write!(f, ""),
+            Self::Void => unreachable!(),
             Self::Number(value) => value.fmt(f),
         }
     }

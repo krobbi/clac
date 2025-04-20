@@ -42,7 +42,8 @@ pub enum Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Literal(value) => write!(f, "literal '{value}'"),
+            Self::Literal(Value::Void) => unreachable!(),
+            Self::Literal(value @ Value::Number(_)) => write!(f, "number '{value}'"),
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             Self::OpenParen => write!(f, "opening '('"),
             Self::CloseParen => write!(f, "closing ')'"),
