@@ -8,6 +8,9 @@ pub enum Expr {
     /// An identifier expression.
     Ident(String),
 
+    /// A block expression.
+    Block(Vec<Expr>),
+
     /// A unary negation expression.
     Negate(Box<Expr>),
 

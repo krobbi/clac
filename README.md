@@ -78,6 +78,23 @@ clac> y
 Variable names consist of one or more ASCII letters or underscores with digits
 allowed after the first character. All variables are global.
 
+## Blocks
+Zero or more expressions can be grouped into a block by surrounding them with
+curly braces and separating them with commas:
+```
+clac> {}
+
+clac> {1}
+1
+
+clac> {1, 2, 3}
+3
+```
+
+The expressions in the block are evaluated in order and the value returned by
+the last expression is returned by the block. If the block is empty or the last
+expression does not return a value, the block will not return a value.
+
 ## Grammar
 ```EBNF
 program = sequence, Eof ;
@@ -91,7 +108,7 @@ infix_term       = atom, { ( "*" | "/" ), atom } ;
 
 atom         = atom_prefix ;
 atom_prefix  = "-", atom_prefix | atom_primary ;
-atom_primary = "(", expr, ")" | Literal | Ident ;
+atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 ```
 
 # Goals

@@ -17,6 +17,12 @@ pub enum Token {
     /// A closing parenthesis `)`.
     CloseParen,
 
+    /// An opening brace `{`.
+    OpenBrace,
+
+    /// A closing brace `}`.
+    CloseBrace,
+
     /// A comma `,`.
     Comma,
 
@@ -47,6 +53,8 @@ impl fmt::Display for Token {
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             Self::OpenParen => f.write_str("'('"),
             Self::CloseParen => f.write_str("')'"),
+            Self::OpenBrace => f.write_str("'{'"),
+            Self::CloseBrace => f.write_str("'}'"),
             Self::Comma => f.write_str("','"),
             Self::Eq => f.write_str("'='"),
             Self::Plus => f.write_str("'+'"),

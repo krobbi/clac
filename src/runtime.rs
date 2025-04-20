@@ -31,6 +31,7 @@ impl Runtime {
         match expr {
             Expr::Literal(value) => Ok(value),
             Expr::Ident(name) => self.eval_ident(name),
+            Expr::Block(exprs) => self.eval_block(exprs),
             Expr::Negate(rhs) => self.eval_negate(*rhs),
             Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
         }
@@ -49,6 +50,20 @@ impl Runtime {
         match self.variables.get(&name).cloned() {
             None => Err(RuntimeError::UndefinedVariable(name)),
             Some(value) => Ok(value),
+        }
+    }
+
+    /// Evaluates a block expression.
+    fn eval_block(&mut self, mut exprs: Vec<Expr>) -> Result<Value, RuntimeError> {
+        match exprs.pop() {
+            None => Ok(Value::Void),
+            Some(last_expr) => {
+                for expr in exprs {
+                    self.eval_expr(expr)?;
+                }
+
+                self.eval_expr(last_expr)
+            }
         }
     }
 

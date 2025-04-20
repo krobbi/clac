@@ -133,6 +133,7 @@ impl<'a> Parser<'a> {
                 self.expect(Token::CloseParen)?;
                 Ok(expr)
             }
+            Token::OpenBrace => Ok(Expr::Block(self.parse_sequence(Token::CloseBrace)?)),
             Token::Minus => {
                 let rhs = self.parse_atom()?;
                 Ok(Expr::Negate(Box::new(rhs)))
