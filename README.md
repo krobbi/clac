@@ -67,6 +67,12 @@ also means that variable assignments cannot be chained:
 ```
 clac> x = y = 1
 Runtime error: cannot use void as an argument
+
+clac> x
+Runtime error: variable 'x' is undefined
+
+clac> y
+1
 ```
 
 Variable names consist of one or more ASCII letters or underscores with digits
