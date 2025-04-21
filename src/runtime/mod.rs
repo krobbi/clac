@@ -47,6 +47,7 @@ impl Runtime {
             Expr::Literal(value) => Ok(value),
             Expr::Ident(name) => self.eval_ident(name),
             Expr::Block(exprs) => self.eval_block(exprs),
+            Expr::Call { callee, args } => self.eval_call(*callee, args),
             Expr::Negate(rhs) => self.eval_negate(*rhs),
             Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
         }
@@ -90,6 +91,20 @@ impl Runtime {
                 result
             }
         }
+    }
+
+    /// Evaluates a call expression.
+    fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> Result<Value, RuntimeError> {
+        println!("TODO: Implement calls.");
+        let callee = self.eval_arg(callee)?;
+        println!("Called '{callee}'");
+
+        for arg in args {
+            let arg = self.eval_arg(arg)?;
+            println!("* With argument '{arg}'");
+        }
+
+        Ok(Value::Void)
     }
 
     /// Evaluates a unary negation expression.

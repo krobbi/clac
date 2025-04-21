@@ -62,21 +62,32 @@ impl<'a> Parser<'a> {
 
     /// Parses an atom expression.
     fn parse_atom(&mut self) -> Result<Expr, SyntaxError> {
-        match self.next()? {
-            Token::Literal(value) => Ok(Expr::Literal(value)),
-            Token::Ident(name) => Ok(Expr::Ident(name)),
+        let mut callee = match self.next()? {
+            Token::Literal(value) => Expr::Literal(value),
+            Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
                 self.expect(Token::CloseParen)?;
-                Ok(expr)
+                expr
             }
-            Token::OpenBrace => Ok(Expr::Block(self.parse_sequence(Token::CloseBrace)?)),
+            Token::OpenBrace => Expr::Block(self.parse_sequence(Token::CloseBrace)?),
             Token::Minus => {
                 let rhs = self.parse_atom()?;
-                Ok(Expr::Negate(Box::new(rhs)))
+                Expr::Negate(Box::new(rhs))
             }
-            token => Err(SyntaxError::ExpectedExpr(token)),
+            token => return Err(SyntaxError::ExpectedExpr(token)),
+        };
+
+        while self.eat(&Token::OpenParen)? {
+            let args = self.parse_sequence(Token::CloseParen)?;
+
+            callee = Expr::Call {
+                callee: Box::new(callee),
+                args,
+            };
         }
+
+        Ok(callee)
     }
 
     /// Returns the next token without consuming it.

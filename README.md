@@ -114,6 +114,21 @@ clac> shadow = 0, {shadow = 1}, shadow
 1
 ```
 
+## Functions
+Functions can be called by following a function expression with zero or more
+arguments surrounded by parentheses and separated by commas:
+```
+clac> 1(2, 3, 4)
+TODO: Implement calls.
+Called '1'
+* With argument '2'
+* With argument '3'
+* With argument '4'
+```
+
+Functions do not yet exist in the Clac language, so a number value has to be
+called as a placeholder.
+
 ## Grammar
 ```EBNF
 program = sequence, Eof ;
@@ -126,7 +141,8 @@ infix_sum        = infix_term, { ( "+" | "-" ), infix_term } ;
 infix_term       = atom, { ( "*" | "/" ), atom } ;
 
 atom         = atom_prefix ;
-atom_prefix  = "-", atom_prefix | atom_primary ;
+atom_prefix  = "-", atom_prefix | atom_call ;
+atom_call    = atom_primary, { "(", sequence, ")" } ;
 atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 ```
 
@@ -137,7 +153,8 @@ atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 * [x] Parse expressions from tokens.
 * [x] Evaluate expressions.
 * [x] Allow variables to be defined and used.
-* [ ] Allow functions to be defined and used.
+* [x] Allow functions to be called.
+* [ ] Allow functions to be defined.
 * [ ] Add a library of intrinsic variables and functions (pi, sine, etc.)
 
 # Credits

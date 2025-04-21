@@ -11,6 +11,9 @@ pub enum Expr {
     /// A block expression.
     Block(Vec<Expr>),
 
+    /// A call expression.
+    Call { callee: Box<Expr>, args: Vec<Expr> },
+
     /// A unary negation expression.
     Negate(Box<Expr>),
 
