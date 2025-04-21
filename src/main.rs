@@ -65,12 +65,12 @@ fn execute_source(source: &str, runtime: &mut Runtime) {
     match parser::parse_source(source) {
         Ok(program) => {
             for expr in program {
-                if let Err(e) = runtime.execute_expr(expr) {
-                    eprintln!("Runtime error: {e}");
+                if let Err(error) = runtime.execute_expr(expr) {
+                    eprintln!("Runtime error: {error}");
                     return;
                 }
             }
         }
-        Err(e) => eprintln!("Syntax error: {e}"),
+        Err(error) => eprintln!("Syntax error: {error}"),
     }
 }

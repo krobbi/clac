@@ -28,7 +28,7 @@ pub enum ParseError {
 impl error::Error for ParseError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            Self::Lex(e) => Some(e),
+            Self::Lex(error) => Some(error),
             _ => None,
         }
     }
@@ -37,9 +37,9 @@ impl error::Error for ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Lex(e) => e.fmt(f),
+            Self::Lex(error) => error.fmt(f),
             Self::Unexpected { expected, actual } => write!(f, "expected {expected}, got {actual}"),
-            Self::NonExpression(t) => write!(f, "expected an expression, got {t}"),
+            Self::NonExpression(token) => write!(f, "expected an expression, got {token}"),
         }
     }
 }
@@ -138,15 +138,15 @@ impl<'a> Parser<'a> {
                 let rhs = self.parse_atom()?;
                 Ok(Expr::Negate(Box::new(rhs)))
             }
-            t => Err(ParseError::NonExpression(t)),
+            token => Err(ParseError::NonExpression(token)),
         }
     }
 
     /// Returns the next token without consuming it.
     fn peek(&mut self) -> Result<&Token, LexError> {
         match self.lexer.peek().unwrap() {
-            Ok(t) => Ok(t),
-            Err(e) => Err(e.clone()),
+            Ok(token) => Ok(token),
+            Err(error) => Err(error.clone()),
         }
     }
 
