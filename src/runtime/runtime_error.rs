@@ -9,8 +9,8 @@ pub enum RuntimeError {
     /// A non-variable assignment target was assigned to.
     NonVariableAssignment,
 
-    /// Void was used as an argument.
-    VoidArgument,
+    /// Void was used as a value.
+    VoidValue,
 }
 
 impl error::Error for RuntimeError {}
@@ -20,7 +20,7 @@ impl fmt::Display for RuntimeError {
         match self {
             Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
             Self::NonVariableAssignment => f.write_str("cannot assign to a non-variable"),
-            Self::VoidArgument => f.write_str("cannot use void as an argument"),
+            Self::VoidValue => f.write_str("cannot use void as a value"),
         }
     }
 }

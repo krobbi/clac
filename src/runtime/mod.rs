@@ -8,6 +8,9 @@ use value::Value;
 
 use crate::ast::{BinOp, Expr};
 
+/// The result of evaluating a voidable expression.
+type EvalResult = Result<Option<Value>, RuntimeError>;
+
 /// The runtime environment of a Clac program.
 pub struct Runtime {
     /// The scope stack.
@@ -24,9 +27,8 @@ impl Runtime {
 
     /// Executes a top-level expression.
     pub fn execute_expr(&mut self, expr: Expr) -> Result<(), RuntimeError> {
-        match self.eval_expr(expr)? {
-            Value::Void => {}
-            value @ Value::Number(_) => println!("{value}"),
+        if let Some(value) = self.eval_voidable(expr)? {
+            println!("{value}");
         }
 
         Ok(())
@@ -42,31 +44,32 @@ impl Runtime {
         self.scopes.pop();
     }
 
-    /// Evaluates an expression.
-    fn eval_expr(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
+    /// Evaluates a voidable expression.
+    fn eval_voidable(&mut self, expr: Expr) -> EvalResult {
         match expr {
-            Expr::Literal(literal) => Ok(literal.into()),
+            Expr::Literal(literal) => Ok(Some(literal.into())),
             Expr::Ident(name) => self.eval_ident(name),
             Expr::Block(exprs) => self.eval_block(exprs),
             Expr::Call { callee, args } => self.eval_call(*callee, args),
-            Expr::Negate(rhs) => self.eval_negate(*rhs),
+            Expr::Negate(rhs) => Ok(Some(-self.eval_value(*rhs)?)),
             Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
         }
     }
 
-    /// Evaluates an expression as an argument that cannot be void.
-    fn eval_arg(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
-        match self.eval_expr(expr) {
-            Ok(Value::Void) => Err(RuntimeError::VoidArgument),
-            value => value,
+    /// Evaluates a non-voidable expression.
+    fn eval_value(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
+        match self.eval_voidable(expr) {
+            Ok(None) => Err(RuntimeError::VoidValue),
+            Ok(Some(value)) => Ok(value),
+            Err(error) => Err(error),
         }
     }
 
     /// Evaluates an identifier expression.
-    fn eval_ident(&self, name: String) -> Result<Value, RuntimeError> {
+    fn eval_ident(&self, name: String) -> EvalResult {
         for scope in self.scopes.iter().rev() {
             if let Some(value) = scope.get(&name) {
-                return Ok(value.clone());
+                return Ok(Some(value.clone()));
             }
         }
 
@@ -74,20 +77,20 @@ impl Runtime {
     }
 
     /// Evaluates a block expression.
-    fn eval_block(&mut self, mut exprs: Vec<Expr>) -> Result<Value, RuntimeError> {
+    fn eval_block(&mut self, mut exprs: Vec<Expr>) -> EvalResult {
         match exprs.pop() {
-            None => Ok(Value::Void),
+            None => Ok(None),
             Some(last_expr) => {
                 self.push_scope();
 
                 for expr in exprs {
-                    if let Err(error) = self.eval_expr(expr) {
+                    if let Err(error) = self.eval_voidable(expr) {
                         self.pop_scope();
                         return Err(error);
                     }
                 }
 
-                let result = self.eval_expr(last_expr);
+                let result = self.eval_voidable(last_expr);
                 self.pop_scope();
                 result
             }
@@ -95,27 +98,21 @@ impl Runtime {
     }
 
     /// Evaluates a call expression.
-    fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> Result<Value, RuntimeError> {
+    fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> EvalResult {
         println!("TODO: Implement calls.");
-        let callee = self.eval_arg(callee)?;
+        let callee = self.eval_value(callee)?;
         println!("Called '{callee}'");
 
         for arg in args {
-            let arg = self.eval_arg(arg)?;
+            let arg = self.eval_value(arg)?;
             println!("* With argument '{arg}'");
         }
 
-        Ok(Value::Void)
-    }
-
-    /// Evaluates a unary negation expression.
-    fn eval_negate(&mut self, rhs: Expr) -> Result<Value, RuntimeError> {
-        let rhs = self.eval_expr(rhs)?;
-        -rhs
+        Ok(None)
     }
 
     /// Evaluates a binary expression.
-    fn eval_binary(&mut self, lhs: Expr, op: BinOp, rhs: Expr) -> Result<Value, RuntimeError> {
+    fn eval_binary(&mut self, lhs: Expr, op: BinOp, rhs: Expr) -> EvalResult {
         // Assignment is handled as a special case because its operands cannot
         // be eagerly evaluated. The left-hand-side is an assignment target, not
         // an actual expression. The right-hand-side is only evaluated after the
@@ -124,32 +121,32 @@ impl Runtime {
             return self.eval_assignment(lhs, rhs);
         }
 
-        let lhs = self.eval_expr(lhs)?;
-        let rhs = self.eval_expr(rhs)?;
+        let lhs = self.eval_value(lhs)?;
+        let rhs = self.eval_value(rhs)?;
 
-        match op {
+        Ok(Some(match op {
             BinOp::Assign => unreachable!(),
             BinOp::Add => lhs + rhs,
             BinOp::Sub => lhs - rhs,
             BinOp::Mul => lhs * rhs,
             BinOp::Div => lhs / rhs,
-        }
+        }))
     }
 
     /// Evaluates an assignment expression.
-    fn eval_assignment(&mut self, target: Expr, source: Expr) -> Result<Value, RuntimeError> {
+    fn eval_assignment(&mut self, target: Expr, source: Expr) -> EvalResult {
         if let Expr::Ident(name) = target {
-            let value = self.eval_arg(source)?;
+            let value = self.eval_value(source)?;
 
             for scope in self.scopes.iter_mut().rev() {
                 if let Some(variable) = scope.get_mut(&name) {
                     *variable = value;
-                    return Ok(Value::Void);
+                    return Ok(None);
                 }
             }
 
             self.scopes.last_mut().unwrap().insert(name, value);
-            Ok(Value::Void)
+            Ok(None)
         } else {
             Err(RuntimeError::NonVariableAssignment)
         }

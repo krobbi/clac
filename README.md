@@ -42,15 +42,13 @@ The number type is the fundamental type of the Clac language. The type holds a
 expressions.
 
 ### Void
-The void type holds no value. Void can be returned by expressions to represent
-returning no value.
+Void is the type of no value. Some expressions may return no value to indicate
+a side-effect or a lack of a meaningful value to return.
 
-To reinforce the concept of having no value, the void type has restrictions
-that do not apply to other types:
-* Void cannot be passed as an argument to an operator or a function.
+The void type has some restrictions that do not apply to other types:
+* Void cannot be used as a value in an expression's input.
 * Void cannot be stored in a variable.
-* Void cannot be printed.
-* Void cannot be constructed with a literal value.
+* Void is not printed when it is returned from a top-level expression.
 
 ## Variables
 Variables can be declared or assigned with the `=` operator:
@@ -66,7 +64,7 @@ Variable assignments are not printed because they do not return a value. This
 also means that variable assignments cannot be chained:
 ```
 clac> x = y = 1
-Runtime error: cannot use void as an argument
+Runtime error: cannot use void as a value
 
 clac> x
 Runtime error: variable 'x' is undefined
