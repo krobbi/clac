@@ -1,3 +1,4 @@
+mod builtins;
 mod runtime_error;
 mod value;
 
@@ -20,8 +21,11 @@ pub struct Runtime {
 impl Runtime {
     /// Creates a new runtime environment.
     pub fn new() -> Self {
+        let mut global_scope = HashMap::new();
+        global_scope.insert("sqrt".to_string(), Value::Builtin(builtins::builtin_sqrt));
+
         Self {
-            scopes: vec![HashMap::new()],
+            scopes: vec![global_scope],
         }
     }
 
@@ -51,7 +55,7 @@ impl Runtime {
             Expr::Ident(name) => self.eval_ident(name),
             Expr::Block(exprs) => self.eval_block(exprs),
             Expr::Call { callee, args } => self.eval_call(*callee, args),
-            Expr::Negate(rhs) => Ok(Some(-self.eval_value(*rhs)?)),
+            Expr::Negate(rhs) => (-self.eval_value(*rhs)?).map(Some),
             Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
         }
     }
@@ -99,16 +103,17 @@ impl Runtime {
 
     /// Evaluates a call expression.
     fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> EvalResult {
-        println!("TODO: Implement calls.");
         let callee = self.eval_value(callee)?;
-        println!("Called '{callee}'");
+        let mut arg_values = Vec::with_capacity(args.len());
 
         for arg in args {
-            let arg = self.eval_value(arg)?;
-            println!("* With argument '{arg}'");
+            arg_values.push(self.eval_value(arg)?);
         }
 
-        Ok(None)
+        match callee {
+            Value::Number(_) => Err(RuntimeError::NonFunctionCall),
+            Value::Builtin(function) => function(&arg_values),
+        }
     }
 
     /// Evaluates a binary expression.
@@ -124,13 +129,14 @@ impl Runtime {
         let lhs = self.eval_value(lhs)?;
         let rhs = self.eval_value(rhs)?;
 
-        Ok(Some(match op {
+        match op {
             BinOp::Assign => unreachable!(),
             BinOp::Add => lhs + rhs,
             BinOp::Sub => lhs - rhs,
             BinOp::Mul => lhs * rhs,
             BinOp::Div => lhs / rhs,
-        }))
+        }
+        .map(Some)
     }
 
     /// Evaluates an assignment expression.

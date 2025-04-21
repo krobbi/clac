@@ -34,12 +34,17 @@ The expressions are evaluated in order, and their returned values are printed.
 ## Types
 The Clac language is dynamically typed. Expressions can return different types
 of values, and the types are only checked at runtime when it is necessary to do
-so. There are currently 2 types:
+so. There are currently 3 types:
 
 ### Number
 The number type is the fundamental type of the Clac language. The type holds a
 64-bit floating-point number, which is mostly used for evaluating mathematical
 expressions.
+
+### Function
+The function type holds a function that can be called with zero or more
+argument values to return an optional result value. Being a type of value
+allows functions to be passed to and returned from other functions.
 
 ### Void
 Void is the type of no value. Some expressions may return no value to indicate
@@ -116,16 +121,37 @@ clac> shadow = 0, {shadow = 1}, shadow
 Functions can be called by following a function expression with zero or more
 arguments surrounded by parentheses and separated by commas:
 ```
-clac> 1(2, 3, 4)
-TODO: Implement calls.
-Called '1'
-* With argument '2'
-* With argument '3'
-* With argument '4'
+clac> sqrt(64)
+8
 ```
 
-Functions do not yet exist in the Clac language, so a number value has to be
-called as a placeholder.
+Functions are first-class values, meaning they can be assigned to variables,
+and passed to and returned from functions. This also means that function calls
+do not need to call a function name directly:
+```
+clac> s = sqrt, s
+function
+
+clac> s(sqrt)
+Runtime error: incorrect argument types for operation
+
+clac> s()
+Runtime error: incorrect argument count for function
+
+clac> s(1, 2)
+Runtime error: incorrect argument count for function
+
+clac> {op = sqrt, op}(2)
+1.4142135623730951
+```
+
+It is not yet possible to define functions, but this is a planned feature.
+
+### Built-in Functions
+The Clac language includes built-in functions for commonly-used operations:
+| Function                    | Usage                           |
+| :-------------------------- | :------------------------------ |
+| `sqrt(n: number) -> number` | Returns the square root of `n`. |
 
 ## Grammar
 ```EBNF
@@ -153,7 +179,6 @@ atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 * [x] Allow variables to be defined and used.
 * [x] Allow functions to be called.
 * [ ] Allow functions to be defined.
-* [ ] Add a library of intrinsic variables and functions (pi, sine, etc.)
 
 # Credits
 * Infix parser based on
