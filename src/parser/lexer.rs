@@ -1,6 +1,6 @@
 use std::{iter, str};
 
-use crate::ast::Value;
+use crate::ast::Literal;
 
 use super::{syntax_error::SyntaxError, token::Token};
 
@@ -61,7 +61,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        Token::Literal(Value::Number(number.parse().unwrap()))
+        Token::Literal(Literal::Number(number.parse().unwrap()))
     }
 
     /// Creates a new identifier token from its first character.

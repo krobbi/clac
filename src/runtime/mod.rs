@@ -1,11 +1,12 @@
 mod runtime_error;
-mod value_ops;
+mod value;
 
 use std::collections::HashMap;
 
 use runtime_error::RuntimeError;
+use value::Value;
 
-use crate::ast::{BinOp, Expr, Value};
+use crate::ast::{BinOp, Expr};
 
 /// The runtime environment of a Clac program.
 pub struct Runtime {
@@ -44,7 +45,7 @@ impl Runtime {
     /// Evaluates an expression.
     fn eval_expr(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
         match expr {
-            Expr::Literal(value) => Ok(value),
+            Expr::Literal(literal) => Ok(literal.into()),
             Expr::Ident(name) => self.eval_ident(name),
             Expr::Block(exprs) => self.eval_block(exprs),
             Expr::Call { callee, args } => self.eval_call(*callee, args),

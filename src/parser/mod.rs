@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
     /// Parses an atom expression.
     fn parse_atom(&mut self) -> Result<Expr, SyntaxError> {
         let mut callee = match self.next()? {
-            Token::Literal(value) => Expr::Literal(value),
+            Token::Literal(literal) => Expr::Literal(literal),
             Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;

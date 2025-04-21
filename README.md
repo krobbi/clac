@@ -47,7 +47,7 @@ returning no value.
 
 To reinforce the concept of having no value, the void type has restrictions
 that do not apply to other types:
-* Void cannot be passed as an argument to an operator.
+* Void cannot be passed as an argument to an operator or a function.
 * Void cannot be stored in a variable.
 * Void cannot be printed.
 * Void cannot be constructed with a literal value.

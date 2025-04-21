@@ -1,12 +1,12 @@
 use std::fmt;
 
-use crate::ast::Value;
+use crate::ast::Literal;
 
 /// A syntactic element of source code.
 #[derive(Debug, Clone)]
 pub enum Token {
     /// A literal value.
-    Literal(Value),
+    Literal(Literal),
 
     /// An identifier.
     Ident(String),
@@ -48,8 +48,7 @@ pub enum Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Literal(Value::Void) => unreachable!(),
-            Self::Literal(value @ Value::Number(_)) => write!(f, "number '{value}'"),
+            Self::Literal(Literal::Number(value)) => write!(f, "number '{value}'"),
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             Self::OpenParen => f.write_str("'('"),
             Self::CloseParen => f.write_str("')'"),

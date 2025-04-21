@@ -1,9 +1,9 @@
-use super::{BinOp, Value};
+use super::{BinOp, Literal};
 
 /// An expression.
 pub enum Expr {
     /// A literal value expression.
-    Literal(Value),
+    Literal(Literal),
 
     /// An identifier expression.
     Ident(String),

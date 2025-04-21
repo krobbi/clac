@@ -1,8 +1,35 @@
-use std::ops;
+use std::{fmt, ops};
 
-use crate::ast::Value;
+use crate::ast::Literal;
 
 use super::runtime_error::RuntimeError;
+
+/// A value with a dynamic type.
+#[derive(Clone)]
+pub enum Value {
+    /// A value returned by expressions to represent returning no value.
+    Void,
+
+    /// A floating-point number value.
+    Number(f64),
+}
+
+impl From<Literal> for Value {
+    fn from(value: Literal) -> Self {
+        match value {
+            Literal::Number(value) => Value::Number(value),
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Void => unreachable!(),
+            Self::Number(value) => value.fmt(f),
+        }
+    }
+}
 
 impl ops::Neg for Value {
     type Output = Result<Self, RuntimeError>;
