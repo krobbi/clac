@@ -1,6 +1,8 @@
-use std::{error, fmt, iter, str};
+use std::{iter, str};
 
-use crate::{token::Token, value::Value};
+use crate::ast::Value;
+
+use super::{syntax_error::SyntaxError, token::Token};
 
 /// A structure that generates a stream of tokens from source code.
 pub struct Lexer<'a> {
@@ -17,7 +19,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token from the token stream.
-    fn next_token(&mut self) -> Result<Token, LexError> {
+    fn next_token(&mut self) -> Result<Token, SyntaxError> {
         let first_char = loop {
             match self.chars.next() {
                 None => return Ok(Token::Eof),
@@ -39,7 +41,7 @@ impl<'a> Lexer<'a> {
             '-' => Ok(Token::Minus),
             '*' => Ok(Token::Star),
             '/' => Ok(Token::Slash),
-            c => Err(LexError::NonToken(c)),
+            c => Err(SyntaxError::UnexpectedChar(c)),
         }
     }
 
@@ -75,27 +77,10 @@ impl<'a> Lexer<'a> {
 }
 
 impl Iterator for Lexer<'_> {
-    type Item = Result<Token, LexError>;
+    type Item = Result<Token, SyntaxError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         Some(self.next_token())
-    }
-}
-
-/// A syntax error encountered while lexing source code.
-#[derive(Debug, Clone)]
-pub enum LexError {
-    /// A character was encountered that does not begin a token.
-    NonToken(char),
-}
-
-impl error::Error for LexError {}
-
-impl fmt::Display for LexError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::NonToken(c) => write!(f, "unexpected character '{}'", c.escape_default()),
-        }
     }
 }
 

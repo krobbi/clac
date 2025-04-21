@@ -1,10 +1,6 @@
-mod bin_op;
-mod expr;
-mod lexer;
+mod ast;
 mod parser;
 mod runtime;
-mod token;
-mod value;
 
 use std::{
     env,

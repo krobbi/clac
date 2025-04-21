@@ -1,4 +1,4 @@
-use crate::{bin_op::BinOp, value::Value};
+use super::{BinOp, Value};
 
 /// An expression.
 pub enum Expr {

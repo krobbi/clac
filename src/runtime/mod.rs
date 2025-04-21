@@ -1,6 +1,11 @@
-use std::{collections::HashMap, error, fmt, ops};
+mod runtime_error;
+mod value_ops;
 
-use crate::{bin_op::BinOp, expr::Expr, value::Value};
+use std::collections::HashMap;
+
+use runtime_error::RuntimeError;
+
+use crate::ast::{BinOp, Expr, Value};
 
 /// The runtime environment of a Clac program.
 pub struct Runtime {
@@ -106,59 +111,3 @@ impl Runtime {
         }
     }
 }
-
-/// An error encountered at runtime.
-#[derive(Debug)]
-pub enum RuntimeError {
-    /// An undefined variable was evaluated.
-    UndefinedVariable(String),
-
-    /// A non-variable assignment target was assigned to.
-    NonVariableAssignment,
-
-    /// Void was used as an argument.
-    VoidArgument,
-}
-
-impl error::Error for RuntimeError {}
-
-impl fmt::Display for RuntimeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
-            Self::NonVariableAssignment => f.write_str("cannot assign to a non-variable"),
-            Self::VoidArgument => f.write_str("cannot use void as an argument"),
-        }
-    }
-}
-
-impl ops::Neg for Value {
-    type Output = Result<Self, RuntimeError>;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            Self::Void => Err(RuntimeError::VoidArgument),
-            Self::Number(rhs) => Ok(Self::Number(-rhs)),
-        }
-    }
-}
-
-macro_rules! value_binop_impl {
-    ($trait:path, $fn:ident, $op:tt) => {
-        impl $trait for Value {
-            type Output = Result<Self, RuntimeError>;
-
-            fn $fn(self, rhs: Self) -> Self::Output {
-                match (self, rhs) {
-                    (Value::Void, _) | (_, Value::Void) => Err(RuntimeError::VoidArgument),
-                    (Value::Number(lhs), Value::Number(rhs)) => Ok(Value::Number(lhs $op rhs)),
-                }
-            }
-        }
-    }
-}
-
-value_binop_impl!(ops::Add, add, +);
-value_binop_impl!(ops::Sub, sub, -);
-value_binop_impl!(ops::Mul, mul, *);
-value_binop_impl!(ops::Div, div, /);

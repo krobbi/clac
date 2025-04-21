@@ -1,9 +1,9 @@
 use std::fmt;
 
-use crate::value::Value;
+use crate::ast::Value;
 
 /// A syntactic element of source code.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Token {
     /// A literal value.
     Literal(Value),
