@@ -53,7 +53,7 @@ that do not apply to other types:
 * Void cannot be constructed with a literal value.
 
 ## Variables
-Variables can be assigned with the `=` operator:
+Variables can be declared or assigned with the `=` operator:
 ```
 clac> x = 5, x * x, x = 2 * x
 25
@@ -76,7 +76,7 @@ clac> y
 ```
 
 Variable names consist of one or more ASCII letters or underscores with digits
-allowed after the first character. All variables are global.
+allowed after the first character.
 
 ## Blocks
 Zero or more expressions can be grouped into a block by surrounding them with
@@ -93,7 +93,26 @@ clac> {1, 2, 3}
 
 The expressions in the block are evaluated in order and the value returned by
 the last expression is returned by the block. If the block is empty or the last
-expression does not return a value, the block will not return a value.
+expression does not return a value, then the block will not return a value.
+
+### Scopes
+Each block creates a new scope. Variables declared inside a block cannot be
+used after the block:
+```
+clac> global = 5, global, {local = 2 * global, local}, local
+5
+10
+Runtime error: variable 'local' is undefined
+```
+
+When an undeclared variable is assigned, the assignment first attempts to
+assign an existing variable in a parent scope. Because there is not yet a
+distinction between declaring and assigning a variable, it is impossible to
+declare a variable that shadows a variable name:
+```
+clac> shadow = 0, {shadow = 1}, shadow
+1
+```
 
 ## Grammar
 ```EBNF

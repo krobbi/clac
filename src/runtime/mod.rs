@@ -9,15 +9,15 @@ use crate::ast::{BinOp, Expr, Value};
 
 /// The runtime environment of a Clac program.
 pub struct Runtime {
-    /// The global variables.
-    variables: HashMap<String, Value>,
+    /// The scope stack.
+    scopes: Vec<HashMap<String, Value>>,
 }
 
 impl Runtime {
     /// Creates a new runtime environment.
     pub fn new() -> Self {
         Self {
-            variables: HashMap::new(),
+            scopes: vec![HashMap::new()],
         }
     }
 
@@ -29,6 +29,16 @@ impl Runtime {
         }
 
         Ok(())
+    }
+
+    /// Pushes a new innermost scope to the scope stack.
+    fn push_scope(&mut self) {
+        self.scopes.push(HashMap::new());
+    }
+
+    /// Pops the innermost scope from the scope stack.
+    fn pop_scope(&mut self) {
+        self.scopes.pop();
     }
 
     /// Evaluates an expression.
@@ -52,10 +62,13 @@ impl Runtime {
 
     /// Evaluates an identifier expression.
     fn eval_ident(&self, name: String) -> Result<Value, RuntimeError> {
-        match self.variables.get(&name).cloned() {
-            None => Err(RuntimeError::UndefinedVariable(name)),
-            Some(value) => Ok(value),
+        for scope in self.scopes.iter().rev() {
+            if let Some(value) = scope.get(&name) {
+                return Ok(value.clone());
+            }
         }
+
+        Err(RuntimeError::UndefinedVariable(name))
     }
 
     /// Evaluates a block expression.
@@ -63,11 +76,18 @@ impl Runtime {
         match exprs.pop() {
             None => Ok(Value::Void),
             Some(last_expr) => {
+                self.push_scope();
+
                 for expr in exprs {
-                    self.eval_expr(expr)?;
+                    if let Err(error) = self.eval_expr(expr) {
+                        self.pop_scope();
+                        return Err(error);
+                    }
                 }
 
-                self.eval_expr(last_expr)
+                let result = self.eval_expr(last_expr);
+                self.pop_scope();
+                result
             }
         }
     }
@@ -104,7 +124,15 @@ impl Runtime {
     fn eval_assignment(&mut self, target: Expr, source: Expr) -> Result<Value, RuntimeError> {
         if let Expr::Ident(name) = target {
             let value = self.eval_arg(source)?;
-            self.variables.insert(name, value);
+
+            for scope in self.scopes.iter_mut().rev() {
+                if let Some(variable) = scope.get_mut(&name) {
+                    *variable = value;
+                    return Ok(Value::Void);
+                }
+            }
+
+            self.scopes.last_mut().unwrap().insert(name, value);
             Ok(Value::Void)
         } else {
             Err(RuntimeError::NonVariableAssignment)
