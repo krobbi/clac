@@ -130,6 +130,10 @@ impl Runtime {
                     self.define_variable(name.clone(), value);
                 }
 
+                // TODO: Every time a user-defined function is called, its
+                // arbitrarily large function body is cloned. This may be bad
+                // for performance, so consider reworking the runtime to take
+                // references to expressions instead.
                 let result = self.eval_voidable(function.body().clone());
                 self.pop_scope();
                 result
