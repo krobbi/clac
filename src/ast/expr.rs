@@ -1,6 +1,7 @@
 use super::{BinOp, Literal};
 
 /// An expression.
+#[derive(Clone)]
 pub enum Expr {
     /// A literal value expression.
     Literal(Literal),

@@ -56,7 +56,7 @@ The void type has some restrictions that do not apply to other types:
 * Void is not printed when it is returned from a top-level expression.
 
 ## Variables
-Variables can be declared or assigned with the `=` operator:
+Variables can be defined or assigned with the `=` operator:
 ```
 clac> x = 5, x * x, x = 2 * x
 25
@@ -99,8 +99,8 @@ the last expression is returned by the block. If the block is empty or the last
 expression does not return a value, then the block will not return a value.
 
 ### Scopes
-Each block creates a new scope. Variables declared inside a block cannot be
-used after the block:
+Beginning a block creates a new innermost scope. Variables defined inside a
+block cannot be used after the block:
 ```
 clac> global = 5, global, {local = 2 * global, local}, local
 5
@@ -108,10 +108,10 @@ clac> global = 5, global, {local = 2 * global, local}, local
 Runtime error: variable 'local' is undefined
 ```
 
-When an undeclared variable is assigned, the assignment first attempts to
-assign an existing variable in a parent scope. Because there is not yet a
-distinction between declaring and assigning a variable, it is impossible to
-declare a variable that shadows a variable name:
+When a variable is assigned, an already defined variable in the innermost scope
+is attempted to be assigned, following the next scope outwards until the global
+scope is reached. A new variable will only be defined in the innermost scope if
+no variable with the same name was found in any outer scope:
 ```
 clac> shadow = 0, {shadow = 1}, shadow
 1
@@ -121,31 +121,92 @@ clac> shadow = 0, {shadow = 1}, shadow
 Functions can be called by following a function expression with zero or more
 arguments surrounded by parentheses and separated by commas:
 ```
-clac> sqrt(64)
+clac> sqrt(25)
+5
+```
+
+Functions are values that can be stored in variables, and passed to and
+returned from functions:
+```
+clac> magic = sqrt
+
+clac> get_magic() = magic
+
+clac> apply(f, x) = f(x)
+
+clac> apply(get_magic(), 64)
 8
 ```
 
-Functions are first-class values, meaning they can be assigned to variables,
-and passed to and returned from functions. This also means that function calls
-do not need to call a function name directly:
+### User-defined Functions
+Functions can be defined with algebraic syntax by assigning a body expression
+to a function 'call' that defines the function's name and parameters:
 ```
-clac> s = sqrt, s
+clac> f(x) = 2 * x + 1
+
+clac> f(1), f(2), f(3)
+3
+5
+7
+```
+
+The function's name and parameters must be defined as identifiers
+(variable names.) Additionally, each parameter must have a different name to
+any other parameters:
+```
+clac> 1(x) = {}
+Runtime error: function names must be identifiers
+
+clac> f(1) = {}
+Runtime error: function parameter names must be identifiers
+
+clac> f(x, x) = {}
+Runtime error: functions cannot have duplicate parameter names
+```
+
+### Function Scoping
+Unlike variable assignments, user-defined functions are always defined as a new
+variable in the innermost scope:
+```
+clac> shadow = 0, {shadow() = 1, shadow}, shadow
 function
-
-clac> s(sqrt)
-Runtime error: incorrect argument types for operation
-
-clac> s()
-Runtime error: incorrect argument count for function
-
-clac> s(1, 2)
-Runtime error: incorrect argument count for function
-
-clac> {op = sqrt, op}(2)
-1.4142135623730951
+0
 ```
 
-It is not yet possible to define functions, but this is a planned feature.
+Function calls always create a new innermost scope for their parameters, even
+if the function body is not a block:
+```
+clac> f(x) = result = 2 * x
+
+clac> f(10)
+
+clac> result
+Runtime error: variable 'result' is undefined
+```
+
+Functions are dynamically scoped, meaning they have access to the variables
+that were in scope *when the function was called*. This makes the language
+easier to implement, but can cause confusing or unexpected behavior:
+```
+clac> triple_value() = 3 * value
+
+clac> {value = 123, triple_value()}
+369
+
+clac> triple_value()
+Runtime error: variable 'value' is undefined
+```
+
+Unfortunately, this means it is not possible to create closures with the
+current function scoping rules:
+```
+clac> new_counter() = {n = 0, counter() = {n = n + 1, n}, counter}
+
+clac> counter = new_counter()
+
+clac> counter()
+Runtime error: variable 'n' is undefined
+```
 
 ### Built-in Functions
 The Clac language includes built-in functions for commonly-used operations:
@@ -169,16 +230,6 @@ atom_prefix  = "-", atom_prefix | atom_call ;
 atom_call    = atom_primary, { "(", sequence, ")" } ;
 atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 ```
-
-# Goals
-* [x] Read code in a loop.
-* [x] Read command-line arguments as code.
-* [x] Parse tokens from code.
-* [x] Parse expressions from tokens.
-* [x] Evaluate expressions.
-* [x] Allow variables to be defined and used.
-* [x] Allow functions to be called.
-* [ ] Allow functions to be defined.
 
 # Credits
 * Infix parser based on

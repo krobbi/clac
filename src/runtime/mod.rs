@@ -1,9 +1,11 @@
 mod builtins;
+mod function;
 mod runtime_error;
 mod value;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
+use function::Function;
 use runtime_error::RuntimeError;
 use value::Value;
 
@@ -46,6 +48,11 @@ impl Runtime {
     /// Pops the innermost scope from the scope stack.
     fn pop_scope(&mut self) {
         self.scopes.pop();
+    }
+
+    /// Defines a new variable in the innermost scope.
+    fn define_variable(&mut self, name: String, value: Value) {
+        self.scopes.last_mut().unwrap().insert(name, value);
     }
 
     /// Evaluates a voidable expression.
@@ -112,6 +119,21 @@ impl Runtime {
 
         match callee {
             Value::Number(_) => Err(RuntimeError::NonFunctionCall),
+            Value::Function(function) => {
+                if arg_values.len() != function.arity() {
+                    return Err(RuntimeError::IncorrectArgCount);
+                }
+
+                self.push_scope();
+
+                for (name, value) in function.params().zip(arg_values) {
+                    self.define_variable(name.clone(), value);
+                }
+
+                let result = self.eval_voidable(function.body().clone());
+                self.pop_scope();
+                result
+            }
             Value::Builtin(function) => function(&arg_values),
         }
     }
@@ -141,20 +163,47 @@ impl Runtime {
 
     /// Evaluates an assignment expression.
     fn eval_assignment(&mut self, target: Expr, source: Expr) -> EvalResult {
-        if let Expr::Ident(name) = target {
-            let value = self.eval_value(source)?;
+        match target {
+            Expr::Ident(name) => {
+                let value = self.eval_value(source)?;
 
-            for scope in self.scopes.iter_mut().rev() {
-                if let Some(variable) = scope.get_mut(&name) {
-                    *variable = value;
-                    return Ok(None);
+                for scope in self.scopes.iter_mut().rev() {
+                    if let Some(variable) = scope.get_mut(&name) {
+                        *variable = value;
+                        return Ok(None);
+                    }
                 }
-            }
 
-            self.scopes.last_mut().unwrap().insert(name, value);
-            Ok(None)
-        } else {
-            Err(RuntimeError::NonVariableAssignment)
+                self.define_variable(name, value);
+                Ok(None)
+            }
+            Expr::Call { callee, args } => {
+                let Expr::Ident(name) = *callee else {
+                    return Err(RuntimeError::NonIdentFunctionName);
+                };
+
+                let mut params = Vec::with_capacity(args.len());
+
+                for arg in args {
+                    let Expr::Ident(param) = arg else {
+                        return Err(RuntimeError::NonIdentParamName);
+                    };
+
+                    if params.contains(&param) {
+                        return Err(RuntimeError::DuplicateParamName);
+                    }
+
+                    params.push(param);
+                }
+
+                self.define_variable(
+                    name,
+                    Value::Function(Rc::new(Function::new(params, source))),
+                );
+
+                Ok(None)
+            }
+            _ => Err(RuntimeError::NonVariableAssignment),
         }
     }
 }

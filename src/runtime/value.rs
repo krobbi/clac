@@ -1,14 +1,17 @@
-use std::{fmt, ops};
+use std::{fmt, ops, rc::Rc};
 
 use crate::ast::Literal;
 
-use super::{EvalResult, runtime_error::RuntimeError};
+use super::{EvalResult, function::Function, runtime_error::RuntimeError};
 
 /// A value with a dynamic type.
 #[derive(Clone)]
 pub enum Value {
     /// A number value.
     Number(f64),
+
+    /// A user-defined function.
+    Function(Rc<Function>),
 
     /// A built-in function.
     Builtin(fn(&[Value]) -> EvalResult),
@@ -17,7 +20,7 @@ pub enum Value {
 impl From<Literal> for Value {
     fn from(value: Literal) -> Self {
         match value {
-            Literal::Number(value) => Value::Number(value),
+            Literal::Number(value) => Self::Number(value),
         }
     }
 }
@@ -26,7 +29,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Number(value) => value.fmt(f),
-            Self::Builtin(_) => f.write_str("function"),
+            Self::Function(_) | Self::Builtin(_) => f.write_str("function"),
         }
     }
 }
@@ -37,7 +40,7 @@ impl ops::Neg for Value {
     fn neg(self) -> Self::Output {
         match self {
             Self::Number(rhs) => Ok(Self::Number(-rhs)),
-            Self::Builtin(_) => Err(RuntimeError::IncorrectArgTypes),
+            _ => Err(RuntimeError::IncorrectArgTypes),
         }
     }
 }
