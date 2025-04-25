@@ -32,7 +32,7 @@ impl Runtime {
     }
 
     /// Executes a top-level expression.
-    pub fn execute_expr(&mut self, expr: Expr) -> Result<(), RuntimeError> {
+    pub fn execute_expr(&mut self, expr: &Expr) -> Result<(), RuntimeError> {
         if let Some(value) = self.eval_voidable(expr)? {
             println!("{value}");
         }
@@ -51,24 +51,27 @@ impl Runtime {
     }
 
     /// Defines a new variable in the innermost scope.
-    fn define_variable(&mut self, name: String, value: Value) {
-        self.scopes.last_mut().unwrap().insert(name, value);
+    fn define_variable(&mut self, name: &str, value: Value) {
+        self.scopes
+            .last_mut()
+            .unwrap()
+            .insert(name.to_string(), value);
     }
 
     /// Evaluates a voidable expression.
-    fn eval_voidable(&mut self, expr: Expr) -> EvalResult {
+    fn eval_voidable(&mut self, expr: &Expr) -> EvalResult {
         match expr {
             Expr::Literal(literal) => Ok(Some(literal.into())),
             Expr::Ident(name) => self.eval_ident(name),
             Expr::Block(exprs) => self.eval_block(exprs),
-            Expr::Call { callee, args } => self.eval_call(*callee, args),
-            Expr::Negate(rhs) => (-self.eval_value(*rhs)?).map(Some),
-            Expr::Binary { lhs, op, rhs } => self.eval_binary(*lhs, op, *rhs),
+            Expr::Call { callee, args } => self.eval_call(callee, args),
+            Expr::Negate(rhs) => (-self.eval_value(rhs)?).map(Some),
+            Expr::Binary { lhs, op, rhs } => self.eval_binary(lhs, *op, rhs),
         }
     }
 
     /// Evaluates a non-voidable expression.
-    fn eval_value(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
+    fn eval_value(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match self.eval_voidable(expr) {
             Ok(None) => Err(RuntimeError::VoidValue),
             Ok(Some(value)) => Ok(value),
@@ -77,39 +80,35 @@ impl Runtime {
     }
 
     /// Evaluates an identifier expression.
-    fn eval_ident(&self, name: String) -> EvalResult {
+    fn eval_ident(&self, name: &str) -> EvalResult {
         for scope in self.scopes.iter().rev() {
-            if let Some(value) = scope.get(&name) {
+            if let Some(value) = scope.get(name) {
                 return Ok(Some(value.clone()));
             }
         }
 
-        Err(RuntimeError::UndefinedVariable(name))
+        Err(RuntimeError::UndefinedVariable(name.to_string()))
     }
 
     /// Evaluates a block expression.
-    fn eval_block(&mut self, mut exprs: Vec<Expr>) -> EvalResult {
-        match exprs.pop() {
-            None => Ok(None),
-            Some(last_expr) => {
-                self.push_scope();
+    fn eval_block(&mut self, exprs: &Vec<Expr>) -> EvalResult {
+        self.push_scope();
+        let mut result = Ok(None);
 
-                for expr in exprs {
-                    if let Err(error) = self.eval_voidable(expr) {
-                        self.pop_scope();
-                        return Err(error);
-                    }
-                }
+        for expr in exprs {
+            result = self.eval_voidable(expr);
 
-                let result = self.eval_voidable(last_expr);
-                self.pop_scope();
-                result
+            if result.is_err() {
+                break;
             }
         }
+
+        self.pop_scope();
+        result
     }
 
     /// Evaluates a call expression.
-    fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> EvalResult {
+    fn eval_call(&mut self, callee: &Expr, args: &Vec<Expr>) -> EvalResult {
         let callee = self.eval_value(callee)?;
         let mut arg_values = Vec::with_capacity(args.len());
 
@@ -126,15 +125,11 @@ impl Runtime {
 
                 self.push_scope();
 
-                for (name, value) in function.params().zip(arg_values) {
-                    self.define_variable(name.clone(), value);
+                for (param, value) in function.params().zip(arg_values) {
+                    self.define_variable(param, value);
                 }
 
-                // TODO: Every time a user-defined function is called, its
-                // arbitrarily large function body is cloned. This may be bad
-                // for performance, so consider reworking the runtime to take
-                // references to expressions instead.
-                let result = self.eval_voidable(function.body().clone());
+                let result = self.eval_voidable(function.body());
                 self.pop_scope();
                 result
             }
@@ -143,11 +138,7 @@ impl Runtime {
     }
 
     /// Evaluates a binary expression.
-    fn eval_binary(&mut self, lhs: Expr, op: BinOp, rhs: Expr) -> EvalResult {
-        // Assignment is handled as a special case because its operands cannot
-        // be eagerly evaluated. The left-hand-side is an assignment target, not
-        // an actual expression. The right-hand-side is only evaluated after the
-        // target is validated as a variable.
+    fn eval_binary(&mut self, lhs: &Expr, op: BinOp, rhs: &Expr) -> EvalResult {
         if let BinOp::Assign = op {
             return self.eval_assignment(lhs, rhs);
         }
@@ -166,13 +157,13 @@ impl Runtime {
     }
 
     /// Evaluates an assignment expression.
-    fn eval_assignment(&mut self, target: Expr, source: Expr) -> EvalResult {
-        match target {
+    fn eval_assignment(&mut self, lhs: &Expr, rhs: &Expr) -> EvalResult {
+        match lhs {
             Expr::Ident(name) => {
-                let value = self.eval_value(source)?;
+                let value = self.eval_value(rhs)?;
 
                 for scope in self.scopes.iter_mut().rev() {
-                    if let Some(variable) = scope.get_mut(&name) {
+                    if let Some(variable) = scope.get_mut(name) {
                         *variable = value;
                         return Ok(None);
                     }
@@ -182,7 +173,7 @@ impl Runtime {
                 Ok(None)
             }
             Expr::Call { callee, args } => {
-                let Expr::Ident(name) = *callee else {
+                let Expr::Ident(name) = callee.as_ref() else {
                     return Err(RuntimeError::NonIdentFunctionName);
                 };
 
@@ -193,16 +184,16 @@ impl Runtime {
                         return Err(RuntimeError::NonIdentParamName);
                     };
 
-                    if params.contains(&param) {
+                    if params.contains(param) {
                         return Err(RuntimeError::DuplicateParamName);
                     }
 
-                    params.push(param);
+                    params.push(param.to_string());
                 }
 
                 self.define_variable(
                     name,
-                    Value::Function(Rc::new(Function::new(params, source))),
+                    Value::Function(Rc::new(Function::new(params, rhs.clone()))),
                 );
 
                 Ok(None)

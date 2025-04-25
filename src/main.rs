@@ -60,7 +60,7 @@ fn run_repl(runtime: &mut Runtime) {
 fn execute_source(source: &str, runtime: &mut Runtime) {
     match parser::parse_source(source) {
         Ok(program) => {
-            for expr in program {
+            for expr in &program {
                 if let Err(error) = runtime.execute_expr(expr) {
                     eprintln!("Runtime error: {error}");
                     return;

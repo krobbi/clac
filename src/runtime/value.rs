@@ -17,10 +17,10 @@ pub enum Value {
     Builtin(fn(&[Value]) -> EvalResult),
 }
 
-impl From<Literal> for Value {
-    fn from(value: Literal) -> Self {
+impl From<&Literal> for Value {
+    fn from(value: &Literal) -> Self {
         match value {
-            Literal::Number(value) => Self::Number(value),
+            Literal::Number(value) => Self::Number(*value),
         }
     }
 }
