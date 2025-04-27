@@ -3,7 +3,7 @@ mod lexer;
 mod syntax_error;
 mod token;
 
-use std::{iter, mem};
+use std::mem;
 
 use lexer::Lexer;
 use syntax_error::SyntaxError;
@@ -13,21 +13,24 @@ use crate::ast::Expr;
 
 /// Parses a program from source code.
 pub fn parse_source(source: &str) -> Result<Vec<Expr>, SyntaxError> {
-    Parser::new(source).parse_program()
+    Parser::new(source)?.parse_program()
 }
 
 /// A structure that generates expressions from source code.
 struct Parser<'a> {
     /// The lexer.
-    lexer: iter::Peekable<Lexer<'a>>,
+    lexer: Lexer<'a>,
+
+    /// The next token.
+    next_token: Token,
 }
 
 impl<'a> Parser<'a> {
     /// Creates a new parser from source code.
-    fn new(source: &'a str) -> Self {
-        Self {
-            lexer: Lexer::new(source).peekable(),
-        }
+    fn new(source: &'a str) -> Result<Self, SyntaxError> {
+        let mut lexer = Lexer::new(source);
+        let next_token = lexer.scan_token()?;
+        Ok(Self { lexer, next_token })
     }
 
     /// Parses a program.
@@ -91,30 +94,33 @@ impl<'a> Parser<'a> {
     }
 
     /// Returns the next token without consuming it.
-    fn peek(&mut self) -> Result<&Token, SyntaxError> {
-        match self.lexer.peek().unwrap() {
-            Ok(token) => Ok(token),
-            Err(error) => Err(error.clone()),
-        }
+    fn peek(&self) -> &Token {
+        &self.next_token
+    }
+
+    /// Consumes the next token without returning it.
+    fn bump(&mut self) -> Result<(), SyntaxError> {
+        self.next_token = self.lexer.scan_token()?;
+        Ok(())
     }
 
     /// Consumes and returns the next token.
     fn next(&mut self) -> Result<Token, SyntaxError> {
-        self.lexer.next().unwrap()
+        Ok(mem::replace(&mut self.next_token, self.lexer.scan_token()?))
     }
 
     /// Returns whether the next token matches a token kind.
-    fn check(&mut self, kind: &Token) -> Result<bool, SyntaxError> {
-        Ok(mem::discriminant(self.peek()?) == mem::discriminant(kind))
+    fn check(&self, kind: &Token) -> bool {
+        mem::discriminant(self.peek()) == mem::discriminant(kind)
     }
 
     /// Consumes the next token if it matches a token kind and returns whether
     /// it was consumed.
     fn eat(&mut self, kind: &Token) -> Result<bool, SyntaxError> {
-        let is_match = self.check(kind)?;
+        let is_match = self.check(kind);
 
         if is_match {
-            self.next()?;
+            self.bump()?;
         }
 
         Ok(is_match)

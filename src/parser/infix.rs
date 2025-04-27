@@ -12,7 +12,7 @@ impl Parser<'_> {
     fn parse_infix_level(&mut self, min_precedence: u8) -> Result<Expr, SyntaxError> {
         let mut lhs = self.parse_atom()?;
 
-        while let Some(op) = BinOp::from_token(self.peek()?) {
+        while let Some(op) = BinOp::from_token(self.peek()) {
             let precedence = op.precedence().level();
 
             if precedence < min_precedence {
@@ -24,7 +24,7 @@ impl Parser<'_> {
                 Associativity::RightToLeft => precedence,
             };
 
-            self.next()?; // Skip operator token.
+            self.bump()?; // Skip operator token.
             let rhs = self.parse_infix_level(min_precedence)?;
 
             lhs = Expr::Binary {

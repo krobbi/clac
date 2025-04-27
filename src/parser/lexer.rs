@@ -19,7 +19,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Scans a token.
-    fn scan_token(&mut self) -> Result<Token, SyntaxError> {
+    pub fn scan_token(&mut self) -> Result<Token, SyntaxError> {
         let first_char = loop {
             match self.chars.next() {
                 None => return Ok(Token::Eof),
@@ -83,14 +83,6 @@ impl<'a> Lexer<'a> {
     /// Returns the next character.
     fn next(&mut self) -> char {
         self.chars.next().unwrap_or_default()
-    }
-}
-
-impl Iterator for Lexer<'_> {
-    type Item = Result<Token, SyntaxError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        Some(self.scan_token())
     }
 }
 
