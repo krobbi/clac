@@ -3,7 +3,7 @@ use std::fmt;
 use crate::ast::Literal;
 
 /// A syntactic element of source code.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Token {
     /// A literal value.
     Literal(Literal),

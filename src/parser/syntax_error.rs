@@ -3,7 +3,7 @@ use std::{error, fmt};
 use super::token::Token;
 
 /// A syntax error encountered while parsing.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SyntaxError {
     /// An character was encountered that does not begin a token.
     UnexpectedChar(char),
