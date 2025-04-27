@@ -1,25 +1,25 @@
-use std::{iter, str};
+use std::str::Chars;
 
 use crate::ast::Literal;
 
 use super::{syntax_error::SyntaxError, token::Token};
 
-/// A structure that generates a stream of tokens from source code.
+/// A structure that scans tokens from source code.
 pub struct Lexer<'a> {
     /// The character iterator.
-    chars: iter::Peekable<str::Chars<'a>>,
+    chars: Chars<'a>,
 }
 
 impl<'a> Lexer<'a> {
     /// Creates a new lexer from source code.
     pub fn new(source: &'a str) -> Self {
         Self {
-            chars: source.chars().peekable(),
+            chars: source.chars(),
         }
     }
 
-    /// Returns the next token from the token stream.
-    fn next_token(&mut self) -> Result<Token, SyntaxError> {
+    /// Scans a token.
+    fn scan_token(&mut self) -> Result<Token, SyntaxError> {
         let first_char = loop {
             match self.chars.next() {
                 None => return Ok(Token::Eof),
@@ -29,8 +29,8 @@ impl<'a> Lexer<'a> {
         };
 
         match first_char {
-            c if c.is_ascii_digit() => Ok(self.number(c)),
-            c if is_ident_start(c) => Ok(self.ident(c)),
+            c if c.is_ascii_digit() => Ok(self.scan_number(c)),
+            c if is_ident_start(c) => Ok(self.scan_ident(c)),
             '(' => Ok(Token::OpenParen),
             ')' => Ok(Token::CloseParen),
             '{' => Ok(Token::OpenBrace),
@@ -45,34 +45,44 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Creates a new number literal token from its first digit.
-    fn number(&mut self, first_digit: char) -> Token {
+    /// Scans a number literal token from its first digit.
+    fn scan_number(&mut self, first_digit: char) -> Token {
         let mut number = first_digit.to_string();
 
-        while let Some(c) = self.chars.next_if(char::is_ascii_digit) {
-            number.push(c);
+        while self.peek().is_ascii_digit() {
+            number.push(self.next());
         }
 
-        if self.chars.next_if_eq(&'.').is_some() {
-            number.push('.');
+        if self.peek() == '.' {
+            number.push(self.next());
 
-            while let Some(c) = self.chars.next_if(char::is_ascii_digit) {
-                number.push(c);
+            while self.peek().is_ascii_digit() {
+                number.push(self.next());
             }
         }
 
         Token::Literal(Literal::Number(number.parse().unwrap()))
     }
 
-    /// Creates a new identifier token from its first character.
-    fn ident(&mut self, first_char: char) -> Token {
+    /// Scans an identifier token from its first character.
+    fn scan_ident(&mut self, first_char: char) -> Token {
         let mut name = first_char.to_string();
 
-        while let Some(c) = self.chars.next_if(|c| is_ident_continue(*c)) {
-            name.push(c);
+        while is_ident_continue(self.peek()) {
+            name.push(self.next());
         }
 
         Token::Ident(name)
+    }
+
+    /// Returns the next character without consuming it.
+    fn peek(&self) -> char {
+        self.chars.clone().next().unwrap_or_default()
+    }
+
+    /// Returns the next character.
+    fn next(&mut self) -> char {
+        self.chars.next().unwrap_or_default()
     }
 }
 
@@ -80,7 +90,7 @@ impl Iterator for Lexer<'_> {
     type Item = Result<Token, SyntaxError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        Some(self.next_token())
+        Some(self.scan_token())
     }
 }
 
