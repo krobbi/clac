@@ -8,40 +8,51 @@ use super::{syntax_error::SyntaxError, token::Token};
 pub struct Lexer<'a> {
     /// The character iterator.
     chars: Chars<'a>,
+
+    /// The syntax error log.
+    errors: &'a mut Vec<SyntaxError>,
 }
 
 impl<'a> Lexer<'a> {
-    /// Creates a new lexer from source code.
-    pub fn new(source: &'a str) -> Self {
+    /// Creates a new lexer from source code and a syntax error log.
+    pub fn new(source: &'a str, errors: &'a mut Vec<SyntaxError>) -> Self {
         Self {
             chars: source.chars(),
+            errors,
         }
     }
 
-    /// Scans a token.
-    pub fn scan_token(&mut self) -> Result<Token, SyntaxError> {
-        let first_char = loop {
-            match self.chars.next() {
-                None => return Ok(Token::Eof),
-                Some(c) if c.is_whitespace() => {}
-                Some(c) => break c,
-            }
-        };
+    /// Emits a syntax error to the syntax error log.
+    pub fn emit_error(&mut self, error: SyntaxError) {
+        self.errors.push(error);
+    }
 
-        match first_char {
-            c if c.is_ascii_digit() => Ok(self.scan_number(c)),
-            c if is_ident_start(c) => Ok(self.scan_ident(c)),
-            '(' => Ok(Token::OpenParen),
-            ')' => Ok(Token::CloseParen),
-            '{' => Ok(Token::OpenBrace),
-            '}' => Ok(Token::CloseBrace),
-            '=' => Ok(Token::Eq),
-            ',' => Ok(Token::Comma),
-            '+' => Ok(Token::Plus),
-            '-' => Ok(Token::Minus),
-            '*' => Ok(Token::Star),
-            '/' => Ok(Token::Slash),
-            c => Err(SyntaxError::UnexpectedChar(c)),
+    /// Scans a token.
+    pub fn scan_token(&mut self) -> Token {
+        loop {
+            let Some(first_char) = self.chars.next() else {
+                break Token::Eof;
+            };
+
+            break match first_char {
+                c if c.is_whitespace() => continue,
+                c if c.is_ascii_digit() => self.scan_number(c),
+                c if is_ident_start(c) => self.scan_ident(c),
+                '(' => Token::OpenParen,
+                ')' => Token::CloseParen,
+                '{' => Token::OpenBrace,
+                '}' => Token::CloseBrace,
+                '=' => Token::Eq,
+                ',' => Token::Comma,
+                '+' => Token::Plus,
+                '-' => Token::Minus,
+                '*' => Token::Star,
+                '/' => Token::Slash,
+                c => {
+                    self.emit_error(SyntaxError::UnexpectedChar(c));
+                    continue;
+                }
+            };
         }
     }
 

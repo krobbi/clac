@@ -24,7 +24,7 @@ impl Parser<'_> {
                 Associativity::RightToLeft => precedence,
             };
 
-            self.bump()?; // Skip operator token.
+            self.bump(); // Consume the operator token.
             let rhs = self.parse_infix_level(min_precedence)?;
 
             lhs = Expr::Binary {

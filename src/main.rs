@@ -58,7 +58,7 @@ fn run_repl(runtime: &mut Runtime) {
 
 /// Executes Clac source code with a runtime environment.
 fn execute_source(source: &str, runtime: &mut Runtime) {
-    match parser::parse_source(source) {
+    match parser::parse_program(source) {
         Ok(program) => {
             for expr in &program {
                 if let Err(error) = runtime.execute_expr(expr) {
@@ -67,6 +67,10 @@ fn execute_source(source: &str, runtime: &mut Runtime) {
                 }
             }
         }
-        Err(error) => eprintln!("Syntax error: {error}"),
+        Err(errors) => {
+            for error in &errors {
+                eprintln!("Syntax error: {error}");
+            }
+        }
     }
 }
