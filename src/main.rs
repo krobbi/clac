@@ -64,11 +64,12 @@ fn execute_source(source: &str) {
 
     loop {
         match lexer.read_token() {
-            Token::Eof => {
+            Ok(Token::Eof) => {
                 println!("--- END ---");
                 break;
             }
-            token => println!("{token:?}"),
+            Ok(token) => println!("{token:?}"),
+            Err(error) => eprintln!("{error}"),
         }
     }
 }

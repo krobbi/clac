@@ -1,8 +1,11 @@
+mod error;
 mod token;
 
 pub use crate::lexer::token::Token;
 
 use std::{iter::Peekable, str::Chars};
+
+use crate::lexer::error::LexError;
 
 /// A structure that reads a stream of [`Token`]s from source code.
 pub struct Lexer<'a> {
@@ -17,15 +20,16 @@ impl<'a> Lexer<'a> {
         Self { chars }
     }
 
-    /// Reads the next [`Token`].
-    pub fn read_token(&mut self) -> Token {
+    /// Reads the next [`Token`]. This function returns a [`LexError`] if a
+    /// valid [`Token`] cannot be read.
+    pub fn read_token(&mut self) -> Result<Token, LexError> {
         self.skip_whitespace();
 
         let Some(char) = self.chars.next() else {
-            return Token::Eof;
+            return Ok(Token::Eof);
         };
 
-        match char {
+        let token = match char {
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             ',' => Token::Comma,
@@ -33,8 +37,10 @@ impl<'a> Lexer<'a> {
             '-' => Token::Minus,
             '*' => Token::Star,
             '/' => Token::Slash,
-            _ => todo!("lex error handling"),
-        }
+            _ => return Err(LexError::UnexpectedChar(char)),
+        };
+
+        Ok(token)
     }
 
     /// Advances the `Lexer` until the next [`char`] is not whitespace according
