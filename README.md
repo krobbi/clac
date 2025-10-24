@@ -1,17 +1,23 @@
 # Clac
-Clac is a command-line calculator that is being created as a personal project
-to replace the default Windows calculator and address some minor annoyances
-with it:
-* Relatively long time to start up.
-* No support for custom functions and variables.
-* No way to evaluate an expression from a command-line session.
+Clac was originally created as a command line calculator to address some
+annoyances with the default Windows calculator:
+* Relatively long time to start up
+* No support for custom functions and variables
+* No way to evaluate an expression from a command line session
+
+The decision to support functions and variables made the scope of the project
+more complex. Clac now aims to be an interpreter for a small, mathematical
+scripting language.
 
 # Usage
-Clac is run from the command-line:
+Clac is run from the command line:
 ```shell
-clac [CODE]
+clac
 ```
 
+Currently, Clac prints a hello world message.
+
+<!--
 If Clac is given one or more arguments, they are treated as a single piece of
 code with spaces between the arguments. The program is run, and Clac exits
 automatically.
@@ -234,6 +240,7 @@ atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 # Credits
 * Infix parser based on
 [pseudocode by Eli Bendersky](https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing).
+-->
 
 # License
 Clac is released under the MIT License. See [LICENSE.txt](/LICENSE.txt) for a
