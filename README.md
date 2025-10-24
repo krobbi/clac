@@ -12,16 +12,16 @@ scripting language.
 # Usage
 Clac is run from the command line:
 ```shell
-clac
+clac <CODE>
 ```
 
-Currently, Clac prints a hello world message.
-
-<!--
-If Clac is given one or more arguments, they are treated as a single piece of
-code with spaces between the arguments. The program is run, and Clac exits
+If Clac is given one or more arguments, then they are joined with spaces and
+treated as a single line of code. Clac executes the code and exits
 automatically.
 
+Currently, Clac prints the input code as an escaped string.
+
+<!--
 If Clac is not given any arguments, the user can enter code in a loop until
 manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
 
