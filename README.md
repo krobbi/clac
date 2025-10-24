@@ -12,19 +12,19 @@ scripting language.
 # Usage
 Clac is run from the command line:
 ```shell
-clac <CODE>
+clac [CODE]
 ```
 
 If Clac is given one or more arguments, then they are joined with spaces and
 treated as a single line of code. Clac executes the code and exits
 automatically.
 
+If Clac is not given any arguments, then user can enter code in a loop until
+manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z` (Windows.)
+
 Currently, Clac prints the input code as an escaped string.
 
 <!--
-If Clac is not given any arguments, the user can enter code in a loop until
-manually exiting with `Ctrl+Z` (Windows) or `Ctrl+D` (other OS.)
-
 # Language
 Clac aims to implement a language that is somewhere between a calculator and a
 small scripting language. A Clac program consists of zero or more expressions
