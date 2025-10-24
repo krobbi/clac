@@ -1,6 +1,10 @@
 /// A lexical element of source code.
 #[derive(Debug)]
 pub enum Token {
+    /// A number.
+    #[expect(dead_code, reason = "field should be debug printed")]
+    Number(f64),
+
     /// An opening parenthesis.
     OpenParen,
 

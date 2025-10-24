@@ -30,6 +30,7 @@ impl<'a> Lexer<'a> {
         };
 
         let token = match char {
+            '0'..='9' => self.read_number(char),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             ',' => Token::Comma,
@@ -53,5 +54,30 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
+    }
+
+    /// Reads the next number [`Token`] from its first digit [`char`].
+    fn read_number(&mut self, first_digit: char) -> Token {
+        debug_assert!(
+            first_digit.is_ascii_digit(),
+            "`first_digit` should be matched as an ASCII digit"
+        );
+
+        let mut number = first_digit.to_string();
+
+        while let Some(digit) = self.chars.next_if(char::is_ascii_digit) {
+            number.push(digit);
+        }
+
+        if let Some(point) = self.chars.next_if_eq(&'.') {
+            number.push(point);
+
+            while let Some(digit) = self.chars.next_if(char::is_ascii_digit) {
+                number.push(digit);
+            }
+        }
+
+        let number = number.parse().expect("`number` should be a valid float");
+        Token::Number(number)
     }
 }
