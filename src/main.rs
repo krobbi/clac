@@ -1,7 +1,11 @@
+mod lexer;
+
 use std::{
     env,
     io::{self, Write as _},
 };
+
+use crate::lexer::{Lexer, Token};
 
 /// Runs Clac.
 fn main() {
@@ -56,5 +60,15 @@ fn run_repl() {
 
 /// Executes source code.
 fn execute_source(source: &str) {
-    println!("\"{}\"", source.escape_default());
+    let mut lexer = Lexer::new(source);
+
+    loop {
+        match lexer.read_token() {
+            Token::Eof => {
+                println!("--- END ---");
+                break;
+            }
+            token => println!("{token:?}"),
+        }
+    }
 }
