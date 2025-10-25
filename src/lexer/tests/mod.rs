@@ -1,0 +1,172 @@
+use super::*;
+
+/// Asserts that source code generates an expected stream of tokens.
+macro_rules! assert_tokens {
+    ($source:literal, [$($result:pat),* $(,)?] $(,)?) => {
+        let mut lexer = Lexer::new($source);
+
+        $(
+            assert!(matches!(lexer.read_token(), $result));
+        )*
+
+        assert!(matches!(lexer.read_token(), Ok(Token::Eof)));
+    };
+    ($source:literal, Ok[$($token:pat),* $(,)?] $(,)?) => {
+        assert_tokens!($source, [$(
+            Ok($token)
+        ),*]);
+    };
+}
+
+/// Tests that empty source code does not generate any tokens.
+#[test]
+fn empty_source() {
+    assert_tokens!("", Ok[]);
+}
+
+/// Tests that whitespace does not generate any tokens.
+#[test]
+fn whitespace() {
+    assert_tokens!(" \r\n\t ", Ok[]);
+}
+
+/// Tests that non-ASCII characters are handled correctly.
+#[test]
+fn non_ascii() {
+    assert_tokens!(
+        "(Café ☕!)(🦀💻🧮)",
+        [
+            Ok(Token::OpenParen),
+            Err(LexError::UnexpectedChar('C')),
+            Err(LexError::UnexpectedChar('a')),
+            Err(LexError::UnexpectedChar('f')),
+            Err(LexError::UnexpectedChar('é')),
+            Err(LexError::UnexpectedChar('☕')),
+            Err(LexError::UnexpectedChar('!')),
+            Ok(Token::CloseParen),
+            Ok(Token::OpenParen),
+            Err(LexError::UnexpectedChar('🦀')),
+            Err(LexError::UnexpectedChar('💻')),
+            Err(LexError::UnexpectedChar('🧮')),
+            Ok(Token::CloseParen),
+        ]
+    );
+}
+
+/// Tests that source code generates trailing EOF tokens.
+#[test]
+fn trailing_eof() {
+    let mut lexer = Lexer::new("1 2 3");
+    assert!(matches!(lexer.read_token(), Ok(Token::Number(1.0))));
+    assert!(matches!(lexer.read_token(), Ok(Token::Number(2.0))));
+    assert!(matches!(lexer.read_token(), Ok(Token::Number(3.0))));
+
+    for _ in 0..16 {
+        assert!(matches!(lexer.read_token(), Ok(Token::Eof)));
+    }
+}
+
+/// Tests that all tokens are generated as expected.
+#[test]
+fn all_tokens() {
+    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0", Ok[
+        Token::Minus,
+        Token::OpenParen,
+        Token::Number(1.0),
+        Token::Plus,
+        Token::Number(2.5),
+        Token::CloseParen,
+        Token::Star,
+        Token::Number(3.0),
+        Token::Slash,
+        Token::Number(4.0),
+        Token::Comma,
+        Token::Number(123.0),
+    ]);
+}
+
+/// Tests that integer number tokens are generated as expected.
+#[test]
+fn integers() {
+    assert_tokens!(
+        "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
+        [
+            Ok(Token::Number(0.0)),
+            Ok(Token::Comma),
+            Ok(Token::Minus),
+            Ok(Token::Number(1.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(2.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(300.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(400.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(5.0)),
+            Err(LexError::UnexpectedChar('_')),
+            Ok(Token::Number(0.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(0.0)),
+            Err(LexError::UnexpectedChar('b')),
+            Ok(Token::Number(1010.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(0.0)),
+            Err(LexError::UnexpectedChar('o')),
+            Ok(Token::Number(10.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(0.0)),
+            Err(LexError::UnexpectedChar('x')),
+            Err(LexError::UnexpectedChar('f')),
+            Err(LexError::UnexpectedChar('f')),
+            Ok(Token::Comma),
+        ]
+    );
+}
+
+/// Tests that decimal number tokens are generated as expected.
+#[test]
+fn decimals() {
+    assert_tokens!(
+        "0.0, 1., -2.5, 00300.12500, 4.0625, .5, 0.03125, .,",
+        [
+            Ok(Token::Number(0.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(1.0)),
+            Ok(Token::Comma),
+            Ok(Token::Minus),
+            Ok(Token::Number(2.5)),
+            Ok(Token::Comma),
+            Ok(Token::Number(300.125)),
+            Ok(Token::Comma),
+            Ok(Token::Number(4.0625)),
+            Ok(Token::Comma),
+            Err(LexError::UnexpectedChar('.')),
+            Ok(Token::Number(5.0)),
+            Ok(Token::Comma),
+            Ok(Token::Number(0.03125)),
+            Ok(Token::Comma),
+            Err(LexError::UnexpectedChar('.')),
+            Ok(Token::Comma),
+        ]
+    );
+}
+
+/// Tests that decimal number tokens are parsed accurately.
+#[test]
+fn decimal_accuracy() {
+    use std::f64::consts;
+
+    const PI: f64 = consts::PI;
+
+    // Test pi as it is written in the standard library.
+    assert_tokens!(
+        "3.14159265358979323846264338327950288",
+        Ok[Token::Number(PI)],
+    );
+
+    // Test pi with more decimal places than can be represented.
+    assert_tokens!(
+        "3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628035",
+        Ok[Token::Number(PI)],
+    );
+}
