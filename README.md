@@ -19,8 +19,9 @@ If Clac is given one or more arguments, then they are joined with spaces and
 treated as a single line of code. Clac executes the code and exits
 automatically.
 
-If Clac is not given any arguments, then user can enter code in a loop until
-manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z` (Windows.)
+If Clac is not given any arguments, then the user can enter code in a loop
+until manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z`
+(Windows.)
 
 Currently, Clac prints the input code as a stream of tokens.
 
