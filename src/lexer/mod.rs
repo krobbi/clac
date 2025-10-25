@@ -2,38 +2,38 @@
 mod tests;
 
 mod error;
+mod scanner;
 mod token;
 
 pub use crate::lexer::token::Token;
 
-use std::{iter::Peekable, str::Chars};
-
-use crate::lexer::error::LexError;
+use crate::lexer::{error::LexError, scanner::Scanner};
 
 /// A structure that reads a stream of [`Token`]s from source code.
 pub struct Lexer<'a> {
-    /// The [`Peekable`] iterator for reading [`char`]s from source code.
-    chars: Peekable<Chars<'a>>,
+    /// The [`Scanner`] for reading [`char`]s from source code.
+    scanner: Scanner<'a>,
 }
 
 impl<'a> Lexer<'a> {
     /// Creates a new `Lexer` from source code to be read.
     pub fn new(source: &'a str) -> Self {
-        let chars = source.chars().peekable();
-        Self { chars }
+        let scanner = Scanner::new(source);
+        Self { scanner }
     }
 
-    /// Reads the next [`Token`]. This function returns a [`LexError`] if a
-    /// valid [`Token`] cannot be read.
-    pub fn read_token(&mut self) -> Result<Token, LexError> {
-        self.skip_whitespace();
+    /// Consumes the next [`Token`] from source code. This function returns a
+    /// [`LexError`] if a valid [`Token`] could not be read.
+    pub fn bump(&mut self) -> Result<Token, LexError> {
+        self.scanner.eat_while(char::is_whitespace);
+        self.scanner.begin_lexeme();
 
-        let Some(char) = self.chars.next() else {
+        let Some(char) = self.scanner.bump() else {
             return Ok(Token::Eof);
         };
 
         let token = match char {
-            '0'..='9' => self.read_number(char),
+            c if is_char_digit(c) => self.read_number(),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             ',' => Token::Comma,
@@ -47,40 +47,22 @@ impl<'a> Lexer<'a> {
         Ok(token)
     }
 
-    /// Advances the `Lexer` until the next [`char`] is not whitespace according
-    /// to the Unicode `White_Space` property.
-    fn skip_whitespace(&mut self) {
-        while let Some(char) = self.chars.peek() {
-            if char.is_whitespace() {
-                self.chars.next();
-            } else {
-                break;
-            }
-        }
-    }
+    /// Reads the next number [`Token`] after consuming its first digit
+    /// [`char`].
+    fn read_number(&mut self) -> Token {
+        self.scanner.eat_while(is_char_digit);
 
-    /// Reads the next number [`Token`] from its first digit [`char`].
-    fn read_number(&mut self, first_digit: char) -> Token {
-        debug_assert!(
-            first_digit.is_ascii_digit(),
-            "`first_digit` should be matched as an ASCII digit"
-        );
-
-        let mut number = first_digit.to_string();
-
-        while let Some(digit) = self.chars.next_if(char::is_ascii_digit) {
-            number.push(digit);
+        if self.scanner.eat('.') {
+            self.scanner.eat_while(is_char_digit);
         }
 
-        if let Some(point) = self.chars.next_if_eq(&'.') {
-            number.push(point);
-
-            while let Some(digit) = self.chars.next_if(char::is_ascii_digit) {
-                number.push(digit);
-            }
-        }
-
-        let number = number.parse().expect("`number` should be a valid float");
+        let number = self.scanner.lexeme();
+        let number = number.parse().expect("lexeme should be a valid float");
         Token::Number(number)
     }
+}
+
+/// Returns whether a [`char`] is a digit.
+fn is_char_digit(char: char) -> bool {
+    char.is_ascii_digit()
 }

@@ -1,15 +1,15 @@
 use super::*;
 
-/// Asserts that source code generates an expected stream of tokens.
+/// Asserts that source code generates an expected stream of [`Token`]s.
 macro_rules! assert_tokens {
     ($source:literal, [$($result:pat),* $(,)?] $(,)?) => {
         let mut lexer = Lexer::new($source);
 
         $(
-            assert!(matches!(lexer.read_token(), $result));
+            assert!(matches!(lexer.bump(), $result));
         )*
 
-        assert!(matches!(lexer.read_token(), Ok(Token::Eof)));
+        assert!(matches!(lexer.bump(), Ok(Token::Eof)));
     };
     ($source:literal, Ok[$($token:pat),* $(,)?] $(,)?) => {
         assert_tokens!($source, [$(
@@ -18,19 +18,19 @@ macro_rules! assert_tokens {
     };
 }
 
-/// Tests that empty source code does not generate any tokens.
+/// Tests that empty source code does not generate any [`Token`]s.
 #[test]
 fn empty_source() {
     assert_tokens!("", Ok[]);
 }
 
-/// Tests that whitespace does not generate any tokens.
+/// Tests that whitespace does not generate any [`Token`]s.
 #[test]
 fn whitespace() {
     assert_tokens!(" \r\n\t ", Ok[]);
 }
 
-/// Tests that non-ASCII characters are handled correctly.
+/// Tests that non-ASCII [`char`]s are handled correctly.
 #[test]
 fn non_ascii() {
     assert_tokens!(
@@ -53,20 +53,20 @@ fn non_ascii() {
     );
 }
 
-/// Tests that source code generates trailing EOF tokens.
+/// Tests that source code generates trailing EOF [`Token`]s.
 #[test]
 fn trailing_eof() {
     let mut lexer = Lexer::new("1 2 3");
-    assert!(matches!(lexer.read_token(), Ok(Token::Number(1.0))));
-    assert!(matches!(lexer.read_token(), Ok(Token::Number(2.0))));
-    assert!(matches!(lexer.read_token(), Ok(Token::Number(3.0))));
+    assert!(matches!(lexer.bump(), Ok(Token::Number(1.0))));
+    assert!(matches!(lexer.bump(), Ok(Token::Number(2.0))));
+    assert!(matches!(lexer.bump(), Ok(Token::Number(3.0))));
 
     for _ in 0..16 {
-        assert!(matches!(lexer.read_token(), Ok(Token::Eof)));
+        assert!(matches!(lexer.bump(), Ok(Token::Eof)));
     }
 }
 
-/// Tests that all tokens are generated as expected.
+/// Tests that all [`Token`]s are generated as expected.
 #[test]
 fn all_tokens() {
     assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0", Ok[
@@ -85,7 +85,7 @@ fn all_tokens() {
     ]);
 }
 
-/// Tests that integer number tokens are generated as expected.
+/// Tests that integer number [`Token`]s are generated as expected.
 #[test]
 fn integers() {
     assert_tokens!(
@@ -123,7 +123,7 @@ fn integers() {
     );
 }
 
-/// Tests that decimal number tokens are generated as expected.
+/// Tests that decimal number [`Token`]s are generated as expected.
 #[test]
 fn decimals() {
     assert_tokens!(
@@ -151,7 +151,7 @@ fn decimals() {
     );
 }
 
-/// Tests that decimal number tokens are parsed accurately.
+/// Tests that decimal number [`Token`]s are parsed accurately.
 #[test]
 fn decimal_accuracy() {
     use std::f64::consts;

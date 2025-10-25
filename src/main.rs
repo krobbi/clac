@@ -63,7 +63,7 @@ fn execute_source(source: &str) {
     let mut lexer = Lexer::new(source);
 
     loop {
-        match lexer.read_token() {
+        match lexer.bump() {
             Ok(Token::Eof) => {
                 println!("--- END ---");
                 break;
