@@ -5,9 +5,9 @@ mod lex_error;
 mod scanner;
 mod token;
 
-pub use self::token::Token;
+pub use self::{lex_error::LexError, token::Token};
 
-use self::{lex_error::LexError, scanner::Scanner};
+use self::scanner::Scanner;
 
 /// A structure that reads a stream of [`Token`]s from source code.
 pub struct Lexer<'a> {
@@ -62,7 +62,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Returns whether a [`char`] is a digit.
+/// Returns `true` if a [`char`] is a digit.
 fn is_char_digit(char: char) -> bool {
     char.is_ascii_digit()
 }

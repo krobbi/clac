@@ -3,8 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-/// An [`Error`] caught by a [`Lexer`][super::Lexer] while reading a
-/// [`Token`][super::Token].
+/// An [`Error`] caught while reading a [`Token`][super::Token].
 #[derive(Debug)]
 pub enum LexError {
     /// A [`char`] that does not begin a [`Token`][super::Token] was

@@ -1,5 +1,4 @@
 /// A lexical element of source code.
-#[derive(Debug)]
 pub enum Token {
     /// A number.
     #[cfg_attr(not(test), expect(dead_code, reason = "field should be debug printed"))]

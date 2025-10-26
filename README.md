@@ -23,7 +23,7 @@ If Clac is not given any arguments, then the user can enter code in a loop
 until manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z`
 (Windows.)
 
-Currently, Clac prints the input code as a stream of tokens.
+Currently, Clac prints the input code as an abstract syntax tree.
 
 <!--
 # Language
@@ -220,7 +220,15 @@ The Clac language includes built-in functions for commonly-used operations:
 | Function                    | Usage                           |
 | :-------------------------- | :------------------------------ |
 | `sqrt(n: number) -> number` | Returns the square root of `n`. |
+-->
 
+# Grammar
+All valid Clac programs should have the following grammar:
+```ebnf
+program = Eof ;
+```
+
+<!--
 ## Grammar
 ```EBNF
 program = sequence, Eof ;

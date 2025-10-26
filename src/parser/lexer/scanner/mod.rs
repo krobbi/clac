@@ -40,7 +40,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// Consumes the next [`char`] from source code if it is equal to an
-    /// expected [`char`]. This function returns whether a [`char`] was
+    /// expected [`char`]. This function returns `true` if a [`char`] was
     /// consumed.
     pub fn eat(&mut self, expected: char) -> bool {
         if let Some(char) = self.peek()

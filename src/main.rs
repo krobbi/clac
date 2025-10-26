@@ -1,11 +1,10 @@
-mod lexer;
+mod ast;
+mod parser;
 
 use std::{
     env,
     io::{self, Write as _},
 };
-
-use crate::lexer::{Lexer, Token};
 
 /// Runs Clac.
 fn main() {
@@ -44,7 +43,7 @@ fn run_repl() {
         source.clear();
 
         if let Err(error) = io::stdin().read_line(&mut source) {
-            eprintln!("\nCould not read line: {error}");
+            eprintln!("Could not read line: {error}");
             continue;
         }
 
@@ -60,16 +59,8 @@ fn run_repl() {
 
 /// Executes source code.
 fn execute_source(source: &str) {
-    let mut lexer = Lexer::new(source);
-
-    loop {
-        match lexer.bump() {
-            Ok(Token::Eof) => {
-                println!("--- END ---");
-                break;
-            }
-            Ok(token) => println!("{token:?}"),
-            Err(error) => eprintln!("{error}"),
-        }
+    match parser::parse_source(source) {
+        Ok(ast) => println!("{ast:#?}"),
+        Err(error) => eprintln!("{error}"),
     }
 }
