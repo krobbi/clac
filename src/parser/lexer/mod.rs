@@ -5,7 +5,10 @@ mod lex_error;
 mod scanner;
 mod token;
 
-pub use self::{lex_error::LexError, token::Token};
+pub use self::{
+    lex_error::LexError,
+    token::{Token, TokenType},
+};
 
 use self::scanner::Scanner;
 

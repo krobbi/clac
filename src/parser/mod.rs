@@ -6,7 +6,7 @@ use std::mem;
 use crate::ast::Ast;
 
 use self::{
-    lexer::{LexError, Lexer, Token},
+    lexer::{LexError, Lexer, Token, TokenType},
     parse_error::ParseError,
 };
 
@@ -38,7 +38,7 @@ impl<'a> Parser<'a> {
     /// Parses an [`Ast`]. This function returns a [`ParseError`] if an [`Ast`]
     /// could not be parsed.
     fn parse_ast(&mut self) -> Result<Ast, ParseError> {
-        self.expect(&Token::Eof)?;
+        self.expect(TokenType::Eof)?;
         Ok(Ast)
     }
 
@@ -54,11 +54,11 @@ impl<'a> Parser<'a> {
         Ok(mem::replace(&mut self.next_token, following_token))
     }
 
-    /// Consumes the next [`Token`] if it matches an expected [`Token`]. This
-    /// function returns `true` if a [`Token`] was consumed and returns a
+    /// Consumes the next [`Token`] if it matches an expected [`TokenType`].
+    /// This function returns `true` if a [`Token`] was consumed and returns a
     /// [`LexError`] if a valid following [`Token`] could not be read.
-    fn eat(&mut self, expected: &Token) -> Result<bool, LexError> {
-        let is_match = mem::discriminant(self.peek()) == mem::discriminant(expected);
+    fn eat(&mut self, expected: TokenType) -> Result<bool, LexError> {
+        let is_match = self.peek().as_type() == expected;
 
         if is_match {
             self.bump()?;
@@ -67,14 +67,15 @@ impl<'a> Parser<'a> {
         Ok(is_match)
     }
 
-    /// Consumes the next [`Token`] if it matches an expected [`Token`]. This
-    /// function returns a [`ParseError`] if the next [`Token`] does not match
-    /// the expected [`Token`].
-    fn expect(&mut self, expected: &Token) -> Result<(), ParseError> {
+    /// Consumes the next [`Token`] if it matches an expected [`TokenType`].
+    /// This function returns a [`ParseError`] if the next [`Token`] does not
+    /// match the expected [`TokenType`].
+    fn expect(&mut self, expected: TokenType) -> Result<(), ParseError> {
         if self.eat(expected)? {
             Ok(())
         } else {
-            Err(ParseError::Generic)
+            let actual = self.bump()?;
+            Err(ParseError::UnexpectedToken(expected, actual))
         }
     }
 }

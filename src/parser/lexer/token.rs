@@ -1,30 +1,88 @@
-/// A lexical element of source code.
-pub enum Token {
-    /// A number.
-    #[cfg_attr(not(test), expect(dead_code, reason = "field should be debug printed"))]
-    Number(f64),
+use std::fmt::{self, Display, Formatter};
 
-    /// An opening parenthesis.
-    OpenParen,
+/// Converts a type metavariable to a wildcard pattern.
+macro_rules! wildcard {
+    ($type:ty) => {
+        _
+    };
+}
 
-    /// A closing parenthesis.
-    CloseParen,
+/// Defines the set of available [`Token`]s.
+macro_rules! define_tokens {
+    ([$((
+        $name:ident $(($field:ty))?, $doc:literal, $description:literal $(,)?
+    )),* $(,)?] $(,)?) => {
+        #[doc = "A lexical element of source code."]
+        #[derive(Debug)]
+        pub enum Token {
+            $(
+                #[doc = $doc]
+                $name $(
+                    ($field)
+                )?
+            ),*
+        }
 
-    /// A comma.
-    Comma,
+        impl Token {
+            #[doc = "Converts the `Token` to its [`TokenType`]."]
+            pub fn as_type(&self) -> TokenType {
+                match self {
+                    $(
+                        Self::$name $(
+                            (wildcard!($field))
+                        )? => TokenType::$name
+                    ),*
+                }
+            }
+        }
 
-    /// A plus sign.
-    Plus,
+        #[doc = "A [`Token`]'s type."]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        #[repr(u8)]
+        pub enum TokenType {
+            $(
+                #[doc = $doc]
+                $name
+            ),*
+        }
 
-    /// A minus sign.
-    Minus,
+        impl TokenType {
+            #[doc = "Returns a description of the `TokenType`."]
+            fn description(self) -> &'static str {
+                match self {
+                    $(
+                        Self::$name => $description
+                    ),*
+                }
+            }
+        }
+    };
+}
 
-    /// An asterisk.
-    Star,
+define_tokens!([
+    (Number(f64), "A number.", "a number"),
+    (OpenParen, "An opening parenthesis.", "an opening '('"),
+    (CloseParen, "A closing parenthesis.", "a closing ')'"),
+    (Comma, "A comma.", "','"),
+    (Plus, "A plus sign.", "'+'"),
+    (Minus, "A minus sign.", "'-'"),
+    (Star, "An asterisk.", "'*'"),
+    (Slash, "A forward slash.", "'/'"),
+    (Eof, "An end of source code marker.", "end of file"),
+]);
 
-    /// A forward slash.
-    Slash,
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Number(number) => write!(f, "number '{number}'"),
+            _ => self.as_type().fmt(f),
+        }
+    }
+}
 
-    /// An end of source code marker.
-    Eof,
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let description = self.description();
+        write!(f, "{description}")
+    }
 }
