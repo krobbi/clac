@@ -38,7 +38,6 @@ macro_rules! define_tokens {
 
         #[doc = "A [`Token`]'s type."]
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-        #[repr(u8)]
         pub enum TokenType {
             $(
                 #[doc = $doc]
