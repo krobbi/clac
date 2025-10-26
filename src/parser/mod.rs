@@ -1,3 +1,4 @@
+mod infix;
 mod lexer;
 mod parse_error;
 
@@ -46,29 +47,22 @@ impl<'a> Parser<'a> {
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
     /// [`Expr`] could not be parsed.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expr_prefix()
+        self.parse_expr_infix(0)
     }
 
-    /// Parses a prefix [`Expr`]. This function returns a [`ParseError`] if a
-    /// prefix [`Expr`] could not be parsed.
-    fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
-        if self.eat(TokenType::Minus)? {
-            let expr = self.parse_expr_prefix()?;
-            Ok(Expr::Unary(UnOp::Negate, expr.into()))
-        } else {
-            self.parse_expr_primary()
-        }
-    }
-
-    /// Parses a primary [`Expr`]. This function returns a [`ParseError`] if a
-    /// primary [`Expr`] could not be parsed.
-    fn parse_expr_primary(&mut self) -> Result<Expr, ParseError> {
+    /// Parses an atom [`Expr`]. This function returns a [`ParseError`] if an
+    /// atom [`Expr`] could not be parsed.
+    fn parse_expr_atom(&mut self) -> Result<Expr, ParseError> {
         let expr = match self.bump()? {
             Token::Number(number) => Expr::Number(number),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
                 self.expect(TokenType::CloseParen)?;
                 Expr::Paren(expr.into())
+            }
+            Token::Minus => {
+                let expr = self.parse_expr_atom()?;
+                Expr::Unary(UnOp::Negate, expr.into())
             }
             token => return Err(ParseError::ExpectedExpr(token)),
         };

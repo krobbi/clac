@@ -15,6 +15,9 @@ pub enum Expr {
 
     /// A unary operation.
     Unary(UnOp, Box<Expr>),
+
+    /// A binary operation.
+    Binary(BinOp, Box<Expr>, Box<Expr>),
 }
 
 /// A unary operator.
@@ -22,4 +25,20 @@ pub enum Expr {
 pub enum UnOp {
     /// A negation.
     Negate,
+}
+
+/// A binary operator.
+#[derive(Clone, Copy, Debug)]
+pub enum BinOp {
+    /// An addition.
+    Add,
+
+    /// A subtraction.
+    Subtract,
+
+    /// A multiplication.
+    Multiply,
+
+    /// A division.
+    Divide,
 }

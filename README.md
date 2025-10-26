@@ -226,8 +226,10 @@ The Clac language includes built-in functions for commonly-used operations:
 All valid Clac programs should have the following grammar:
 ```ebnf
 program = expr, Eof ;
-expr    = expr_prefix ;
+expr    = expr_sum ;
 
+expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
+expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix  = "-", expr_prefix | expr_primary ;
 expr_primary = "(", expr, ")" | Number ;
 ```
@@ -249,11 +251,11 @@ atom_prefix  = "-", atom_prefix | atom_call ;
 atom_call    = atom_primary, { "(", sequence, ")" } ;
 atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
 ```
+-->
 
 # Credits
 * Infix parser based on
-[pseudocode by Eli Bendersky](https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing).
--->
+[pseudocode by Eli Bendersky](https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing#precedence-climbing-how-it-actually-works).
 
 # License
 Clac is released under the MIT License. See [LICENSE.txt](/LICENSE.txt) for a
