@@ -3,7 +3,7 @@ mod parse_error;
 
 use std::mem;
 
-use crate::ast::Ast;
+use crate::ast::{Ast, Expr};
 
 use self::{
     lexer::{LexError, Lexer, Token, TokenType},
@@ -38,8 +38,31 @@ impl<'a> Parser<'a> {
     /// Parses an [`Ast`]. This function returns a [`ParseError`] if an [`Ast`]
     /// could not be parsed.
     fn parse_ast(&mut self) -> Result<Ast, ParseError> {
+        let expr = self.parse_expr()?;
         self.expect(TokenType::Eof)?;
-        Ok(Ast)
+        Ok(Ast(expr))
+    }
+
+    /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
+    /// [`Expr`] could not be parsed.
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.parse_expr_primary()
+    }
+
+    /// Parses a primary [`Expr`]. This function returns a [`ParseError`] if a
+    /// primary [`Expr`] could not be parsed.
+    fn parse_expr_primary(&mut self) -> Result<Expr, ParseError> {
+        let expr = match self.bump()? {
+            Token::Number(number) => Expr::Number(number),
+            Token::OpenParen => {
+                let expr = self.parse_expr()?;
+                self.expect(TokenType::CloseParen)?;
+                Expr::Paren(expr.into())
+            }
+            token => return Err(ParseError::ExpectedExpr(token)),
+        };
+
+        Ok(expr)
     }
 
     /// Returns the next [`Token`] without consuming it.

@@ -11,9 +11,13 @@ pub enum ParseError {
     /// A [`LexError`] was encountered.
     Lex(LexError),
 
-    /// A [`Token`] was encountered that did not match an expected
-    /// [`TokenType`].
+    /// A [`Token`] that did not match an expected [`TokenType`] was
+    /// encountered.
     UnexpectedToken(TokenType, Token),
+
+    /// A [`Token`] that does not begin an expected [`Expr`][crate::ast::Expr]
+    /// was encountered.
+    ExpectedExpr(Token),
 }
 
 impl From<LexError> for ParseError {
@@ -26,7 +30,7 @@ impl Error for ParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Lex(error) => Some(error),
-            Self::UnexpectedToken(..) => None,
+            _ => None,
         }
     }
 }
@@ -38,6 +42,7 @@ impl Display for ParseError {
             Self::UnexpectedToken(expected, actual) => {
                 write!(f, "expected {expected}, got {actual}")
             }
+            Self::ExpectedExpr(token) => write!(f, "expected an expression, got {token}"),
         }
     }
 }
