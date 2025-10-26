@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests;
 
-mod error;
+mod lex_error;
 mod scanner;
 mod token;
 
-pub use crate::lexer::token::Token;
+pub use self::token::Token;
 
-use crate::lexer::{error::LexError, scanner::Scanner};
+use self::{lex_error::LexError, scanner::Scanner};
 
 /// A structure that reads a stream of [`Token`]s from source code.
 pub struct Lexer<'a> {

@@ -154,9 +154,7 @@ fn decimals() {
 /// Tests that decimal number [`Token`]s are parsed accurately.
 #[test]
 fn decimal_accuracy() {
-    use std::f64::consts;
-
-    const PI: f64 = consts::PI;
+    use std::f64::consts::PI;
 
     // Test pi as it is written in the standard library.
     assert_tokens!(

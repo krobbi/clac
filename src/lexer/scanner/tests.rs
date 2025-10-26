@@ -62,8 +62,8 @@ fn eat_while_terminates() {
 }
 
 /// A [`char`] predicate function that always returns `true`.
-fn is_char_not_eof(_char: char) -> bool {
-    use std::hint;
+fn is_char_not_eof(char: char) -> bool {
+    use std::hint::black_box;
 
-    hint::black_box(true)
+    black_box(char) == black_box(char)
 }
