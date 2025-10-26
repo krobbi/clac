@@ -3,7 +3,7 @@ mod parse_error;
 
 use std::mem;
 
-use crate::ast::{Ast, Expr};
+use crate::ast::{Ast, Expr, UnOp};
 
 use self::{
     lexer::{LexError, Lexer, Token, TokenType},
@@ -46,7 +46,18 @@ impl<'a> Parser<'a> {
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
     /// [`Expr`] could not be parsed.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expr_primary()
+        self.parse_expr_prefix()
+    }
+
+    /// Parses a prefix [`Expr`]. This function returns a [`ParseError`] if a
+    /// prefix [`Expr`] could not be parsed.
+    fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
+        if self.eat(TokenType::Minus)? {
+            let expr = self.parse_expr_prefix()?;
+            Ok(Expr::Unary(UnOp::Negate, expr.into()))
+        } else {
+            self.parse_expr_primary()
+        }
     }
 
     /// Parses a primary [`Expr`]. This function returns a [`ParseError`] if a

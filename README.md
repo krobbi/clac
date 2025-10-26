@@ -226,7 +226,9 @@ The Clac language includes built-in functions for commonly-used operations:
 All valid Clac programs should have the following grammar:
 ```ebnf
 program = expr, Eof ;
-expr = expr_primary ;
+expr    = expr_prefix ;
+
+expr_prefix  = "-", expr_prefix | expr_primary ;
 expr_primary = "(", expr, ")" | Number ;
 ```
 

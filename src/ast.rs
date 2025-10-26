@@ -12,4 +12,14 @@ pub enum Expr {
 
     /// A parenthesized expression.
     Paren(Box<Expr>),
+
+    /// A unary operation.
+    Unary(UnOp, Box<Expr>),
+}
+
+/// A unary operator.
+#[derive(Clone, Copy, Debug)]
+pub enum UnOp {
+    /// A negation.
+    Negate,
 }
