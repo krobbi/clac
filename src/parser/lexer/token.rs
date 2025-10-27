@@ -74,7 +74,7 @@ define_tokens!([
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(number) => write!(f, "number '{number}'"),
+            Self::Number(value) => write!(f, "number '{value}'"),
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             _ => self.as_type().fmt(f),
         }
@@ -83,7 +83,6 @@ impl Display for Token {
 
 impl Display for TokenType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let description = self.description();
-        write!(f, "{description}")
+        f.write_str(self.description())
     }
 }

@@ -82,7 +82,7 @@ impl<'a> Parser<'a> {
     /// atom [`Expr`] could not be parsed.
     fn parse_expr_atom(&mut self) -> Result<Expr, ParseError> {
         let mut callee = match self.bump()? {
-            Token::Number(number) => Expr::Number(number),
+            Token::Number(value) => Expr::Number(value),
             Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;

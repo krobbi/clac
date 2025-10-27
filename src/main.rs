@@ -60,7 +60,7 @@ fn run_repl() {
 /// Executes source code.
 fn execute_source(source: &str) {
     match parser::parse_source(source) {
-        Ok(ast) => println!("{ast:#?}"),
+        Ok(ast) => println!("{ast}"),
         Err(error) => eprintln!("{error}"),
     }
 }

@@ -1,11 +1,9 @@
-#![expect(dead_code, reason = "ASTs should be debug printed")]
+mod display;
 
 /// An abstract syntax tree.
-#[derive(Debug)]
 pub struct Ast(pub Vec<Expr>);
 
 /// An expression.
-#[derive(Debug)]
 pub enum Expr {
     /// A number.
     Number(f64),
@@ -27,14 +25,14 @@ pub enum Expr {
 }
 
 /// A unary operator.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum UnOp {
     /// A negation.
     Negate,
 }
 
 /// A binary operator.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum BinOp {
     /// An addition.
     Add,

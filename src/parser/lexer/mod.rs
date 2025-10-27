@@ -59,9 +59,9 @@ impl<'a> Lexer<'a> {
             self.scanner.eat_while(is_char_digit);
         }
 
-        let number = self.scanner.lexeme();
-        let number = number.parse().expect("lexeme should be a valid float");
-        Token::Number(number)
+        let value = self.scanner.lexeme();
+        let value = value.parse().expect("value should be a valid float");
+        Token::Number(value)
     }
 
     /// Reads the next identifier [`Token`] after consuming its first [`char`].
