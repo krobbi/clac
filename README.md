@@ -225,12 +225,15 @@ The Clac language includes built-in functions for commonly-used operations:
 # Grammar
 All valid Clac programs should have the following grammar:
 ```ebnf
-program = { expr, [ "," ] }, Eof ;
-expr    = expr_sum ;
+program  = sequence, Eof ;
+sequence = { expr, [ "," ] } ;
+tuple    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
+expr     = expr_sum ;
 
 expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
-expr_prefix  = "-", expr_prefix | expr_primary ;
+expr_prefix  = "-", expr_prefix | expr_call ;
+expr_call    = expr_primary, { tuple } ;
 expr_primary = "(", expr, ")" | Number ;
 ```
 

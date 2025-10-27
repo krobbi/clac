@@ -50,6 +50,28 @@ impl<'a> Parser<'a> {
         Ok(Ast(exprs))
     }
 
+    /// Parses a tuple of [`Expr`]s after consuming its opening parenthesis.
+    /// This function returns a [`ParseError`] if a tuple could not be parsed.
+    fn parse_tuple(&mut self) -> Result<Vec<Expr>, ParseError> {
+        let mut exprs = Vec::new();
+
+        loop {
+            if self.check(TokenType::CloseParen) {
+                break;
+            }
+
+            let expr = self.parse_expr()?;
+            exprs.push(expr);
+
+            if !self.eat(TokenType::Comma)? {
+                break;
+            }
+        }
+
+        self.expect(TokenType::CloseParen)?;
+        Ok(exprs)
+    }
+
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
     /// [`Expr`] could not be parsed.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
@@ -59,7 +81,7 @@ impl<'a> Parser<'a> {
     /// Parses an atom [`Expr`]. This function returns a [`ParseError`] if an
     /// atom [`Expr`] could not be parsed.
     fn parse_expr_atom(&mut self) -> Result<Expr, ParseError> {
-        let expr = match self.bump()? {
+        let mut callee = match self.bump()? {
             Token::Number(number) => Expr::Number(number),
             Token::OpenParen => {
                 let expr = self.parse_expr()?;
@@ -73,7 +95,12 @@ impl<'a> Parser<'a> {
             token => return Err(ParseError::ExpectedExpr(token)),
         };
 
-        Ok(expr)
+        while self.eat(TokenType::OpenParen)? {
+            let args = self.parse_tuple()?;
+            callee = Expr::Call(callee.into(), args);
+        }
+
+        Ok(callee)
     }
 
     /// Returns the next [`Token`]'s [`TokenType`].

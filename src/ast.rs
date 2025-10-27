@@ -13,6 +13,9 @@ pub enum Expr {
     /// A parenthesized expression.
     Paren(Box<Expr>),
 
+    /// A function call.
+    Call(Box<Expr>, Vec<Expr>),
+
     /// A unary operation.
     Unary(UnOp, Box<Expr>),
 
