@@ -225,7 +225,7 @@ The Clac language includes built-in functions for commonly-used operations:
 # Grammar
 All valid Clac programs should have the following grammar:
 ```ebnf
-program = expr, Eof ;
+program = { expr, [ "," ] }, Eof ;
 expr    = expr_sum ;
 
 expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;

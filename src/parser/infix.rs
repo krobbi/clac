@@ -8,7 +8,7 @@ impl Parser<'_> {
     pub fn parse_expr_infix(&mut self, min_precedence: u8) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_expr_atom()?;
 
-        while let Some(op) = BinOp::from_token_type(self.peek().as_type()) {
+        while let Some(op) = BinOp::from_token_type(self.peek()) {
             let precedence = op.precedence();
 
             if precedence < min_precedence {

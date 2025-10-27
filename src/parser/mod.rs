@@ -39,9 +39,15 @@ impl<'a> Parser<'a> {
     /// Parses an [`Ast`]. This function returns a [`ParseError`] if an [`Ast`]
     /// could not be parsed.
     fn parse_ast(&mut self) -> Result<Ast, ParseError> {
-        let expr = self.parse_expr()?;
-        self.expect(TokenType::Eof)?;
-        Ok(Ast(expr))
+        let mut exprs = Vec::new();
+
+        while !self.check(TokenType::Eof) {
+            let expr = self.parse_expr()?;
+            self.eat(TokenType::Comma)?;
+            exprs.push(expr);
+        }
+
+        Ok(Ast(exprs))
     }
 
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
@@ -70,9 +76,14 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    /// Returns the next [`Token`] without consuming it.
-    fn peek(&self) -> &Token {
-        &self.next_token
+    /// Returns the next [`Token`]'s [`TokenType`].
+    fn peek(&self) -> TokenType {
+        self.next_token.as_type()
+    }
+
+    /// Returns `true` if the next [`Token`] matches an expected [`TokenType`].
+    fn check(&self, expected: TokenType) -> bool {
+        self.peek() == expected
     }
 
     /// Consumes the next [`Token`]. This function returns a [`LexError`] if a
@@ -86,7 +97,7 @@ impl<'a> Parser<'a> {
     /// This function returns `true` if a [`Token`] was consumed and returns a
     /// [`LexError`] if a valid following [`Token`] could not be read.
     fn eat(&mut self, expected: TokenType) -> Result<bool, LexError> {
-        let is_match = self.peek().as_type() == expected;
+        let is_match = self.check(expected);
 
         if is_match {
             self.bump()?;

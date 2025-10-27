@@ -2,7 +2,7 @@
 
 /// An abstract syntax tree.
 #[derive(Debug)]
-pub struct Ast(pub Expr);
+pub struct Ast(pub Vec<Expr>);
 
 /// An expression.
 #[derive(Debug)]
