@@ -60,6 +60,7 @@ macro_rules! define_tokens {
 
 define_tokens!([
     (Number(f64), "A number.", "a number"),
+    (Ident(String), "An identifier.", "an identifier"),
     (OpenParen, "An opening parenthesis.", "an opening '('"),
     (CloseParen, "A closing parenthesis.", "a closing ')'"),
     (Comma, "A comma.", "','"),
@@ -74,6 +75,7 @@ impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Number(number) => write!(f, "number '{number}'"),
+            Self::Ident(name) => write!(f, "identifier '{name}'"),
             _ => self.as_type().fmt(f),
         }
     }

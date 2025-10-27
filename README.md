@@ -234,7 +234,7 @@ expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix  = "-", expr_prefix | expr_call ;
 expr_call    = expr_primary, { tuple } ;
-expr_primary = "(", expr, ")" | Number ;
+expr_primary = "(", expr, ")" | Number | Ident ;
 ```
 
 <!--

@@ -10,6 +10,9 @@ pub enum Expr {
     /// A number.
     Number(f64),
 
+    /// An identifier.
+    Ident(String),
+
     /// A parenthesized expression.
     Paren(Box<Expr>),
 

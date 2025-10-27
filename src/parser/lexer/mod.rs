@@ -37,6 +37,7 @@ impl<'a> Lexer<'a> {
 
         let token = match char {
             c if is_char_digit(c) => self.read_number(),
+            c if is_char_ident_start(c) => self.read_ident(),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             ',' => Token::Comma,
@@ -50,8 +51,7 @@ impl<'a> Lexer<'a> {
         Ok(token)
     }
 
-    /// Reads the next number [`Token`] after consuming its first digit
-    /// [`char`].
+    /// Reads the next number [`Token`] after consuming its first [`char`].
     fn read_number(&mut self) -> Token {
         self.scanner.eat_while(is_char_digit);
 
@@ -63,9 +63,26 @@ impl<'a> Lexer<'a> {
         let number = number.parse().expect("lexeme should be a valid float");
         Token::Number(number)
     }
+
+    /// Reads the next identifier [`Token`] after consuming its first [`char`].
+    fn read_ident(&mut self) -> Token {
+        self.scanner.eat_while(is_char_ident_continue);
+        let name = self.scanner.lexeme().to_owned();
+        Token::Ident(name)
+    }
 }
 
 /// Returns `true` if a [`char`] is a digit.
 fn is_char_digit(char: char) -> bool {
     char.is_ascii_digit()
+}
+
+/// Returns `true` if a [`char`] is an identifier start.
+fn is_char_ident_start(char: char) -> bool {
+    char.is_ascii_alphabetic() || char == '_'
+}
+
+/// Return `true` if a [`char`] is an identifier continuation.
+fn is_char_ident_continue(char: char) -> bool {
+    is_char_ident_start(char) || is_char_digit(char)
 }

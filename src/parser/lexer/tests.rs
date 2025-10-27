@@ -2,18 +2,22 @@ use super::*;
 
 /// Asserts that source code generates an expected stream of [`Token`]s.
 macro_rules! assert_tokens {
-    ($source:literal, [$($result:pat),* $(,)?] $(,)?) => {
+    ($source:literal, [$(
+        $result:pat $(if $guard:expr)?
+    ),* $(,)?] $(,)?) => {
         let mut lexer = Lexer::new($source);
 
         $(
-            assert!(matches!(lexer.bump(), $result));
+            assert!(matches!(lexer.bump(), $result $(if $guard)?));
         )*
 
         assert!(matches!(lexer.bump(), Ok(Token::Eof)));
     };
-    ($source:literal, Ok[$($token:pat),* $(,)?] $(,)?) => {
+    ($source:literal, Ok[$(
+        $token:pat $(if $guard:expr)?
+    ),* $(,)?] $(,)?) => {
         assert_tokens!($source, [$(
-            Ok($token)
+            Ok($token) $(if $guard)?
         ),*]);
     };
 }
@@ -37,9 +41,7 @@ fn non_ascii() {
         "(Café ☕!)(🦀💻🧮)",
         [
             Ok(Token::OpenParen),
-            Err(LexError::UnexpectedChar('C')),
-            Err(LexError::UnexpectedChar('a')),
-            Err(LexError::UnexpectedChar('f')),
+            Ok(Token::Ident(n)) if n == "Caf",
             Err(LexError::UnexpectedChar('é')),
             Err(LexError::UnexpectedChar('☕')),
             Err(LexError::UnexpectedChar('!')),
@@ -69,7 +71,7 @@ fn trailing_eof() {
 /// Tests that all [`Token`]s are generated as expected.
 #[test]
 fn all_tokens() {
-    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0", Ok[
+    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0, foo, _Bar42,", Ok[
         Token::Minus,
         Token::OpenParen,
         Token::Number(1.0),
@@ -82,6 +84,11 @@ fn all_tokens() {
         Token::Number(4.0),
         Token::Comma,
         Token::Number(123.0),
+        Token::Comma,
+        Token::Ident(n) if n == "foo",
+        Token::Comma,
+        Token::Ident(n) if n == "_Bar42",
+        Token::Comma,
     ]);
 }
 
@@ -90,35 +97,38 @@ fn all_tokens() {
 fn integers() {
     assert_tokens!(
         "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
-        [
-            Ok(Token::Number(0.0)),
-            Ok(Token::Comma),
-            Ok(Token::Minus),
-            Ok(Token::Number(1.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(2.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(300.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(400.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(5.0)),
-            Err(LexError::UnexpectedChar('_')),
-            Ok(Token::Number(0.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(0.0)),
-            Err(LexError::UnexpectedChar('b')),
-            Ok(Token::Number(1010.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(0.0)),
-            Err(LexError::UnexpectedChar('o')),
-            Ok(Token::Number(10.0)),
-            Ok(Token::Comma),
-            Ok(Token::Number(0.0)),
-            Err(LexError::UnexpectedChar('x')),
-            Err(LexError::UnexpectedChar('f')),
-            Err(LexError::UnexpectedChar('f')),
-            Ok(Token::Comma),
+        Ok[
+            Token::Number(0.0),
+            Token::Comma,
+
+            Token::Minus,
+            Token::Number(1.0),
+            Token::Comma,
+
+            Token::Number(2.0),
+            Token::Comma,
+
+            Token::Number(300.0),
+            Token::Comma,
+
+            Token::Number(400.0),
+            Token::Comma,
+
+            Token::Number(5.0),
+            Token::Ident(n) if n == "_000",
+            Token::Comma,
+
+            Token::Number(0.0),
+            Token::Ident(n) if n == "b1010",
+            Token::Comma,
+
+            Token::Number(0.0),
+            Token::Ident(n) if n == "o10",
+            Token::Comma,
+
+            Token::Number(0.0),
+            Token::Ident(n) if n == "xff",
+            Token::Comma,
         ]
     );
 }
