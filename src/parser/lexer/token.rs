@@ -64,6 +64,7 @@ define_tokens!([
     (OpenParen, "An opening parenthesis.", "an opening '('"),
     (CloseParen, "A closing parenthesis.", "a closing ')'"),
     (Comma, "A comma.", "','"),
+    (Eq, "An equals sign.", "'='"),
     (Plus, "A plus sign.", "'+'"),
     (Minus, "A minus sign.", "'-'"),
     (Star, "An asterisk.", "'*'"),

@@ -1,16 +1,25 @@
 use std::fmt::{self, Display, Formatter};
 
-use super::{Ast, BinOp, Expr, UnOp};
+use super::{Ast, BinOp, Expr, Stmt, UnOp};
 
 impl Display for Ast {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("(p:")?;
 
-        for expr in &self.0 {
-            write!(f, " {expr}")?;
+        for stmt in &self.0 {
+            write!(f, " {stmt}")?;
         }
 
         f.write_str(")")
+    }
+}
+
+impl Display for Stmt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Assign(target, source) => write!(f, "(= {target} {source})"),
+            Self::Expr(expr) => expr.fmt(f),
+        }
     }
 }
 

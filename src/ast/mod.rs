@@ -1,7 +1,16 @@
 mod display;
 
 /// An abstract syntax tree.
-pub struct Ast(pub Vec<Expr>);
+pub struct Ast(pub Vec<Stmt>);
+
+/// A statement.
+pub enum Stmt {
+    /// An assignment.
+    Assign(Box<Expr>, Box<Expr>),
+
+    /// An expression statement.
+    Expr(Box<Expr>),
+}
 
 /// An expression.
 pub enum Expr {

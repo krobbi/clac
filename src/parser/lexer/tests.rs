@@ -71,7 +71,7 @@ fn trailing_eof() {
 /// Tests that all [`Token`]s are generated as expected.
 #[test]
 fn all_tokens() {
-    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0, foo, _Bar42,", Ok[
+    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0, life == 42, _F00,", Ok[
         Token::Minus,
         Token::OpenParen,
         Token::Number(1.0),
@@ -83,11 +83,17 @@ fn all_tokens() {
         Token::Slash,
         Token::Number(4.0),
         Token::Comma,
+
         Token::Number(123.0),
         Token::Comma,
-        Token::Ident(n) if n == "foo",
+
+        Token::Ident(n) if n == "life",
+        Token::Eq,
+        Token::Eq,
+        Token::Number(42.0),
         Token::Comma,
-        Token::Ident(n) if n == "_Bar42",
+
+        Token::Ident(n) if n == "_F00",
         Token::Comma,
     ]);
 }

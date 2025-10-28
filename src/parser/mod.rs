@@ -4,7 +4,7 @@ mod parse_error;
 
 use std::mem;
 
-use crate::ast::{Ast, Expr, UnOp};
+use crate::ast::{Ast, Expr, Stmt, UnOp};
 
 use self::{
     lexer::{LexError, Lexer, Token, TokenType},
@@ -39,15 +39,30 @@ impl<'a> Parser<'a> {
     /// Parses an [`Ast`]. This function returns a [`ParseError`] if an [`Ast`]
     /// could not be parsed.
     fn parse_ast(&mut self) -> Result<Ast, ParseError> {
-        let mut exprs = Vec::new();
+        let mut stmts = Vec::new();
 
         while !self.check(TokenType::Eof) {
-            let expr = self.parse_expr()?;
+            let stmt = self.parse_stmt()?;
             self.eat(TokenType::Comma)?;
-            exprs.push(expr);
+            stmts.push(stmt);
         }
 
-        Ok(Ast(exprs))
+        Ok(Ast(stmts))
+    }
+
+    /// Parses a [`Stmt`]. This function returns a [`ParseError`] if a [`Stmt`]
+    /// could not be parsed.
+    fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
+        let target = self.parse_expr()?;
+
+        let stmt = if self.eat(TokenType::Eq)? {
+            let source = self.parse_expr()?;
+            Stmt::Assign(target.into(), source.into())
+        } else {
+            Stmt::Expr(target.into())
+        };
+
+        Ok(stmt)
     }
 
     /// Parses a tuple of [`Expr`]s after consuming its opening parenthesis.

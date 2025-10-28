@@ -41,6 +41,7 @@ impl<'a> Lexer<'a> {
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             ',' => Token::Comma,
+            '=' => Token::Eq,
             '+' => Token::Plus,
             '-' => Token::Minus,
             '*' => Token::Star,

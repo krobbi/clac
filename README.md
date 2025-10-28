@@ -226,7 +226,8 @@ The Clac language includes built-in functions for commonly-used operations:
 All valid Clac programs should have the following grammar:
 ```ebnf
 program  = sequence, Eof ;
-sequence = { expr, [ "," ] } ;
+sequence = { stmt, [ "," ] } ;
+stmt     = expr, [ "=", expr ] ;
 tuple    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
 expr     = expr_sum ;
 
