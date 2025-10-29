@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 mod infix;
 mod lexer;
 mod parse_error;
