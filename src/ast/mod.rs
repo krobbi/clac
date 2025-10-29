@@ -23,6 +23,9 @@ pub enum Expr {
     /// A parenthesized expression.
     Paren(Box<Expr>),
 
+    /// A block.
+    Block(Vec<Stmt>),
+
     /// A function call.
     Call(Box<Expr>, Vec<Expr>),
 

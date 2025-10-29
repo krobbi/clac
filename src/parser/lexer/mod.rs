@@ -40,6 +40,8 @@ impl<'a> Lexer<'a> {
             c if is_char_ident_start(c) => self.read_ident(),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
+            '{' => Token::OpenBrace,
+            '}' => Token::CloseBrace,
             ',' => Token::Comma,
             '=' => Token::Eq,
             '+' => Token::Plus,

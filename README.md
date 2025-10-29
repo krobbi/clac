@@ -235,27 +235,8 @@ expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix  = "-", expr_prefix | expr_call ;
 expr_call    = expr_primary, { tuple } ;
-expr_primary = "(", expr, ")" | Number | Ident ;
+expr_primary = "(", expr, ")" | "{", sequence, "}" | Number | Ident ;
 ```
-
-<!--
-## Grammar
-```EBNF
-program = sequence, Eof ;
-sequence = [ expr, { ",", expr } ] ;
-expr = infix ;
-
-infix            = infix_assignment ;
-infix_assignment = infix_sum, [ "=", infix_assignment ] ;
-infix_sum        = infix_term, { ( "+" | "-" ), infix_term } ;
-infix_term       = atom, { ( "*" | "/" ), atom } ;
-
-atom         = atom_prefix ;
-atom_prefix  = "-", atom_prefix | atom_call ;
-atom_call    = atom_primary, { "(", sequence, ")" } ;
-atom_primary = "(", expr, ")" | "{", sequence, "}" | Literal | Ident ;
-```
--->
 
 # Credits
 * Infix parser based on

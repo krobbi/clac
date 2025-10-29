@@ -63,6 +63,8 @@ define_tokens!([
     (Ident(String), "An identifier.", "an identifier"),
     (OpenParen, "An opening parenthesis.", "an opening '('"),
     (CloseParen, "A closing parenthesis.", "a closing ')'"),
+    (OpenBrace, "An opening brace.", "an opening '{'"),
+    (CloseBrace, "A closing brace.", "a closing '}'"),
     (Comma, "A comma.", "','"),
     (Eq, "An equals sign.", "'='"),
     (Plus, "A plus sign.", "'+'"),
