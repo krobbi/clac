@@ -70,6 +70,9 @@ fn execute_source(source: &str) {
     };
 
     println!("{ast}");
-    let hir = resolver::resolve_ast(&ast);
-    println!("{hir:#?}");
+
+    match resolver::resolve_ast(&ast) {
+        Ok(hir) => println!("{hir:#?}"),
+        Err(error) => eprintln!("{error}"),
+    }
 }
