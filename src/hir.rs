@@ -7,6 +7,9 @@ pub struct Hir(pub Vec<Stmt>);
 /// A statement.
 #[derive(Debug)]
 pub enum Stmt {
+    /// A global variable assignment.
+    AssignGlobal(String, Box<Expr>),
+
     /// A print statement.
     Print(Box<Expr>),
 }
@@ -16,6 +19,9 @@ pub enum Stmt {
 pub enum Expr {
     /// A number.
     Number(f64),
+
+    /// A global variable.
+    Global(String),
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),

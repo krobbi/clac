@@ -6,12 +6,15 @@ use crate::{
     hir::{self, Hir},
 };
 
-use self::{env::Env, resolve_error::ResolveError};
+use self::{
+    env::{Env, Location},
+    resolve_error::ResolveError,
+};
 
 /// Resolves an [`Ast`] to [`Hir`]. This function returns a [`ResolveError`] if
 /// the [`Ast`] could not be resolved.
 pub fn resolve_ast(ast: &Ast) -> Result<Hir, ResolveError> {
-    let resolver = Resolver::new();
+    let mut resolver = Resolver::new();
     resolver.resolve_ast(ast)
 }
 
@@ -30,7 +33,7 @@ impl Resolver {
 
     /// Resolves an [`Ast`] to [`Hir`]. This function returns a [`ResolveError`]
     /// if the [`Ast`] could not be resolved.
-    fn resolve_ast(&self, ast: &Ast) -> Result<Hir, ResolveError> {
+    fn resolve_ast(&mut self, ast: &Ast) -> Result<Hir, ResolveError> {
         let mut stmts = Vec::with_capacity(ast.0.len());
 
         for stmt in &ast.0 {
@@ -43,13 +46,32 @@ impl Resolver {
 
     /// Resolves an [`ast::Stmt`] to an [`hir::Stmt`]. This function returns a
     /// [`ResolveError`] if the [`ast::Stmt`] could not be resolved.
-    fn resolve_stmt(&self, stmt: &ast::Stmt) -> Result<hir::Stmt, ResolveError> {
+    fn resolve_stmt(&mut self, stmt: &ast::Stmt) -> Result<hir::Stmt, ResolveError> {
         match stmt {
-            ast::Stmt::Assign(..) => todo!("lowering of `ast::Stmt::Assign`"),
+            ast::Stmt::Assign(target, source) => self.resolve_stmt_assign(target, source),
             ast::Stmt::Expr(expr) => {
                 let expr = self.resolve_expr(expr)?;
                 Ok(hir::Stmt::Print(expr.into()))
             }
+        }
+    }
+
+    /// Resolves an assignment [`ast::Stmt`] to an [`hir::Stmt`]. This function
+    /// returns a [`ResolveError`] if a variable could not be assigned.
+    fn resolve_stmt_assign(
+        &mut self,
+        target: &ast::Expr,
+        source: &ast::Expr,
+    ) -> Result<hir::Stmt, ResolveError> {
+        let ast::Expr::Ident(name) = target else {
+            return Err(ResolveError::InvalidAssignTarget);
+        };
+
+        let value = self.resolve_expr(source)?;
+
+        match self.env.define(name) {
+            None => Err(ResolveError::AlreadyDefinedVariable(name.to_owned())),
+            Some(Location::Global) => Ok(hir::Stmt::AssignGlobal(name.to_owned(), value.into())),
         }
     }
 
@@ -71,11 +93,10 @@ impl Resolver {
     /// returns a [`ResolveError`] if the identifier is undefined in the
     /// current environment.
     fn resolve_expr_ident(&self, name: &str) -> Result<hir::Expr, ResolveError> {
-        let Some(_location) = self.env.find(name) else {
-            return Err(ResolveError::UndefinedVariable(name.to_owned()));
-        };
-
-        todo!("HIR variable expressions");
+        match self.env.find(name) {
+            None => Err(ResolveError::UndefinedVariable(name.to_owned())),
+            Some(Location::Global) => Ok(hir::Expr::Global(name.to_owned())),
+        }
     }
 
     /// Resolves a unary [`ast::Expr`] to an [`hir::Expr`]. This function

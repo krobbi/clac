@@ -13,6 +13,14 @@ impl Env {
         Self { globals }
     }
 
+    /// Defines a new variable and returns its [`Location`]. This function
+    /// returns [`None`] if the variable is already defined.
+    pub fn define(&mut self, name: &str) -> Option<Location> {
+        self.globals
+            .insert(name.to_owned())
+            .then_some(Location::Global)
+    }
+
     /// Finds the [`Location`] of a variable. This function returns [`None`] if
     /// the variable is undefined.
     pub fn find(&self, name: &str) -> Option<Location> {
@@ -20,7 +28,8 @@ impl Env {
     }
 }
 
-/// A location of a declared variable.
+/// A location of a defined variable.
+#[derive(Clone, Copy)]
 pub enum Location {
     /// A global variable.
     Global,
