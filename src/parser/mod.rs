@@ -31,7 +31,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    /// Creates a new [`Parser`] from source code to be parsed. This function
+    /// Creates a new `Parser` from source code to be parsed. This function
     /// returns a [`LexError`] if a valid first [`Token`] could not be read.
     fn try_new(source: &'a str) -> Result<Self, LexError> {
         let mut lexer = Lexer::new(source);
