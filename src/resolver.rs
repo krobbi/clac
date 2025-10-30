@@ -34,7 +34,34 @@ fn resolve_expr(expr: &ast::Expr) -> hir::Expr {
         ast::Expr::Paren(expr) => resolve_expr(expr),
         ast::Expr::Block(..) => todo!("lowering of `ast::Expr::Block`"),
         ast::Expr::Call(..) => todo!("lowering of `ast::Expr::Call`"),
-        ast::Expr::Unary(..) => todo!("lowering of `ast::Expr::Unary`"),
-        ast::Expr::Binary(..) => todo!("lowering of `ast::Expr::Binary`"),
+        ast::Expr::Unary(op, expr) => resolve_expr_unary(*op, expr),
+        ast::Expr::Binary(op, lhs, rhs) => resolve_expr_binary(*op, lhs, rhs),
     }
+}
+
+/// Resolves a unary [`ast::Expr`] to an [`hir::Expr`].
+fn resolve_expr_unary(op: ast::UnOp, expr: &ast::Expr) -> hir::Expr {
+    match op {
+        ast::UnOp::Negate => {
+            let op = hir::BinOp::Subtract;
+            let lhs = hir::Expr::Number(0.0);
+            let rhs = resolve_expr(expr);
+            hir::Expr::Binary(op, lhs.into(), rhs.into())
+        }
+    }
+}
+
+/// Resolves a binary [`ast::Expr`] to a unary [`hir::Expr`]
+fn resolve_expr_binary(op: ast::BinOp, lhs: &ast::Expr, rhs: &ast::Expr) -> hir::Expr {
+    let lhs = resolve_expr(lhs);
+    let rhs = resolve_expr(rhs);
+
+    let op = match op {
+        ast::BinOp::Add => hir::BinOp::Add,
+        ast::BinOp::Subtract => hir::BinOp::Subtract,
+        ast::BinOp::Multiply => hir::BinOp::Multiply,
+        ast::BinOp::Divide => hir::BinOp::Divide,
+    };
+
+    hir::Expr::Binary(op, lhs.into(), rhs.into())
 }

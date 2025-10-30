@@ -16,4 +16,23 @@ pub enum Stmt {
 pub enum Expr {
     /// A number.
     Number(f64),
+
+    /// A binary operation.
+    Binary(BinOp, Box<Expr>, Box<Expr>),
+}
+
+/// A binary operator.
+#[derive(Clone, Copy, Debug)]
+pub enum BinOp {
+    /// An addition.
+    Add,
+
+    /// A subtraction.
+    Subtract,
+
+    /// A multiplication.
+    Multiply,
+
+    /// A division.
+    Divide,
 }
