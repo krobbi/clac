@@ -1,5 +1,6 @@
 mod ast;
 mod compiler;
+mod execute_error;
 mod ir;
 mod parser;
 
@@ -7,6 +8,8 @@ use std::{
     env,
     io::{self, Write as _},
 };
+
+use crate::execute_error::ExecuteError;
 
 /// Runs Clac.
 fn main() {
@@ -61,15 +64,16 @@ fn run_repl() {
 
 /// Executes source code.
 fn execute_source(source: &str) {
-    let ast = match parser::parse_source(source) {
-        Ok(ast) => ast,
-        Err(error) => {
-            eprintln!("{error}");
-            return;
-        }
-    };
+    if let Err(error) = try_execute_source(source) {
+        eprintln!("{error}");
+    }
+}
 
-    println!("{ast}");
-    let ir = compiler::compile_ast(&ast);
+/// Executes source code. This function returns an [`ExecuteError`] if the
+/// source code could not be executed.
+fn try_execute_source(source: &str) -> Result<(), ExecuteError> {
+    let ast = parser::parse_source(source)?;
+    let ir = compiler::compile_ast(&ast)?;
     println!("{ir:#?}");
+    Ok(())
 }

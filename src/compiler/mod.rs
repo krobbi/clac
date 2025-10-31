@@ -1,17 +1,27 @@
+mod compile_error;
+
+pub use self::compile_error::CompileError;
+
+use std::collections::HashSet;
+
 use crate::{
     ast::{Ast, BinOp, Expr, Stmt, UnOp},
     ir::{self, Body, Instruction, Ir, Value},
 };
 
-/// Compiles an [`Ast`] to [`Ir`].
-pub fn compile_ast(ast: &Ast) -> Ir {
+/// Compiles an [`Ast`] to [`Ir`]. This function returns a [`CompileError`] if
+/// [`Ir`] could not be compiled.
+pub fn compile_ast(ast: &Ast) -> Result<Ir, CompileError> {
     let mut compiler = Compiler::new();
-    compiler.compile_ast(ast);
-    Ir(compiler.into_body())
+    compiler.compile_ast(ast)?;
+    Ok(Ir(compiler.into_body()))
 }
 
 /// A structure that compiles a program or function's [`Body`].
 struct Compiler {
+    /// The set of defined global variables.
+    globals: HashSet<String>,
+
     /// The [`Instruction`]s that have been compiled.
     instructions: Vec<Instruction>,
 }
@@ -19,8 +29,13 @@ struct Compiler {
 impl Compiler {
     /// Creates a new `Compiler`.
     fn new() -> Self {
+        let globals = HashSet::new();
         let instructions = Vec::new();
-        Self { instructions }
+
+        Self {
+            globals,
+            instructions,
+        }
     }
 
     /// Consumes the `Compiler` and converts it to a [`Body`].
@@ -28,49 +43,86 @@ impl Compiler {
         Body(self.instructions.into_boxed_slice())
     }
 
-    /// Compiles an [`Ast`].
-    fn compile_ast(&mut self, ast: &Ast) {
+    /// Compiles an [`Ast`]. This function returns a [`CompileError`] if the
+    /// [`Ast`] could not be compiled.
+    fn compile_ast(&mut self, ast: &Ast) -> Result<(), CompileError> {
         for stmt in &ast.0 {
             match stmt {
-                Stmt::Assign(..) => todo!("compilation of `Stmt::Assign`"),
+                Stmt::Assign(target, source) => {
+                    let Expr::Ident(name) = target.as_ref() else {
+                        return Err(CompileError::InvalidAssignTarget);
+                    };
+
+                    self.compile_expr(source)?;
+
+                    if self.globals.contains(name) {
+                        return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
+                    }
+
+                    self.compile(Instruction::StoreGlobal(name.to_owned()));
+                    self.globals.insert(name.to_owned());
+                }
                 Stmt::Expr(expr) => {
-                    self.compile_expr(expr);
+                    self.compile_expr(expr)?;
                     self.compile(Instruction::Print);
                 }
             }
         }
 
         self.compile(Instruction::Halt);
+        Ok(())
     }
 
-    /// Compiles an [`Expr`].
-    fn compile_expr(&mut self, expr: &Expr) {
+    /// Compiles an [`Expr`]. This function returns a [`CompileError`] if the
+    /// [`Expr`] could not be compiled.
+    fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
         match expr {
             Expr::Number(value) => self.compile(Instruction::PushValue(Value::Number(*value))),
-            Expr::Ident(..) => todo!("compilation of `Expr::Ident`"),
-            Expr::Paren(expr) => self.compile_expr(expr),
+            Expr::Ident(name) => self.compile_expr_ident(name)?,
+            Expr::Paren(expr) => self.compile_expr(expr)?,
             Expr::Block(..) => todo!("compilation of `Expr::Block`"),
             Expr::Call(..) => todo!("compilation of `Expr::Call`"),
-            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr),
-            Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
+            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr)?,
+            Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs)?,
+        }
+
+        Ok(())
+    }
+
+    /// Compiles an identifier [`Expr`]. This function returns a
+    /// [`CompileError`] if no variable is defined with the identifier's name.
+    fn compile_expr_ident(&mut self, name: &str) -> Result<(), CompileError> {
+        if self.globals.contains(name) {
+            self.compile(Instruction::PushGlobal(name.to_owned()));
+            Ok(())
+        } else {
+            Err(CompileError::UndefinedVariable(name.to_owned()))
         }
     }
 
-    /// Compiles a unary [`Expr`].
-    fn compile_expr_unary(&mut self, op: UnOp, expr: &Expr) {
-        self.compile_expr(expr);
+    /// Compiles a unary [`Expr`]. This function returns a [`CompileError`] if
+    /// the operand could not be compiled.
+    fn compile_expr_unary(&mut self, op: UnOp, expr: &Expr) -> Result<(), CompileError> {
+        self.compile_expr(expr)?;
 
         let op = match op {
             UnOp::Negate => ir::UnOp::Negate,
         };
 
         self.compile(Instruction::Unary(op));
+        Ok(())
     }
 
-    /// Compiles a binary [`Expr`].
-    fn compile_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) {
-        self.compile_expr(lhs);
-        self.compile_expr(rhs);
+    /// Compiles a binary [`Expr`]. This function returns a [`CompileError`] if
+    /// either operand could not be compiled.
+    fn compile_expr_binary(
+        &mut self,
+        op: BinOp,
+        lhs: &Expr,
+        rhs: &Expr,
+    ) -> Result<(), CompileError> {
+        self.compile_expr(lhs)?;
+        self.compile_expr(rhs)?;
 
         let op = match op {
             BinOp::Add => ir::BinOp::Add,
@@ -80,6 +132,7 @@ impl Compiler {
         };
 
         self.compile(Instruction::Binary(op));
+        Ok(())
     }
 
     /// Appends an [`Instruction`] to the current block.

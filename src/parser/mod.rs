@@ -5,14 +5,13 @@ mod infix;
 mod lexer;
 mod parse_error;
 
+pub use self::parse_error::ParseError;
+
 use std::mem;
 
 use crate::ast::{Ast, Expr, Stmt, UnOp};
 
-use self::{
-    lexer::{LexError, Lexer, Token, TokenType},
-    parse_error::ParseError,
-};
+use self::lexer::{LexError, Lexer, Token, TokenType};
 
 /// Parses an [`Ast`] from source code. This function returns a [`ParseError`]
 /// if an [`Ast`] could not be parsed.

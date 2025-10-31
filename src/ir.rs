@@ -14,6 +14,15 @@ pub enum Instruction {
     /// Push a constant [`Value`] to the stack.
     PushValue(Value),
 
+    /// Load a [`Value`] from a global variable and push it to the stack.
+    PushGlobal(String),
+
+    /// Pop a [`Value`] from the stack and store it in a global variable.
+    StoreGlobal(String),
+
+    /// Pop a [`Value`] from the stack and print it.
+    Print,
+
     /// Pop a [`Value`] from the stack, perform a unary operation on it, and
     /// push the result to the stack.
     Unary(UnOp),
@@ -21,9 +30,6 @@ pub enum Instruction {
     /// Pop two [`Value`]s from the stack, perform a binary operation on them,
     /// and push the result to the stack.
     Binary(BinOp),
-
-    /// Pop a [`Value`] from the stack and print it.
-    Print,
 
     /// Halt execution.
     Halt,
