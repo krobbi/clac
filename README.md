@@ -23,7 +23,7 @@ If Clac is not given any arguments, then the user can enter code in a loop
 until manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z`
 (Windows.)
 
-Currently, Clac prints the input code as an abstract syntax tree.
+Currently, Clac prints the input code as pseudo-assembly.
 
 <!--
 # Language

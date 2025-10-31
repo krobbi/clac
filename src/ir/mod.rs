@@ -1,15 +1,12 @@
-#![expect(dead_code, reason = "IR code should be debug printed")]
+mod display;
 
 /// An intermediate representation of a program.
-#[derive(Debug)]
 pub struct Ir(pub Body);
 
 /// A sequence of [`Instruction`]s in a program or function body.
-#[derive(Debug)]
 pub struct Body(pub Box<[Instruction]>);
 
 /// An executable instruction.
-#[derive(Debug)]
 pub enum Instruction {
     /// Push a constant [`Value`] to the stack.
     Push(Value),
@@ -45,7 +42,7 @@ pub enum Instruction {
 }
 
 /// A value with a dynamic type.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Value {
     /// An empty value.
     Void,
@@ -55,14 +52,14 @@ pub enum Value {
 }
 
 /// A unary operation.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum UnOp {
     /// A negation.
     Negate,
 }
 
 /// A binary operation.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum BinOp {
     /// An addition.
     Add,

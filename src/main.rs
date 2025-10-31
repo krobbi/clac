@@ -9,7 +9,7 @@ use std::{
     io::{self, Write as _},
 };
 
-use crate::execute_error::ExecuteError;
+use self::execute_error::ExecuteError;
 
 /// Runs Clac.
 fn main() {
@@ -74,6 +74,6 @@ fn execute_source(source: &str) {
 fn try_execute_source(source: &str) -> Result<(), ExecuteError> {
     let ast = parser::parse_source(source)?;
     let ir = compiler::compile_ast(&ast)?;
-    println!("{ir:#?}");
+    println!("{ir}");
     Ok(())
 }
