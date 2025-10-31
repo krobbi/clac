@@ -77,16 +77,17 @@ impl Compiler {
     /// [`Expr`] could not be compiled.
     fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
         match expr {
-            Expr::Number(value) => self.compile(Instruction::PushValue(Value::Number(*value))),
-            Expr::Ident(name) => self.compile_expr_ident(name)?,
-            Expr::Paren(expr) => self.compile_expr(expr)?,
-            Expr::Block(..) => todo!("compilation of `Expr::Block`"),
+            Expr::Number(value) => {
+                self.compile(Instruction::Push(Value::Number(*value)));
+                Ok(())
+            }
+            Expr::Ident(name) => self.compile_expr_ident(name),
+            Expr::Paren(expr) => self.compile_expr(expr),
+            Expr::Block(stmts) => self.compile_expr_block(stmts),
             Expr::Call(..) => todo!("compilation of `Expr::Call`"),
-            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr)?,
-            Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs)?,
+            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr),
+            Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }
-
-        Ok(())
     }
 
     /// Compiles an identifier [`Expr`]. This function returns a
@@ -98,6 +99,34 @@ impl Compiler {
         } else {
             Err(CompileError::UndefinedVariable(name.to_owned()))
         }
+    }
+
+    /// Compiles a block [`Expr`]. This function returns a [`CompileError`] if
+    /// any of the block's [`Stmt`]s could not be compiled.
+    fn compile_expr_block(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
+        let mut stmts = stmts.iter();
+        let mut is_void = true;
+
+        while let Some(stmt) = stmts.next() {
+            match stmt {
+                Stmt::Assign(..) => todo!("compilation of local `Stmt::Assign`"),
+                Stmt::Expr(expr) => {
+                    self.compile_expr(expr)?;
+
+                    if stmts.len() > 0 {
+                        self.compile(Instruction::Pop);
+                    } else {
+                        is_void = false;
+                    }
+                }
+            }
+        }
+
+        if is_void {
+            self.compile(Instruction::Push(Value::Void));
+        }
+
+        Ok(())
     }
 
     /// Compiles a unary [`Expr`]. This function returns a [`CompileError`] if

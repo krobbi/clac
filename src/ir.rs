@@ -12,13 +12,16 @@ pub struct Body(pub Box<[Instruction]>);
 #[derive(Debug)]
 pub enum Instruction {
     /// Push a constant [`Value`] to the stack.
-    PushValue(Value),
+    Push(Value),
 
     /// Load a [`Value`] from a global variable and push it to the stack.
     PushGlobal(String),
 
     /// Pop a [`Value`] from the stack and store it in a global variable.
     StoreGlobal(String),
+
+    /// Pop a [`Value`] from the stack and discard it.
+    Pop,
 
     /// Pop a [`Value`] from the stack and print it.
     Print,
@@ -38,6 +41,9 @@ pub enum Instruction {
 /// A value with a dynamic type.
 #[derive(Clone, Debug)]
 pub enum Value {
+    /// An empty value.
+    Void,
+
     /// A number.
     Number(f64),
 }
