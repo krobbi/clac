@@ -51,7 +51,14 @@ impl Resolver {
             ast::Stmt::Assign(target, source) => self.resolve_stmt_assign(target, source),
             ast::Stmt::Expr(expr) => {
                 let expr = self.resolve_expr(expr)?;
-                Ok(hir::Stmt::Print(expr.into()))
+
+                let stmt = if self.env.is_global() {
+                    hir::Stmt::Print(expr.into())
+                } else {
+                    hir::Stmt::Expr(expr.into())
+                };
+
+                Ok(stmt)
             }
         }
     }
@@ -72,17 +79,18 @@ impl Resolver {
         match self.env.define(name) {
             None => Err(ResolveError::AlreadyDefinedVariable(name.to_owned())),
             Some(Location::Global) => Ok(hir::Stmt::AssignGlobal(name.to_owned(), value.into())),
+            Some(Location::Local(_)) => Ok(hir::Stmt::DefineLocal(value.into())),
         }
     }
 
     /// Resolves an [`ast::Expr`] to an [`hir::Expr`]. This function returns a
     /// [`ResolveError`] if the [`ast::Expr`] could not be resolved.
-    fn resolve_expr(&self, expr: &ast::Expr) -> Result<hir::Expr, ResolveError> {
+    fn resolve_expr(&mut self, expr: &ast::Expr) -> Result<hir::Expr, ResolveError> {
         match expr {
             ast::Expr::Number(value) => Ok(hir::Expr::Number(*value)),
             ast::Expr::Ident(name) => self.resolve_expr_ident(name),
             ast::Expr::Paren(expr) => self.resolve_expr(expr),
-            ast::Expr::Block(..) => todo!("lowering of `ast::Expr::Block`"),
+            ast::Expr::Block(stmts) => self.resolve_expr_block(stmts),
             ast::Expr::Call(..) => todo!("lowering of `ast::Expr::Call`"),
             ast::Expr::Unary(op, expr) => self.resolve_expr_unary(*op, expr),
             ast::Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
@@ -96,13 +104,38 @@ impl Resolver {
         match self.env.find(name) {
             None => Err(ResolveError::UndefinedVariable(name.to_owned())),
             Some(Location::Global) => Ok(hir::Expr::Global(name.to_owned())),
+            Some(Location::Local(index)) => Ok(hir::Expr::Local(index)),
         }
+    }
+
+    /// Resolves a block [`ast::Expr`] to an [`hir::Expr`]. This function
+    /// returns a [`ResolveError`] if any of the block's [`ast::Stmt`]s could
+    /// not be resolved.
+    fn resolve_expr_block(&mut self, stmts: &[ast::Stmt]) -> Result<hir::Expr, ResolveError> {
+        self.env.push_scope();
+        let mut block_stmts = Vec::with_capacity(stmts.len());
+
+        for stmt in stmts {
+            let stmt = match self.resolve_stmt(stmt) {
+                Ok(stmt) => stmt,
+                Err(error) => {
+                    self.env.pop_scope();
+                    return Err(error);
+                }
+            };
+
+            block_stmts.push(stmt);
+        }
+
+        let local_count = self.env.local_count();
+        self.env.pop_scope();
+        Ok(hir::Expr::Block(local_count, block_stmts))
     }
 
     /// Resolves a unary [`ast::Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the operand could not be resolved.
     fn resolve_expr_unary(
-        &self,
+        &mut self,
         op: ast::UnOp,
         expr: &ast::Expr,
     ) -> Result<hir::Expr, ResolveError> {
@@ -120,7 +153,7 @@ impl Resolver {
     /// Resolves a binary [`ast::Expr`] to a unary [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if either operand could not be resolved.
     fn resolve_expr_binary(
-        &self,
+        &mut self,
         op: ast::BinOp,
         lhs: &ast::Expr,
         rhs: &ast::Expr,

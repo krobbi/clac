@@ -10,8 +10,14 @@ pub enum Stmt {
     /// A global variable assignment.
     AssignGlobal(String, Box<Expr>),
 
+    /// A local variable definition.
+    DefineLocal(Box<Expr>),
+
     /// A print statement.
     Print(Box<Expr>),
+
+    /// An expression statement.
+    Expr(Box<Expr>),
 }
 
 /// An expression.
@@ -22,6 +28,12 @@ pub enum Expr {
 
     /// A global variable.
     Global(String),
+
+    /// A local variable.
+    Local(u8),
+
+    /// A block with a number of defined local variables.
+    Block(u8, Vec<Stmt>),
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),
