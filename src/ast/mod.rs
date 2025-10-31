@@ -1,4 +1,5 @@
-mod display;
+#[cfg(test)]
+mod test_display;
 
 /// An abstract syntax tree.
 pub struct Ast(pub Vec<Stmt>);
@@ -27,6 +28,10 @@ pub enum Expr {
     Block(Vec<Stmt>),
 
     /// A function call.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "function calls are not yet implemented")
+    )]
     Call(Box<Expr>, Vec<Expr>),
 
     /// A unary operation.
