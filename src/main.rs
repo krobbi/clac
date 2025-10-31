@@ -1,7 +1,5 @@
 mod ast;
-mod hir;
 mod parser;
-mod resolver;
 
 use std::{
     env,
@@ -61,18 +59,8 @@ fn run_repl() {
 
 /// Executes source code.
 fn execute_source(source: &str) {
-    let ast = match parser::parse_source(source) {
-        Ok(ast) => ast,
-        Err(error) => {
-            eprintln!("{error}");
-            return;
-        }
-    };
-
-    println!("{ast}");
-
-    match resolver::resolve_ast(&ast) {
-        Ok(hir) => println!("{hir:#?}"),
+    match parser::parse_source(source) {
+        Ok(ast) => println!("{ast}"),
         Err(error) => eprintln!("{error}"),
     }
 }
