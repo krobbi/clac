@@ -1,6 +1,6 @@
 use crate::{
-    ast::{Ast, Expr, Stmt},
-    ir::{Body, Instruction, Ir, Value},
+    ast::{Ast, BinOp, Expr, Stmt, UnOp},
+    ir::{self, Body, Instruction, Ir, Value},
 };
 
 /// Compiles an [`Ast`] to [`Ir`].
@@ -51,9 +51,35 @@ impl Compiler {
             Expr::Paren(expr) => self.compile_expr(expr),
             Expr::Block(..) => todo!("compilation of `Expr::Block`"),
             Expr::Call(..) => todo!("compilation of `Expr::Call`"),
-            Expr::Unary(..) => todo!("compilation of `Expr::Unary`"),
-            Expr::Binary(..) => todo!("compilation of `Expr::Binary`"),
+            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr),
+            Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }
+    }
+
+    /// Compiles a unary [`Expr`].
+    fn compile_expr_unary(&mut self, op: UnOp, expr: &Expr) {
+        self.compile_expr(expr);
+
+        let op = match op {
+            UnOp::Negate => ir::UnOp::Negate,
+        };
+
+        self.compile(Instruction::Unary(op));
+    }
+
+    /// Compiles a binary [`Expr`].
+    fn compile_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) {
+        self.compile_expr(lhs);
+        self.compile_expr(rhs);
+
+        let op = match op {
+            BinOp::Add => ir::BinOp::Add,
+            BinOp::Subtract => ir::BinOp::Subtract,
+            BinOp::Multiply => ir::BinOp::Multiply,
+            BinOp::Divide => ir::BinOp::Divide,
+        };
+
+        self.compile(Instruction::Binary(op));
     }
 
     /// Appends an [`Instruction`] to the current block.
