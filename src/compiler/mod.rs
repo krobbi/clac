@@ -1,4 +1,5 @@
 mod compile_error;
+mod locals;
 
 pub use self::compile_error::CompileError;
 
@@ -8,6 +9,8 @@ use crate::{
     ast::{Ast, BinOp, Expr, Stmt, UnOp},
     ir::{self, Body, Instruction, Ir, Value},
 };
+
+use self::locals::Locals;
 
 /// Compiles an [`Ast`] to [`Ir`]. This function returns a [`CompileError`] if
 /// [`Ir`] could not be compiled.
@@ -19,8 +22,11 @@ pub fn compile_ast(ast: &Ast) -> Result<Ir, CompileError> {
 
 /// A structure that compiles a program or function's [`Body`].
 struct Compiler {
-    /// The set of defined global variables.
+    /// The set of declared global variables.
     globals: HashSet<String>,
+
+    /// The stack of declared local variables.
+    locals: Locals,
 
     /// The [`Instruction`]s that have been compiled.
     instructions: Vec<Instruction>,
@@ -30,10 +36,12 @@ impl Compiler {
     /// Creates a new `Compiler`.
     fn new() -> Self {
         let globals = HashSet::new();
+        let locals = Locals::new();
         let instructions = Vec::new();
 
         Self {
             globals,
+            locals,
             instructions,
         }
     }
@@ -48,20 +56,7 @@ impl Compiler {
     fn compile_ast(&mut self, ast: &Ast) -> Result<(), CompileError> {
         for stmt in &ast.0 {
             match stmt {
-                Stmt::Assign(target, source) => {
-                    let Expr::Ident(name) = target.as_ref() else {
-                        return Err(CompileError::InvalidAssignTarget);
-                    };
-
-                    self.compile_expr(source)?;
-
-                    if self.globals.contains(name) {
-                        return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
-                    }
-
-                    self.compile(Instruction::StoreGlobal(name.to_owned()));
-                    self.globals.insert(name.to_owned());
-                }
+                Stmt::Assign(target, source) => self.compile_assign_stmt(target, source)?,
                 Stmt::Expr(expr) => {
                     self.compile_expr(expr)?;
                     self.compile(Instruction::Print);
@@ -70,6 +65,29 @@ impl Compiler {
         }
 
         self.compile(Instruction::Halt);
+        Ok(())
+    }
+
+    /// Compiles an assignment [`Stmt`]. This function returns a
+    /// [`CompileError`] if the assignment source or target was invalid.
+    fn compile_assign_stmt(&mut self, target: &Expr, source: &Expr) -> Result<(), CompileError> {
+        let Expr::Ident(name) = target else {
+            return Err(CompileError::InvalidAssignTarget);
+        };
+
+        self.compile_expr(source)?;
+
+        if self.locals.is_global_scope() {
+            if self.globals.contains(name) {
+                return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
+            }
+
+            self.compile(Instruction::StoreGlobal(name.to_owned()));
+            self.globals.insert(name.to_owned());
+        } else if !self.locals.declare(name) {
+            return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
+        }
+
         Ok(())
     }
 
@@ -93,12 +111,15 @@ impl Compiler {
     /// Compiles an identifier [`Expr`]. This function returns a
     /// [`CompileError`] if no variable is defined with the identifier's name.
     fn compile_expr_ident(&mut self, name: &str) -> Result<(), CompileError> {
-        if self.globals.contains(name) {
+        if let Some(index) = self.locals.get(name) {
+            self.compile(Instruction::PushLocal(index));
+        } else if self.globals.contains(name) {
             self.compile(Instruction::PushGlobal(name.to_owned()));
-            Ok(())
         } else {
-            Err(CompileError::UndefinedVariable(name.to_owned()))
+            return Err(CompileError::UndefinedVariable(name.to_owned()));
         }
+
+        Ok(())
     }
 
     /// Compiles a block [`Expr`]. This function returns a [`CompileError`] if
@@ -106,10 +127,11 @@ impl Compiler {
     fn compile_expr_block(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
         let mut stmts = stmts.iter();
         let mut is_void = true;
+        self.locals.push_scope();
 
         while let Some(stmt) = stmts.next() {
             match stmt {
-                Stmt::Assign(..) => todo!("compilation of local `Stmt::Assign`"),
+                Stmt::Assign(target, source) => self.compile_assign_stmt(target, source)?,
                 Stmt::Expr(expr) => {
                     self.compile_expr(expr)?;
 
@@ -122,7 +144,22 @@ impl Compiler {
             }
         }
 
+        let block_variable_count = self.locals.pop_scope();
+
+        if block_variable_count > 0 {
+            if is_void {
+                self.compile_pop(block_variable_count);
+            } else {
+                // HACK: If the block declared local variables and produced a
+                // result, then move the result into the first local variable
+                // and don't pop it.
+                self.compile(Instruction::StoreLocal(self.locals.count()));
+                self.compile_pop(block_variable_count - 1);
+            }
+        }
+
         if is_void {
+            // Push void at the end to bypass the stack manipulation hack.
             self.compile(Instruction::Push(Value::Void));
         }
 
@@ -151,7 +188,14 @@ impl Compiler {
         rhs: &Expr,
     ) -> Result<(), CompileError> {
         self.compile_expr(lhs)?;
+
+        // HACK: `rhs` could be a block that defines local variables, but the
+        // location of these variables would be off by one because `lhs` is
+        // sitting on top the stack. To fix this, `lhs` is treated as an unnamed
+        // local variable while `rhs` is being evaluated.
+        self.locals.push_temp();
         self.compile_expr(rhs)?;
+        self.locals.pop_temp();
 
         let op = match op {
             BinOp::Add => ir::BinOp::Add,
@@ -167,5 +211,12 @@ impl Compiler {
     /// Appends an [`Instruction`] to the current block.
     fn compile(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);
+    }
+
+    /// Appends `n` pop [`Instruction`]s to the current block.
+    fn compile_pop(&mut self, n: usize) {
+        for _ in 0..n {
+            self.compile(Instruction::Pop);
+        }
     }
 }

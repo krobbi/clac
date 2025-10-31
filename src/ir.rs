@@ -17,8 +17,14 @@ pub enum Instruction {
     /// Load a [`Value`] from a global variable and push it to the stack.
     PushGlobal(String),
 
+    /// Load a [`Value`] from a local variable and push it to the stack.
+    PushLocal(usize),
+
     /// Pop a [`Value`] from the stack and store it in a global variable.
     StoreGlobal(String),
+
+    /// Pop a [`Value`] from the stack and store it in a local variable.
+    StoreLocal(usize),
 
     /// Pop a [`Value`] from the stack and discard it.
     Pop,
