@@ -1,4 +1,6 @@
 mod ast;
+mod compiler;
+mod ir;
 mod parser;
 
 use std::{
@@ -59,8 +61,15 @@ fn run_repl() {
 
 /// Executes source code.
 fn execute_source(source: &str) {
-    match parser::parse_source(source) {
-        Ok(ast) => println!("{ast}"),
-        Err(error) => eprintln!("{error}"),
-    }
+    let ast = match parser::parse_source(source) {
+        Ok(ast) => ast,
+        Err(error) => {
+            eprintln!("{error}");
+            return;
+        }
+    };
+
+    println!("{ast}");
+    let ir = compiler::compile_ast(&ast);
+    println!("{ir:#?}");
 }
