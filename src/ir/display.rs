@@ -47,7 +47,7 @@ impl Display for Instruction {
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Void => f.write_str("void"),
+            Self::Void => f.write_str("{}"),
             Self::Number(value) => value.fmt(f),
         }
     }
