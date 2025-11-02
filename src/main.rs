@@ -1,6 +1,7 @@
 mod ast;
 mod compiler;
 mod execute_error;
+mod interpreter;
 mod ir;
 mod parser;
 
@@ -75,5 +76,6 @@ fn try_execute_source(source: &str) -> Result<(), ExecuteError> {
     let ast = parser::parse_source(source)?;
     let ir = compiler::compile_ast(&ast)?;
     println!("{ir}");
+    interpreter::interpret_ir(&ir)?;
     Ok(())
 }
