@@ -10,27 +10,28 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::execute_error::ExecuteError;
+use self::{execute_error::ExecuteError, interpreter::Globals};
 
 /// Runs Clac.
 fn main() {
+    let mut globals = Globals::new();
     let mut args = env::args().skip(1);
 
     match args.next() {
-        None => run_repl(),
+        None => run_repl(&mut globals),
         Some(mut source) => {
             for arg in args {
                 source.push(' ');
                 source.push_str(&arg);
             }
 
-            execute_source(&source);
+            execute_source(&source, &mut globals);
         }
     }
 }
 
-/// Runs Clac in REPL mode.
-fn run_repl() {
+/// Runs Clac in REPL mode with [`Globals`].
+fn run_repl(globals: &mut Globals) {
     #[cfg(target_os = "windows")]
     const EXIT_SHORTCUT: &str = "Ctrl+Z";
 
@@ -57,25 +58,25 @@ fn run_repl() {
             break;
         }
 
-        execute_source(&source);
+        execute_source(&source, globals);
     }
 
     println!("\nReceived [{EXIT_SHORTCUT}], exiting...");
 }
 
-/// Executes source code.
-fn execute_source(source: &str) {
-    if let Err(error) = try_execute_source(source) {
+/// Executes source code with [`Globals`].
+fn execute_source(source: &str, globals: &mut Globals) {
+    if let Err(error) = try_execute_source(source, globals) {
         eprintln!("{error}");
     }
 }
 
-/// Executes source code. This function returns an [`ExecuteError`] if the
-/// source code could not be executed.
-fn try_execute_source(source: &str) -> Result<(), ExecuteError> {
+/// Executes source code with [`Globals`]. This function returns an
+/// [`ExecuteError`] if the source code could not be executed.
+fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ExecuteError> {
     let ast = parser::parse_source(source)?;
-    let ir = compiler::compile_ast(&ast)?;
+    let ir = compiler::compile_ast(&ast, globals.names())?;
     println!("{ir}");
-    interpreter::interpret_ir(&ir)?;
+    interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

@@ -12,10 +12,11 @@ use crate::{
 
 use self::locals::Locals;
 
-/// Compiles an [`Ast`] to [`Ir`]. This function returns a [`CompileError`] if
-/// [`Ir`] could not be compiled.
-pub fn compile_ast(ast: &Ast) -> Result<Ir, CompileError> {
-    let mut compiler = Compiler::new();
+/// Compiles an [`Ast`] to [`Ir`] with a [`HashSet`] of defined global variable
+/// names. This function returns a [`CompileError`] if [`Ir`] could not be
+/// compiled.
+pub fn compile_ast(ast: &Ast, globals: HashSet<String>) -> Result<Ir, CompileError> {
+    let mut compiler = Compiler::new(globals);
     compiler.compile_ast(ast)?;
     Ok(Ir(compiler.into_body()))
 }
@@ -33,9 +34,9 @@ struct Compiler {
 }
 
 impl Compiler {
-    /// Creates a new `Compiler`.
-    fn new() -> Self {
-        let globals = HashSet::new();
+    /// Creates a new `Compiler` with a [`HashSet`] of defined global variable
+    /// names.
+    fn new(globals: HashSet<String>) -> Self {
         let locals = Locals::new();
         let instructions = Vec::new();
 
