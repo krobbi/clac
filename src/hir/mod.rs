@@ -8,7 +8,10 @@ pub struct Hir(pub Vec<Stmt>);
 #[derive(Debug)]
 pub enum Stmt {
     /// A print statement.
-    Print(Expr),
+    Print(Box<Expr>),
+
+    /// An expression statement.
+    Expr(Box<Expr>),
 }
 
 /// An expression.
@@ -16,6 +19,9 @@ pub enum Stmt {
 pub enum Expr {
     /// A number.
     Number(f64),
+
+    /// A block.
+    Block(Vec<Stmt>, Box<Expr>),
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),

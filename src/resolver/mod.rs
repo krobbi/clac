@@ -24,10 +24,10 @@ impl Resolver {
 
         for stmt in &ast.0 {
             let stmt = match stmt {
-                Stmt::Assign(..) => todo!("resolving `Stmt::Assign`"),
+                Stmt::Assign(..) => todo!("resolving `Stmt::Assign` globally"),
                 Stmt::Expr(expr) => {
                     let expr = self.resolve_expr(expr);
-                    hir::Stmt::Print(expr)
+                    hir::Stmt::Print(expr.into())
                 }
             };
 
@@ -43,10 +43,32 @@ impl Resolver {
             Expr::Number(value) => hir::Expr::Number(*value),
             Expr::Ident(..) => todo!("resolving `Expr::Ident`"),
             Expr::Paren(expr) => self.resolve_expr(expr),
-            Expr::Block(..) => todo!("resolving `Expr::Block`"),
+            Expr::Block(stmts) => self.resolve_expr_block(stmts),
             Expr::Call(..) => todo!("resolving `Expr::Call`"),
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
+        }
+    }
+
+    /// Resolves a block [`Expr`] to an [`hir::Expr`].
+    fn resolve_expr_block(&self, stmts: &[Stmt]) -> hir::Expr {
+        let mut block_stmts = Vec::with_capacity(stmts.len());
+
+        for stmt in stmts {
+            let stmt = match stmt {
+                Stmt::Assign(..) => todo!("resolving `Stmt::Assign` locally"),
+                Stmt::Expr(expr) => {
+                    let expr = self.resolve_expr(expr);
+                    hir::Stmt::Expr(expr.into())
+                }
+            };
+
+            block_stmts.push(stmt);
+        }
+
+        match block_stmts.pop() {
+            Some(hir::Stmt::Expr(expr)) => hir::Expr::Block(block_stmts, expr),
+            _ => todo!("resolving void `Expr::Block`s"),
         }
     }
 
