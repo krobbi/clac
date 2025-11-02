@@ -1,9 +1,11 @@
 mod ast;
 mod compiler;
 mod execute_error;
+mod hir;
 mod interpreter;
 mod ir;
 mod parser;
+mod resolver;
 
 use std::{
     env,
@@ -75,8 +77,14 @@ fn execute_source(source: &str, globals: &mut Globals) {
 /// [`ExecuteError`] if the source code could not be executed.
 fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ExecuteError> {
     let ast = parser::parse_source(source)?;
+
+    {
+        // TODO: Rework the compiler to use HIR.
+        let hir = resolver::resolve_ast(&ast);
+        println!("{hir:#?}");
+    }
+
     let ir = compiler::compile_ast(&ast, globals.names())?;
-    println!("{ir}");
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }
