@@ -55,6 +55,10 @@ pub fn interpret_ir(ir: &Ir, globals: &mut Globals) -> Result<(), InterpretError
 
                 stack.push(Value::Number(result));
             }
+            Instruction::AssertNonVoid => {
+                let value = stack.pop_non_void()?;
+                stack.push(value);
+            }
             Instruction::Halt => break,
         }
     }

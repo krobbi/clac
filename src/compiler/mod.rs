@@ -85,11 +85,22 @@ impl Compiler {
 
             self.compile(Instruction::StoreGlobal(name.to_owned()));
             self.globals.insert(name.to_owned());
-        } else if !self.locals.declare(name) {
-            return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
+            return Ok(());
         }
 
-        Ok(())
+        if self.locals.declare(name) {
+            // HACK: Local variables are defined by simply leaving a value on
+            // the stack. This value may be void, but void is not allowed to be
+            // stored in variables. An extra instruction is compiled to check
+            // the value if the source expression could be evaluated as void.
+            if is_expr_possibly_void(source) {
+                self.compile(Instruction::AssertNonVoid);
+            }
+
+            Ok(())
+        } else {
+            Err(CompileError::AlreadyDefinedVariable(name.to_owned()))
+        }
     }
 
     /// Compiles an [`Expr`]. This function returns a [`CompileError`] if the
@@ -219,5 +230,23 @@ impl Compiler {
         for _ in 0..n {
             self.compile(Instruction::Pop);
         }
+    }
+}
+
+/// Returns whether an [`Expr`] could be evaluated as void at runtime.
+fn is_expr_possibly_void(expr: &Expr) -> bool {
+    // Unary and binary operations are not included because they are checked at
+    // runtime and will never be evaluated as void.
+    match expr {
+        Expr::Paren(expr) => is_expr_possibly_void(expr),
+        Expr::Block(stmts) => {
+            if let Some(Stmt::Expr(expr)) = stmts.last() {
+                is_expr_possibly_void(expr)
+            } else {
+                true
+            }
+        }
+        Expr::Call(_, _) => true,
+        _ => false,
     }
 }

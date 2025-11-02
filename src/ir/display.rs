@@ -38,6 +38,7 @@ impl Display for Instruction {
             Self::Print => f.write_str("print"),
             Self::Unary(op) => write!(f, "{:8}{op}", "unary"),
             Self::Binary(op) => write!(f, "{:8}{op}", "binary"),
+            Self::AssertNonVoid => f.write_str("nonvoid"),
             Self::Halt => f.write_str("halt"),
         }
     }

@@ -37,6 +37,10 @@ pub enum Instruction {
     /// and push the result to the stack.
     Binary(BinOp),
 
+    /// Pop a [`Value`] from the stack, check that it is not void, and push it
+    /// back onto the stack.
+    AssertNonVoid,
+
     /// Halt execution.
     Halt,
 }

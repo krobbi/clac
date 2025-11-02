@@ -30,7 +30,7 @@ impl Locals {
         let scope_offset = self
             .scope_offsets
             .pop()
-            .expect("should not pop from an empty scope stack");
+            .expect("scope stack should not be empty");
 
         let variable_count = self.count() - scope_offset;
         self.names.truncate(scope_offset);
@@ -88,7 +88,7 @@ impl Locals {
             .scope_offsets
             .last()
             .copied()
-            .expect("should not read from an empty scope stack");
+            .expect("scope stack should not be empty");
 
         self.names[scope_offset..].contains(&name.to_owned())
     }
