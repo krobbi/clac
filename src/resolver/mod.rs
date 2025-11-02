@@ -1,10 +1,5 @@
-#![expect(
-    clippy::only_used_in_recursion,
-    reason = "resolver fields should be added later"
-)]
-
 use crate::{
-    ast::{Ast, Expr, Stmt},
+    ast::{Ast, BinOp, Expr, Stmt, UnOp},
     hir::{self, Hir},
 };
 
@@ -50,8 +45,36 @@ impl Resolver {
             Expr::Paren(expr) => self.resolve_expr(expr),
             Expr::Block(..) => todo!("resolving `Expr::Block`"),
             Expr::Call(..) => todo!("resolving `Expr::Call`"),
-            Expr::Unary(..) => todo!("resolving `Expr::Unary`"),
-            Expr::Binary(..) => todo!("resolving `Expr::Binary`"),
+            Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
+            Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
         }
+    }
+
+    /// Resolves a unary [`Expr`] to an [`hir::Expr`].
+    fn resolve_expr_unary(&self, op: UnOp, rhs: &Expr) -> hir::Expr {
+        let rhs = self.resolve_expr(rhs);
+
+        match op {
+            UnOp::Negate => {
+                let op = hir::BinOp::Subtract;
+                let lhs = hir::Expr::Number(0.0);
+                hir::Expr::Binary(op, lhs.into(), rhs.into())
+            }
+        }
+    }
+
+    /// Resolves a binary [`Expr`] to an [`hir::Expr`].
+    fn resolve_expr_binary(&self, op: BinOp, lhs: &Expr, rhs: &Expr) -> hir::Expr {
+        let lhs = self.resolve_expr(lhs);
+        let rhs = self.resolve_expr(rhs);
+
+        let op = match op {
+            BinOp::Add => hir::BinOp::Add,
+            BinOp::Subtract => hir::BinOp::Subtract,
+            BinOp::Multiply => hir::BinOp::Multiply,
+            BinOp::Divide => hir::BinOp::Divide,
+        };
+
+        hir::Expr::Binary(op, lhs.into(), rhs.into())
     }
 }
