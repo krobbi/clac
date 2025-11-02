@@ -7,6 +7,9 @@ pub struct Hir(pub Vec<Stmt>);
 /// A statement.
 #[derive(Debug)]
 pub enum Stmt {
+    /// A block.
+    Block(Vec<Stmt>),
+
     /// A print statement.
     Print(Box<Expr>),
 

@@ -1,10 +1,19 @@
+mod resolve_error;
+mod scope_kind;
+mod voidable;
+
+pub use self::resolve_error::ResolveError;
+
 use crate::{
     ast::{Ast, BinOp, Expr, Stmt, UnOp},
     hir::{self, Hir},
 };
 
-/// Resolves an [`Ast`] to [`Hir`].
-pub fn resolve_ast(ast: &Ast) -> Hir {
+use self::{scope_kind::ScopeKind, voidable::Voidable};
+
+/// Resolves an [`Ast`] to [`Hir`]. This function returns a [`ResolveError`] if
+/// the [`Ast`] could not be resolved.
+pub fn resolve_ast(ast: &Ast) -> Result<Hir, ResolveError> {
     let resolver = Resolver::new();
     resolver.resolve_ast(ast)
 }
@@ -18,77 +27,114 @@ impl Resolver {
         Self
     }
 
-    /// Resolves an [`Ast`] to [`Hir`].
-    fn resolve_ast(&self, ast: &Ast) -> Hir {
-        let mut stmts = Vec::with_capacity(ast.0.len());
-
-        for stmt in &ast.0 {
-            let stmt = match stmt {
-                Stmt::Assign(..) => todo!("resolving `Stmt::Assign` globally"),
-                Stmt::Expr(expr) => {
-                    let expr = self.resolve_expr(expr);
-                    hir::Stmt::Print(expr.into())
-                }
-            };
-
-            stmts.push(stmt);
-        }
-
-        Hir(stmts)
+    /// Resolves an [`Ast`] to [`Hir`]. This function returns a [`ResolveError`]
+    /// if the [`Ast`] could not be resolved.
+    fn resolve_ast(&self, ast: &Ast) -> Result<Hir, ResolveError> {
+        let stmts = self.resolve_stmts(&ast.0, ScopeKind::Global)?;
+        Ok(Hir(stmts))
     }
 
-    /// Resolves an [`Expr`] to an [`hir::Expr`]
-    fn resolve_expr(&self, expr: &Expr) -> hir::Expr {
-        match expr {
-            Expr::Number(value) => hir::Expr::Number(*value),
-            Expr::Ident(..) => todo!("resolving `Expr::Ident`"),
-            Expr::Paren(expr) => self.resolve_expr(expr),
-            Expr::Block(stmts) => self.resolve_expr_block(stmts),
-            Expr::Call(..) => todo!("resolving `Expr::Call`"),
-            Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
-            Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
-        }
-    }
-
-    /// Resolves a block [`Expr`] to an [`hir::Expr`].
-    fn resolve_expr_block(&self, stmts: &[Stmt]) -> hir::Expr {
-        let mut block_stmts = Vec::with_capacity(stmts.len());
+    /// Resolves a slice of [`Stmt`]s to a [`Vec`] of [`hir::Stmt`]s. This
+    /// function returns a [`ResolveError`] if the [`Stmt`]s could not be
+    /// resolved.
+    fn resolve_stmts(
+        &self,
+        stmts: &[Stmt],
+        scope_kind: ScopeKind,
+    ) -> Result<Vec<hir::Stmt>, ResolveError> {
+        let mut resolved_stmts = Vec::with_capacity(stmts.len());
 
         for stmt in stmts {
             let stmt = match stmt {
-                Stmt::Assign(..) => todo!("resolving `Stmt::Assign` locally"),
-                Stmt::Expr(expr) => {
-                    let expr = self.resolve_expr(expr);
-                    hir::Stmt::Expr(expr.into())
-                }
+                Stmt::Assign(..) => todo!("resolving `Stmt::Assign`"),
+                Stmt::Expr(expr) => match (self.resolve_expr_voidable(expr)?, scope_kind) {
+                    (Voidable::Nop, _) => continue,
+                    (Voidable::Expr(expr), ScopeKind::Global) => hir::Stmt::Print(expr.into()),
+                    (Voidable::Expr(expr), ScopeKind::Local) => hir::Stmt::Expr(expr.into()),
+                    (Voidable::Stmt(stmt), _) => stmt,
+                },
             };
 
-            block_stmts.push(stmt);
+            resolved_stmts.push(stmt);
         }
 
-        match block_stmts.pop() {
-            Some(hir::Stmt::Expr(expr)) => hir::Expr::Block(block_stmts, expr),
-            _ => todo!("resolving void `Expr::Block`s"),
+        Ok(resolved_stmts)
+    }
+
+    /// Resolves an [`Expr`] to an [`hir::Expr`]. This function returns a
+    /// [`ResolveError`] if the [`Expr`] is void or could not be resolved.
+    fn resolve_expr(&self, expr: &Expr) -> Result<hir::Expr, ResolveError> {
+        match self.resolve_expr_voidable(expr)? {
+            Voidable::Expr(expr) => Ok(expr),
+            _ => Err(ResolveError::VoidArgument),
         }
     }
 
-    /// Resolves a unary [`Expr`] to an [`hir::Expr`].
-    fn resolve_expr_unary(&self, op: UnOp, rhs: &Expr) -> hir::Expr {
-        let rhs = self.resolve_expr(rhs);
+    /// Resolves an [`Expr`] to a [`Voidable`]. This function returns a
+    /// [`ResolveError`] if the [`Expr`] could not be resolved.
+    fn resolve_expr_voidable(&self, expr: &Expr) -> Result<Voidable, ResolveError> {
+        let expr = match expr {
+            Expr::Number(value) => hir::Expr::Number(*value),
+            Expr::Ident(..) => todo!("resolving `Expr::Ident`"),
+            Expr::Paren(expr) => self.resolve_expr(expr)?,
+            Expr::Block(stmts) => return self.resolve_expr_block(stmts),
+            Expr::Call(..) => todo!("resolving `Expr::Call`"),
+            Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs)?,
+            Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs)?,
+        };
+
+        Ok(expr.into())
+    }
+
+    /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a
+    /// [`ResolveError`] if the block's [`Stmt`]s could not be resolved.
+    fn resolve_expr_block(&self, stmts: &[Stmt]) -> Result<Voidable, ResolveError> {
+        let mut stmts = self.resolve_stmts(stmts, ScopeKind::Local)?;
+
+        let block = match stmts.pop() {
+            None => Voidable::Nop,
+            Some(hir::Stmt::Expr(expr)) => {
+                let expr = if stmts.is_empty() {
+                    *expr
+                } else {
+                    hir::Expr::Block(stmts, expr)
+                };
+
+                expr.into()
+            }
+            Some(stmt) => {
+                stmts.push(stmt);
+                hir::Stmt::Block(stmts).into()
+            }
+        };
+
+        Ok(block)
+    }
+
+    /// Resolves a unary [`Expr`] to an [`hir::Expr`]. This function returns a
+    /// [`ResolveError`] if the operand is void or could not be resolved.
+    fn resolve_expr_unary(&self, op: UnOp, rhs: &Expr) -> Result<hir::Expr, ResolveError> {
+        let rhs = self.resolve_expr(rhs)?;
 
         match op {
             UnOp::Negate => {
                 let op = hir::BinOp::Subtract;
                 let lhs = hir::Expr::Number(0.0);
-                hir::Expr::Binary(op, lhs.into(), rhs.into())
+                Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
             }
         }
     }
 
-    /// Resolves a binary [`Expr`] to an [`hir::Expr`].
-    fn resolve_expr_binary(&self, op: BinOp, lhs: &Expr, rhs: &Expr) -> hir::Expr {
-        let lhs = self.resolve_expr(lhs);
-        let rhs = self.resolve_expr(rhs);
+    /// Resolves a binary [`Expr`] to an [`hir::Expr`]. This function returns a
+    /// [`ResolveError`] if either operand is void or could not be resolved.
+    fn resolve_expr_binary(
+        &self,
+        op: BinOp,
+        lhs: &Expr,
+        rhs: &Expr,
+    ) -> Result<hir::Expr, ResolveError> {
+        let lhs = self.resolve_expr(lhs)?;
+        let rhs = self.resolve_expr(rhs)?;
 
         let op = match op {
             BinOp::Add => hir::BinOp::Add,
@@ -97,6 +143,6 @@ impl Resolver {
             BinOp::Divide => hir::BinOp::Divide,
         };
 
-        hir::Expr::Binary(op, lhs.into(), rhs.into())
+        Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
     }
 }
