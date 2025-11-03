@@ -1,6 +1,6 @@
 mod ast;
+mod clac_error;
 mod compiler;
-mod execute_error;
 mod hir;
 mod interpreter;
 mod ir;
@@ -12,7 +12,7 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::{execute_error::ExecuteError, interpreter::Globals};
+use self::{clac_error::ClacError, interpreter::Globals};
 
 /// Runs Clac.
 fn main() {
@@ -73,18 +73,14 @@ fn execute_source(source: &str, globals: &mut Globals) {
     }
 }
 
-/// Executes source code with [`Globals`]. This function returns an
-/// [`ExecuteError`] if the source code could not be executed.
-fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ExecuteError> {
+/// Executes source code with [`Globals`]. This function returns a [`ClacError`]
+/// if the source code could not be executed.
+fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
     let ast = parser::parse_source(source)?;
-
-    {
-        // TODO: Rework the compiler to use HIR.
-        let hir = resolver::resolve_ast(&ast, globals.names().iter())?;
-        println!("{hir:#?}");
-    }
-
-    let ir = compiler::compile_ast(&ast, globals.names())?;
+    let hir = resolver::resolve_ast(&ast, globals.names().iter())?;
+    println!("{hir:#?}");
+    let ir = compiler::compile_hir(&hir);
+    println!("{ir}");
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

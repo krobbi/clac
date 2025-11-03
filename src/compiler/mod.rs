@@ -1,48 +1,36 @@
-mod compile_error;
-mod locals;
-
-pub use self::compile_error::CompileError;
-
-use std::collections::HashSet;
+mod stack;
 
 use crate::{
-    ast::{Ast, BinOp, Expr, Stmt, UnOp},
+    hir::{BinOp, Expr, Hir, Stmt},
     ir::{self, Body, Instruction, Ir, Value},
 };
 
-use self::locals::Locals;
+use self::stack::Stack;
 
-/// Compiles an [`Ast`] to [`Ir`] with a [`HashSet`] of defined global variable
-/// names. This function returns a [`CompileError`] if [`Ir`] could not be
-/// compiled.
-pub fn compile_ast(ast: &Ast, globals: HashSet<String>) -> Result<Ir, CompileError> {
-    let mut compiler = Compiler::new(globals);
-    compiler.compile_ast(ast)?;
-    Ok(Ir(compiler.into_body()))
+/// Compiles [`Hir`] to [`Ir`].
+pub fn compile_hir(hir: &Hir) -> Ir {
+    let mut compiler = Compiler::new();
+    compiler.compile_hir(hir);
+    Ir(compiler.into_body())
 }
 
 /// A structure that compiles a program or function's [`Body`].
 struct Compiler {
-    /// The set of declared global variables.
-    globals: HashSet<String>,
-
-    /// The stack of declared local variables.
-    locals: Locals,
+    /// The [`Stack`] for tracking the locations of local variables.
+    stack: Stack,
 
     /// The [`Instruction`]s that have been compiled.
     instructions: Vec<Instruction>,
 }
 
 impl Compiler {
-    /// Creates a new `Compiler` with a [`HashSet`] of defined global variable
-    /// names.
-    fn new(globals: HashSet<String>) -> Self {
-        let locals = Locals::new();
+    /// Creates a new `Compiler`.
+    fn new() -> Self {
+        let stack = Stack::new();
         let instructions = Vec::new();
 
         Self {
-            globals,
-            locals,
+            stack,
             instructions,
         }
     }
@@ -52,162 +40,95 @@ impl Compiler {
         Body(self.instructions.into_boxed_slice())
     }
 
-    /// Compiles an [`Ast`]. This function returns a [`CompileError`] if the
-    /// [`Ast`] could not be compiled.
-    fn compile_ast(&mut self, ast: &Ast) -> Result<(), CompileError> {
-        for stmt in &ast.0 {
-            match stmt {
-                Stmt::Assign(target, source) => self.compile_assign_stmt(target, source)?,
-                Stmt::Expr(expr) => {
-                    self.compile_expr(expr)?;
-                    self.compile(Instruction::Print);
-                }
-            }
-        }
-
+    /// Compiles [`Hir`].
+    fn compile_hir(&mut self, hir: &Hir) {
+        self.compile_stmts(&hir.0);
         self.compile(Instruction::Halt);
-        Ok(())
     }
 
-    /// Compiles an assignment [`Stmt`]. This function returns a
-    /// [`CompileError`] if the assignment source or target was invalid.
-    fn compile_assign_stmt(&mut self, target: &Expr, source: &Expr) -> Result<(), CompileError> {
-        let Expr::Ident(name) = target else {
-            return Err(CompileError::InvalidAssignTarget);
-        };
-
-        self.compile_expr(source)?;
-
-        if self.locals.is_global_scope() {
-            if self.globals.contains(name) {
-                return Err(CompileError::AlreadyDefinedVariable(name.to_owned()));
-            }
-
-            self.compile(Instruction::StoreGlobal(name.to_owned()));
-            self.globals.insert(name.to_owned());
-            return Ok(());
-        }
-
-        if self.locals.declare(name) {
-            // HACK: Local variables are defined by simply leaving a value on
-            // the stack. This value may be void, but void is not allowed to be
-            // stored in variables. An extra instruction is compiled to check
-            // the value if the source expression could be evaluated as void.
-            if is_expr_possibly_void(source) {
-                self.compile(Instruction::AssertNonVoid);
-            }
-
-            Ok(())
-        } else {
-            Err(CompileError::AlreadyDefinedVariable(name.to_owned()))
+    /// Compiles a slice of [`Stmt`]s.
+    fn compile_stmts(&mut self, stmts: &[Stmt]) {
+        for stmt in stmts {
+            self.compile_stmt(stmt);
         }
     }
 
-    /// Compiles an [`Expr`]. This function returns a [`CompileError`] if the
-    /// [`Expr`] could not be compiled.
-    fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
+    /// Compiles a [`Stmt`].
+    fn compile_stmt(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::Block(stmts) => self.compile_stmt_block(stmts),
+            Stmt::DefineLocal(name, value) => self.compile_stmt_define_local(name, value),
+            Stmt::AssignGlobal(name, value) => self.compile_stmt_assign_global(name, value),
+            Stmt::Print(value) => self.compile_stmt_print(value),
+            Stmt::Expr(expr) => self.compile_stmt_expr(expr),
+        }
+    }
+
+    /// Compiles a block [`Stmt`].
+    fn compile_stmt_block(&mut self, stmts: &[Stmt]) {
+        self.stack.push_scope();
+        self.compile_stmts(stmts);
+        let local_count = self.stack.pop_scope();
+        self.compile_drop(local_count);
+    }
+
+    /// Compiles a local variable definition [`Stmt`].
+    fn compile_stmt_define_local(&mut self, name: &str, value: &Expr) {
+        self.compile_expr(value);
+        self.stack.declare_local(name);
+    }
+
+    /// Compiles a global variable assignment [`Stmt`].
+    fn compile_stmt_assign_global(&mut self, name: &str, value: &Expr) {
+        self.compile_expr(value);
+        self.compile(Instruction::StoreGlobal(name.to_owned()));
+    }
+
+    /// Compiles a print [`Stmt`].
+    fn compile_stmt_print(&mut self, value: &Expr) {
+        self.compile_expr(value);
+        self.compile(Instruction::Print);
+    }
+
+    /// Compiles an expression [`Stmt`].
+    fn compile_stmt_expr(&mut self, expr: &Expr) {
+        self.compile_expr(expr);
+        self.compile(Instruction::Drop);
+    }
+
+    /// Compiles an [`Expr`].
+    fn compile_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Number(value) => {
-                self.compile(Instruction::Push(Value::Number(*value)));
-                Ok(())
-            }
-            Expr::Ident(name) => self.compile_expr_ident(name),
-            Expr::Paren(expr) => self.compile_expr(expr),
-            Expr::Block(stmts) => self.compile_expr_block(stmts),
-            Expr::Call(..) => todo!("compilation of `Expr::Call`"),
-            Expr::Unary(op, expr) => self.compile_expr_unary(*op, expr),
+            Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
+            Expr::Local(name) => self.compile(Instruction::LoadLocal(self.stack.local_index(name))),
+            Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
+            Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }
     }
 
-    /// Compiles an identifier [`Expr`]. This function returns a
-    /// [`CompileError`] if no variable is defined with the identifier's name.
-    fn compile_expr_ident(&mut self, name: &str) -> Result<(), CompileError> {
-        if let Some(index) = self.locals.get(name) {
-            self.compile(Instruction::PushLocal(index));
-        } else if self.globals.contains(name) {
-            self.compile(Instruction::PushGlobal(name.to_owned()));
-        } else {
-            return Err(CompileError::UndefinedVariable(name.to_owned()));
-        }
+    /// Compiles a block [`Expr`].
+    fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
+        self.stack.push_scope();
+        self.compile_stmts(stmts);
+        self.compile_expr(expr);
+        let local_count = self.stack.pop_scope();
 
-        Ok(())
+        if local_count > 0 {
+            // The result of the block expression is on top of the stack, but
+            // there are local variables below it that need to be dropped. Move
+            // the result into the first local variable and drop any local
+            // variables above it.
+            self.compile(Instruction::StoreLocal(self.stack.len()));
+            self.compile_drop(local_count - 1);
+        }
     }
 
-    /// Compiles a block [`Expr`]. This function returns a [`CompileError`] if
-    /// any of the block's [`Stmt`]s could not be compiled.
-    fn compile_expr_block(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
-        let mut stmts = stmts.iter();
-        let mut is_void = true;
-        self.locals.push_scope();
-
-        while let Some(stmt) = stmts.next() {
-            match stmt {
-                Stmt::Assign(target, source) => self.compile_assign_stmt(target, source)?,
-                Stmt::Expr(expr) => {
-                    self.compile_expr(expr)?;
-
-                    if stmts.len() > 0 {
-                        self.compile(Instruction::Pop);
-                    } else {
-                        is_void = false;
-                    }
-                }
-            }
-        }
-
-        let block_variable_count = self.locals.pop_scope();
-
-        if block_variable_count > 0 {
-            if is_void {
-                self.compile_pop(block_variable_count);
-            } else {
-                // HACK: If the block declared local variables and produced a
-                // result, then move the result into the first local variable
-                // and don't pop it.
-                self.compile(Instruction::StoreLocal(self.locals.count()));
-                self.compile_pop(block_variable_count - 1);
-            }
-        }
-
-        if is_void {
-            // Push void at the end to bypass the stack manipulation hack.
-            self.compile(Instruction::Push(Value::Void));
-        }
-
-        Ok(())
-    }
-
-    /// Compiles a unary [`Expr`]. This function returns a [`CompileError`] if
-    /// the operand could not be compiled.
-    fn compile_expr_unary(&mut self, op: UnOp, expr: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(expr)?;
-
-        let op = match op {
-            UnOp::Negate => ir::UnOp::Negate,
-        };
-
-        self.compile(Instruction::Unary(op));
-        Ok(())
-    }
-
-    /// Compiles a binary [`Expr`]. This function returns a [`CompileError`] if
-    /// either operand could not be compiled.
-    fn compile_expr_binary(
-        &mut self,
-        op: BinOp,
-        lhs: &Expr,
-        rhs: &Expr,
-    ) -> Result<(), CompileError> {
-        self.compile_expr(lhs)?;
-
-        // HACK: `rhs` could be a block that defines local variables, but the
-        // location of these variables would be off by one because `lhs` is
-        // sitting on top the stack. To fix this, `lhs` is treated as an unnamed
-        // local variable while `rhs` is being evaluated.
-        self.locals.push_temp();
-        self.compile_expr(rhs)?;
-        self.locals.pop_temp();
+    /// Compiles a binary [`Expr`].
+    fn compile_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) {
+        self.compile_expr(lhs);
+        self.stack.declare_intermediate();
+        self.compile_expr(rhs);
 
         let op = match op {
             BinOp::Add => ir::BinOp::Add,
@@ -217,7 +138,7 @@ impl Compiler {
         };
 
         self.compile(Instruction::Binary(op));
-        Ok(())
+        self.stack.declare_drop_intermediate();
     }
 
     /// Appends an [`Instruction`] to the current block.
@@ -225,28 +146,10 @@ impl Compiler {
         self.instructions.push(instruction);
     }
 
-    /// Appends `n` pop [`Instruction`]s to the current block.
-    fn compile_pop(&mut self, n: usize) {
-        for _ in 0..n {
-            self.compile(Instruction::Pop);
+    /// Appends multiple drop [`Instruction`]s to the current block.
+    fn compile_drop(&mut self, count: usize) {
+        for _ in 0..count {
+            self.compile(Instruction::Drop);
         }
-    }
-}
-
-/// Returns whether an [`Expr`] could be evaluated as void at runtime.
-fn is_expr_possibly_void(expr: &Expr) -> bool {
-    // Unary and binary operations are not included because they are checked at
-    // runtime and will never be evaluated as void.
-    match expr {
-        Expr::Paren(expr) => is_expr_possibly_void(expr),
-        Expr::Block(stmts) => {
-            if let Some(Stmt::Expr(expr)) = stmts.last() {
-                is_expr_possibly_void(expr)
-            } else {
-                true
-            }
-        }
-        Expr::Call(_, _) => true,
-        _ => false,
     }
 }

@@ -65,8 +65,8 @@ impl Resolver {
                 }
                 Stmt::Expr(expr) => match (self.resolve_expr_voidable(expr)?, scope_kind) {
                     (Voidable::Nop, _) => continue,
-                    (Voidable::Expr(expr), ScopeKind::Global) => hir::Stmt::Print(expr.into()),
                     (Voidable::Expr(expr), ScopeKind::Local) => hir::Stmt::Expr(expr.into()),
+                    (Voidable::Expr(value), ScopeKind::Global) => hir::Stmt::Print(value.into()),
                     (Voidable::Stmt(stmt), _) => stmt,
                 },
             };
@@ -99,8 +99,8 @@ impl Resolver {
         }
 
         let stmt = match scope_kind {
-            ScopeKind::Global => hir::Stmt::AssignGlobal(name.to_owned(), value.into()),
             ScopeKind::Local => hir::Stmt::DefineLocal(name.to_owned(), value.into()),
+            ScopeKind::Global => hir::Stmt::AssignGlobal(name.to_owned(), value.into()),
         };
 
         self.scope_stack.define_variable(name);
@@ -137,8 +137,8 @@ impl Resolver {
     fn resolve_expr_ident(&self, name: &str) -> Result<hir::Expr> {
         match self.scope_stack.resolve_variable(name) {
             None => Err(ResolveError::UndefinedVariable(name.to_owned())),
-            Some(ScopeKind::Global) => Ok(hir::Expr::Global(name.to_owned())),
             Some(ScopeKind::Local) => Ok(hir::Expr::Local(name.to_owned())),
+            Some(ScopeKind::Global) => Ok(hir::Expr::Global(name.to_owned())),
         }
     }
 

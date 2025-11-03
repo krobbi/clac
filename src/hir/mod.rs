@@ -1,5 +1,3 @@
-#![expect(dead_code, reason = "HIR fields should be debug printed")]
-
 /// A high-level intermediate representation of a program.
 #[derive(Debug)]
 pub struct Hir(pub Vec<Stmt>);

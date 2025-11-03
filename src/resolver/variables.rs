@@ -74,11 +74,11 @@ impl ScopeStack {
 /// A kind of `Scope` where a variable may defined.
 #[derive(Clone, Copy)]
 pub enum ScopeKind {
-    /// At the top level of the program.
-    Global,
-
     /// Inside a block.
     Local,
+
+    /// At the top level of the program.
+    Global,
 }
 
 /// A scope of defined variables.

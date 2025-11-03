@@ -11,35 +11,27 @@ pub enum Instruction {
     /// Push a constant [`Value`] to the stack.
     Push(Value),
 
-    /// Load a [`Value`] from a global variable and push it to the stack.
-    PushGlobal(String),
-
-    /// Load a [`Value`] from a local variable and push it to the stack.
-    PushLocal(usize),
-
-    /// Pop a [`Value`] from the stack and store it in a global variable.
-    StoreGlobal(String),
-
-    /// Pop a [`Value`] from the stack and store it in a local variable.
-    StoreLocal(usize),
-
     /// Pop a [`Value`] from the stack and discard it.
-    Pop,
+    Drop,
 
     /// Pop a [`Value`] from the stack and print it.
     Print,
 
-    /// Pop a [`Value`] from the stack, perform a unary operation on it, and
-    /// push the result to the stack.
-    Unary(UnOp),
+    /// Load a [`Value`] from a local variable and push it to the stack.
+    LoadLocal(usize),
+
+    /// Load a [`Value`] from a global variable and push it to the stack.
+    LoadGlobal(String),
+
+    /// Pop a [`Value`] from the stack and store it in a local variable.
+    StoreLocal(usize),
+
+    /// Pop a [`Value`] from the stack and store it in a global variable.
+    StoreGlobal(String),
 
     /// Pop two [`Value`]s from the stack, perform a binary operation on them,
     /// and push the result to the stack.
     Binary(BinOp),
-
-    /// Pop a [`Value`] from the stack, check that it is not void, and push it
-    /// back onto the stack.
-    AssertNonVoid,
 
     /// Halt execution.
     Halt,
@@ -48,18 +40,8 @@ pub enum Instruction {
 /// A value with a dynamic type.
 #[derive(Clone)]
 pub enum Value {
-    /// An empty value.
-    Void,
-
     /// A number.
     Number(f64),
-}
-
-/// A unary operation.
-#[derive(Clone, Copy)]
-pub enum UnOp {
-    /// A negation.
-    Negate,
 }
 
 /// A binary operation.

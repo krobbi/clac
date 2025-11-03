@@ -3,7 +3,7 @@ mod interpret_error;
 
 pub use self::{globals::Globals, interpret_error::InterpretError};
 
-use crate::ir::{BinOp, Instruction, Ir, UnOp, Value};
+use crate::ir::{BinOp, Instruction, Ir, Value};
 
 /// Interprets [`Ir`] with [`Globals`]. This function returns an
 /// [`InterpretError`] if [`Ir`] could not be interpreted.
@@ -13,29 +13,17 @@ pub fn interpret_ir(ir: &Ir, globals: &mut Globals) -> Result<(), InterpretError
     for instruction in &ir.0.0 {
         match instruction {
             Instruction::Push(value) => stack.push(value.clone()),
-            Instruction::PushGlobal(name) => stack.push(globals.get(name).clone()),
-            Instruction::PushLocal(index) => stack.push(stack.get_local(*index).clone()),
-            Instruction::StoreGlobal(name) => {
-                let value = stack.pop_non_void()?;
-                globals.set(name, value);
-            }
-            Instruction::StoreLocal(index) => {
-                let value = stack.pop_non_void()?;
-                stack.set_local(*index, value);
-            }
-            Instruction::Pop => {
+            Instruction::Drop => {
                 stack.pop();
             }
-            Instruction::Print => print_value(&stack.pop()),
-            Instruction::Unary(op) => {
-                let value = stack.pop_number()?;
-
-                let result = match op {
-                    UnOp::Negate => -value,
-                };
-
-                stack.push(Value::Number(result));
+            Instruction::Print => println!("{}", stack.pop()),
+            Instruction::LoadLocal(index) => stack.push(stack.get_local(*index).clone()),
+            Instruction::LoadGlobal(name) => stack.push(globals.get(name).clone()),
+            Instruction::StoreLocal(index) => {
+                let value = stack.pop();
+                stack.set_local(*index, value);
             }
+            Instruction::StoreGlobal(name) => globals.set(name, stack.pop()),
             Instruction::Binary(op) => {
                 let rhs = stack.pop_number()?;
                 let lhs = stack.pop_number()?;
@@ -54,10 +42,6 @@ pub fn interpret_ir(ir: &Ir, globals: &mut Globals) -> Result<(), InterpretError
                 };
 
                 stack.push(Value::Number(result));
-            }
-            Instruction::AssertNonVoid => {
-                let value = stack.pop_non_void()?;
-                stack.push(value);
             }
             Instruction::Halt => break,
         }
@@ -89,22 +73,14 @@ impl Stack {
         self.values.pop().expect("stack should not be empty")
     }
 
-    /// Pops a [`Value`] from the `Stack`. This function returns an
-    /// [`InterpretError`] if the [`Value`] is void.
-    fn pop_non_void(&mut self) -> Result<Value, InterpretError> {
-        let value = self.pop();
-
-        if let Value::Void = value {
-            Err(InterpretError::InvalidType)
-        } else {
-            Ok(value)
-        }
-    }
-
     /// Pops a number [`Value`] from the `Stack` and returns its underlying
     /// [`f64`]. This function returns an [`InterpretError`] if the [`Value`] is
     /// not a number.
     fn pop_number(&mut self) -> Result<f64, InterpretError> {
+        #[expect(
+            irrefutable_let_patterns,
+            reason = "function types should be added later"
+        )]
         if let Value::Number(value) = self.pop() {
             Ok(value)
         } else {
@@ -121,13 +97,4 @@ impl Stack {
     fn set_local(&mut self, index: usize, value: Value) {
         self.values[index] = value;
     }
-}
-
-/// Prints a [`Value`] if it is not void.
-fn print_value(value: &Value) {
-    if let Value::Void = value {
-        return;
-    }
-
-    println!("{value}");
 }

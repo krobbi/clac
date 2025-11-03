@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter, Write as _};
 
-use super::{BinOp, Body, Instruction, Ir, UnOp, Value};
+use super::{BinOp, Body, Instruction, Ir, Value};
 
 impl Display for Ir {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -30,15 +30,13 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Push(value) => write!(f, "{:8}{value}", "push"),
-            Self::PushGlobal(name) => write!(f, "{:8}{name}", "push"),
-            Self::PushLocal(index) => write!(f, "{:8}[{index}]", "push"),
-            Self::StoreGlobal(name) => write!(f, "{:8}{name}", "store"),
-            Self::StoreLocal(index) => write!(f, "{:8}[{index}]", "store"),
-            Self::Pop => f.write_str("pop"),
+            Self::Drop => f.write_str("drop"),
             Self::Print => f.write_str("print"),
-            Self::Unary(op) => write!(f, "{:8}{op}", "unary"),
+            Self::LoadLocal(index) => write!(f, "{:8}[{index}]", "load"),
+            Self::LoadGlobal(name) => write!(f, "{:8}{name}", "load"),
+            Self::StoreLocal(index) => write!(f, "{:8}[{index}]", "store"),
+            Self::StoreGlobal(name) => write!(f, "{:8}{name}", "store"),
             Self::Binary(op) => write!(f, "{:8}{op}", "binary"),
-            Self::AssertNonVoid => f.write_str("nonvoid"),
             Self::Halt => f.write_str("halt"),
         }
     }
@@ -47,19 +45,8 @@ impl Display for Instruction {
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Void => f.write_str("{}"),
             Self::Number(value) => value.fmt(f),
         }
-    }
-}
-
-impl Display for UnOp {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Negate => "negate",
-        };
-
-        f.write_str(name)
     }
 }
 

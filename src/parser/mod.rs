@@ -116,8 +116,8 @@ impl<'a> Parser<'a> {
                 Expr::Block(stmts)
             }
             Token::Minus => {
-                let expr = self.parse_expr_atom()?;
-                Expr::Unary(UnOp::Negate, expr.into())
+                let rhs = self.parse_expr_atom()?;
+                Expr::Unary(UnOp::Negate, rhs.into())
             }
             token => return Err(ParseError::ExpectedExpr(token)),
         };
