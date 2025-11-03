@@ -10,6 +10,9 @@ pub enum Stmt {
     /// A block.
     Block(Vec<Stmt>),
 
+    /// A global variable assignment.
+    AssignGlobal(String, Box<Expr>),
+
     /// A print statement.
     Print(Box<Expr>),
 
@@ -22,6 +25,9 @@ pub enum Stmt {
 pub enum Expr {
     /// A number.
     Number(f64),
+
+    /// A global variable.
+    Global(String),
 
     /// A block.
     Block(Vec<Stmt>, Box<Expr>),

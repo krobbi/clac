@@ -80,7 +80,7 @@ fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), Execute
 
     {
         // TODO: Rework the compiler to use HIR.
-        let hir = resolver::resolve_ast(&ast)?;
+        let hir = resolver::resolve_ast(&ast, globals.names().iter())?;
         println!("{hir:#?}");
     }
 

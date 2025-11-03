@@ -12,7 +12,7 @@ pub enum CompileError {
     /// A variable that is already defined was defined again.
     AlreadyDefinedVariable(String),
 
-    /// A variable that is not defined was used.
+    /// A variable that is undefined was used.
     UndefinedVariable(String),
 }
 
