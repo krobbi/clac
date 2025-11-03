@@ -102,9 +102,27 @@ impl Compiler {
             Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
             Expr::Local(name) => self.compile(Instruction::LoadLocal(self.stack.local_index(name))),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
-            Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
+            Expr::Function(params, body) => self.compile_expr_function(params, body),
+            Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
+        }
+    }
+
+    /// Compiles a block [`Expr`].
+    fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
+        self.stack.push_scope();
+        self.compile_stmts(stmts);
+        self.compile_expr(expr);
+        let local_count = self.stack.pop_scope();
+
+        if local_count > 0 {
+            // The result of the block expression is on top of the stack, but
+            // there are local variables below it that need to be dropped. Move
+            // the result into the first local variable and drop any local
+            // variables above it.
+            self.compile(Instruction::StoreLocal(self.stack.len()));
+            self.compile_drop(local_count - 1);
         }
     }
 
@@ -122,20 +140,21 @@ impl Compiler {
         self.compile(Instruction::Push(value));
     }
 
-    /// Compiles a block [`Expr`].
-    fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
-        self.stack.push_scope();
-        self.compile_stmts(stmts);
-        self.compile_expr(expr);
-        let local_count = self.stack.pop_scope();
+    /// Compiles a function call [`Expr`].
+    fn compile_expr_call(&mut self, callee: &Expr, args: &[Expr]) {
+        self.compile_expr(callee);
+        self.stack.declare_intermediate();
 
-        if local_count > 0 {
-            // The result of the block expression is on top of the stack, but
-            // there are local variables below it that need to be dropped. Move
-            // the result into the first local variable and drop any local
-            // variables above it.
-            self.compile(Instruction::StoreLocal(self.stack.len()));
-            self.compile_drop(local_count - 1);
+        for arg in args {
+            self.compile_expr(arg);
+            self.stack.declare_intermediate();
+        }
+
+        let arity = args.len();
+        self.compile(Instruction::Call(arity));
+
+        for _ in 0..=arity {
+            self.stack.declare_drop_intermediate();
         }
     }
 

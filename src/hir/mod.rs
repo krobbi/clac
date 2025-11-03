@@ -33,11 +33,14 @@ pub enum Expr {
     /// A global variable.
     Global(String),
 
+    /// A block.
+    Block(Vec<Stmt>, Box<Expr>),
+
     /// A function.
     Function(Vec<String>, Box<Expr>),
 
-    /// A block.
-    Block(Vec<Stmt>, Box<Expr>),
+    /// A function call.
+    Call(Box<Expr>, Vec<Expr>),
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),

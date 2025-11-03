@@ -128,7 +128,7 @@ impl Resolver {
             Expr::Ident(name) => self.resolve_expr_ident(name)?,
             Expr::Paren(expr) => self.resolve_expr(expr)?,
             Expr::Block(stmts) => return self.resolve_expr_block(stmts),
-            Expr::Call(..) => todo!("resolving `Expr::Call`"),
+            Expr::Call(callee, args) => self.resolve_expr_call(callee, args)?,
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs)?,
             Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs)?,
         };
@@ -195,6 +195,21 @@ impl Resolver {
         };
 
         Ok(block)
+    }
+
+    /// Resolves a function call [`Expr`] to an [`hir::Expr`]. This function
+    /// returns a [`ResolveError`] if the callee or arguments are void or could
+    /// not be resolved.
+    fn resolve_expr_call(&mut self, callee: &Expr, args: &[Expr]) -> Result<hir::Expr> {
+        let callee = self.resolve_expr(callee)?;
+        let mut resolved_args = Vec::with_capacity(args.len());
+
+        for arg in args {
+            let arg = self.resolve_expr(arg)?;
+            resolved_args.push(arg);
+        }
+
+        Ok(hir::Expr::Call(callee.into(), resolved_args))
     }
 
     /// Resolves a unary [`Expr`] to an [`hir::Expr`]. This function returns a

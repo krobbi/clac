@@ -40,6 +40,9 @@ pub enum Instruction {
     /// and push the result to the stack.
     Binary(BinOp),
 
+    /// Call a function with a number of argument [`Value`]s on the stack.
+    Call(usize),
+
     /// Pop a [`Value`] from the stack, clear the current function's stack,
     /// return to the call site, and push the [`Value`] to the stack.
     Return,
