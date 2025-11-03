@@ -26,7 +26,7 @@ pub fn resolve_ast<'a>(ast: &Ast, globals: impl Iterator<Item = &'a String>) -> 
     let mut resolver = Resolver::new();
 
     for global in globals {
-        resolver.scope_stack.define(global);
+        resolver.scope_stack.define_variable(global);
     }
 
     resolver.resolve_ast(ast)
@@ -100,10 +100,10 @@ impl Resolver {
 
         let stmt = match scope_kind {
             ScopeKind::Global => hir::Stmt::AssignGlobal(name.to_owned(), value.into()),
-            ScopeKind::Local => todo!("resolving local variable definitions"),
+            ScopeKind::Local => hir::Stmt::DefineLocal(name.to_owned(), value.into()),
         };
 
-        self.scope_stack.define(name);
+        self.scope_stack.define_variable(name);
         Ok(stmt)
     }
 
@@ -135,17 +135,19 @@ impl Resolver {
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
     fn resolve_expr_ident(&self, name: &str) -> Result<hir::Expr> {
-        match self.scope_stack.resolve(name) {
+        match self.scope_stack.resolve_variable(name) {
             None => Err(ResolveError::UndefinedVariable(name.to_owned())),
             Some(ScopeKind::Global) => Ok(hir::Expr::Global(name.to_owned())),
-            Some(ScopeKind::Local) => todo!("resolving local variables"),
+            Some(ScopeKind::Local) => Ok(hir::Expr::Local(name.to_owned())),
         }
     }
 
     /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a
     /// [`ResolveError`] if the block's [`Stmt`]s could not be resolved.
     fn resolve_expr_block(&mut self, stmts: &[Stmt]) -> Result<Voidable> {
+        self.scope_stack.push_scope();
         let mut stmts = self.resolve_stmts(stmts, ScopeKind::Local)?;
+        self.scope_stack.pop_scope();
 
         let block = match stmts.pop() {
             None => Voidable::Nop,

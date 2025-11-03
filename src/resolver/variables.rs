@@ -14,14 +14,30 @@ impl ScopeStack {
     pub fn new() -> Self {
         let global_scope = Scope::new();
         let local_scopes = Vec::new();
+
         Self {
             global_scope,
             local_scopes,
         }
     }
 
+    /// Pushes a new innermost local [`Scope`] to the `ScopeStack`.
+    pub fn push_scope(&mut self) {
+        self.local_scopes.push(Scope::new());
+    }
+
+    /// Pops the innermost local [`Scope`] from the `ScopeStack`.
+    pub fn pop_scope(&mut self) {
+        debug_assert!(
+            !self.local_scopes.is_empty(),
+            "scope stack should not be empty"
+        );
+
+        self.local_scopes.pop();
+    }
+
     /// Defines a new variable in the innermost [`Scope`].
-    pub fn define(&mut self, name: &str) {
+    pub fn define_variable(&mut self, name: &str) {
         let scope = match self.local_scopes.last_mut() {
             None => &mut self.global_scope,
             Some(scope) => scope,
@@ -42,7 +58,7 @@ impl ScopeStack {
 
     /// Returns the [`ScopeKind`] where a variable is defined. This function
     /// returns [`None`] if the variable is undefined.
-    pub fn resolve(&self, name: &str) -> Option<ScopeKind> {
+    pub fn resolve_variable(&self, name: &str) -> Option<ScopeKind> {
         for scope in self.local_scopes.iter().rev() {
             if scope.has_variable(name) {
                 return Some(ScopeKind::Local);
