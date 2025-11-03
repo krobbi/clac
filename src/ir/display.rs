@@ -37,6 +37,7 @@ impl Display for Instruction {
             Self::StoreLocal(index) => write!(f, "{:8}[{index}]", "store"),
             Self::StoreGlobal(name) => write!(f, "{:8}{name}", "store"),
             Self::Binary(op) => write!(f, "{:8}{op}", "binary"),
+            Self::Return => f.write_str("return"),
             Self::Halt => f.write_str("halt"),
         }
     }
@@ -46,6 +47,7 @@ impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Number(value) => value.fmt(f),
+            Self::Function(_) => f.write_str("function"),
         }
     }
 }

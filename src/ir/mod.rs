@@ -1,7 +1,14 @@
+#![expect(dead_code, reason = "functions are not yet implemented")]
+
+use std::rc::Rc;
+
 mod display;
 
 /// An intermediate representation of a program.
 pub struct Ir(pub Body);
+
+/// A function.
+pub struct Function(pub usize, pub Body);
 
 /// A sequence of [`Instruction`]s in a program or function body.
 pub struct Body(pub Box<[Instruction]>);
@@ -33,6 +40,10 @@ pub enum Instruction {
     /// and push the result to the stack.
     Binary(BinOp),
 
+    /// Pop a [`Value`] from the stack, clear the current function's stack,
+    /// return to the call site, and push the [`Value`] to the stack.
+    Return,
+
     /// Halt execution.
     Halt,
 }
@@ -42,6 +53,9 @@ pub enum Instruction {
 pub enum Value {
     /// A number.
     Number(f64),
+
+    /// A function.
+    Function(Rc<Function>),
 }
 
 /// A binary operation.

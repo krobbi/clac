@@ -2,7 +2,7 @@ mod stack;
 
 use crate::{
     hir::{BinOp, Expr, Hir, Stmt},
-    ir::{self, Body, Instruction, Ir, Value},
+    ir::{self, Body, Function, Instruction, Ir, Value},
 };
 
 use self::stack::Stack;
@@ -102,10 +102,24 @@ impl Compiler {
             Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
             Expr::Local(name) => self.compile(Instruction::LoadLocal(self.stack.local_index(name))),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
-            Expr::Function(..) => todo!("compiling `Expr::Function`"),
+            Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }
+    }
+
+    /// Compiles a function [`Expr`].
+    fn compile_expr_function(&mut self, params: &[String], body: &Expr) {
+        let mut compiler = Self::new();
+
+        for param in params {
+            compiler.stack.declare_local(param);
+        }
+
+        compiler.compile_expr(body);
+        compiler.compile(Instruction::Return);
+        let value = Value::Function(Function(params.len(), compiler.into_body()).into());
+        self.compile(Instruction::Push(value));
     }
 
     /// Compiles a block [`Expr`].

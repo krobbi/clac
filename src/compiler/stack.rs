@@ -49,11 +49,6 @@ impl Stack {
 
     /// Declares a new local variable at the top of the `Stack`.
     pub fn declare_local(&mut self, name: &str) {
-        debug_assert!(
-            !self.scope_offsets.is_empty(),
-            "scope stack should not be empty"
-        );
-
         self.elems.push(name.to_owned());
     }
 

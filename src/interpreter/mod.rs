@@ -43,6 +43,7 @@ pub fn interpret_ir(ir: &Ir, globals: &mut Globals) -> Result<(), InterpretError
 
                 stack.push(Value::Number(result));
             }
+            Instruction::Return => todo!("interpreting `Instruction::Return`"),
             Instruction::Halt => break,
         }
     }
@@ -77,10 +78,6 @@ impl Stack {
     /// [`f64`]. This function returns an [`InterpretError`] if the [`Value`] is
     /// not a number.
     fn pop_number(&mut self) -> Result<f64, InterpretError> {
-        #[expect(
-            irrefutable_let_patterns,
-            reason = "function types should be added later"
-        )]
         if let Value::Number(value) = self.pop() {
             Ok(value)
         } else {
