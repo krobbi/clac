@@ -102,6 +102,7 @@ impl Compiler {
             Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
             Expr::Local(name) => self.compile(Instruction::LoadLocal(self.stack.local_index(name))),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
+            Expr::Function(..) => todo!("compiling `Expr::Function`"),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }

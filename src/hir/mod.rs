@@ -33,6 +33,10 @@ pub enum Expr {
     /// A global variable.
     Global(String),
 
+    /// A function.
+    #[expect(dead_code, reason = "fields should be debug printed")]
+    Function(Vec<String>, Box<Expr>),
+
     /// A block.
     Block(Vec<Stmt>, Box<Expr>),
 

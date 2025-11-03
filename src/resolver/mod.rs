@@ -66,7 +66,7 @@ impl Resolver {
                 Stmt::Expr(expr) => match (self.resolve_expr_voidable(expr)?, scope_kind) {
                     (Voidable::Nop, _) => continue,
                     (Voidable::Expr(expr), ScopeKind::Local) => hir::Stmt::Expr(expr.into()),
-                    (Voidable::Expr(value), ScopeKind::Global) => hir::Stmt::Print(value.into()),
+                    (Voidable::Expr(expr), ScopeKind::Global) => hir::Stmt::Print(expr.into()),
                     (Voidable::Stmt(stmt), _) => stmt,
                 },
             };
@@ -86,11 +86,15 @@ impl Resolver {
         source: &Expr,
         scope_kind: ScopeKind,
     ) -> Result<hir::Stmt> {
-        let value = self.resolve_expr(source)?;
+        let (name, value) = match target {
+            Expr::Ident(name) => (name, self.resolve_expr(source)?),
+            Expr::Call(callee, args) => {
+                let Expr::Ident(name) = callee.as_ref() else {
+                    return Err(ResolveError::InvalidFunctionName);
+                };
 
-        let name = match target {
-            Expr::Ident(name) => name,
-            Expr::Call(..) => todo!("resolving function definitions"),
+                (name, self.resolve_expr_function(args, source)?)
+            }
             _ => return Err(ResolveError::InvalidAssignTarget),
         };
 
@@ -140,6 +144,30 @@ impl Resolver {
             Some(ScopeKind::Local) => Ok(hir::Expr::Local(name.to_owned())),
             Some(ScopeKind::Global) => Ok(hir::Expr::Global(name.to_owned())),
         }
+    }
+
+    /// Resolves a function [`Expr`] to an [`hir::Expr`]. This function returns
+    /// a [`ResolveError`] if the function has an invalid signature or if the
+    /// function body is void.
+    fn resolve_expr_function(&mut self, params: &[Expr], body: &Expr) -> Result<hir::Expr> {
+        let mut resolved_params = Vec::with_capacity(params.len());
+
+        for param in params {
+            let Expr::Ident(param) = param else {
+                return Err(ResolveError::InvalidParam);
+            };
+
+            if resolved_params.contains(param) {
+                return Err(ResolveError::DuplicateParam(param.to_owned()));
+            }
+
+            resolved_params.push(param.to_owned());
+        }
+
+        self.scope_stack.begin_function(&resolved_params);
+        let body = self.resolve_expr(body)?;
+        self.scope_stack.end_function();
+        Ok(hir::Expr::Function(resolved_params, body.into()))
     }
 
     /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a

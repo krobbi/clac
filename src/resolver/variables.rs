@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, mem};
 
 /// A stack of variable [`Scope`]s.
 pub struct ScopeStack {
@@ -7,6 +7,9 @@ pub struct ScopeStack {
 
     /// The stack of local [`Scope`]s.
     local_scopes: Vec<Scope>,
+
+    /// The stack of local [`Scope`] stacks outside the current function.
+    outer_stacks: Vec<Vec<Scope>>,
 }
 
 impl ScopeStack {
@@ -14,11 +17,35 @@ impl ScopeStack {
     pub fn new() -> Self {
         let global_scope = Scope::new();
         let local_scopes = Vec::new();
+        let outer_stacks = Vec::new();
 
         Self {
             global_scope,
             local_scopes,
+            outer_stacks,
         }
+    }
+
+    /// Begins a new function with a list of parameters.
+    pub fn begin_function(&mut self, params: &[String]) {
+        let mut param_scope = Scope::new();
+
+        for param in params {
+            param_scope.define(param);
+        }
+
+        let outer_scopes = mem::replace(&mut self.local_scopes, vec![param_scope]);
+        self.outer_stacks.push(outer_scopes);
+    }
+
+    /// Ends the current function.
+    pub fn end_function(&mut self) {
+        let outer_scopes = self
+            .outer_stacks
+            .pop()
+            .expect("function stack should not be empty");
+
+        self.local_scopes = outer_scopes;
     }
 
     /// Pushes a new innermost local [`Scope`] to the `ScopeStack`.
