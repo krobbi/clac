@@ -5,63 +5,52 @@ annoyances with the default Windows calculator:
 * No support for custom functions and variables
 * No way to evaluate an expression from a command line session
 
-The decision to support functions and variables made the scope of the project
-more complex. Clac now aims to be an interpreter for a small, mathematical
-scripting language.
-
 # Usage
 Clac is run from the command line:
 ```shell
 clac [CODE]
 ```
 
-If Clac is given one or more arguments, then they are joined with spaces and
+If one or more arguments are given, then they are joined with spaces and
 treated as a single line of code. Clac executes the code and exits
 automatically.
 
-If Clac is not given any arguments, then the user can enter code in a loop
-until manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z`
-(Windows.)
+If no arguments are given, then the user can enter code in a loop until
+manually exiting with `Ctrl+D` (Linux, macOS, etc.) or `Ctrl+Z` (Windows.)
 
-Currently, Clac prints the input code as pseudo-assembly.
-
-<!--
 # Language
-Clac aims to implement a language that is somewhere between a calculator and a
-small scripting language. A Clac program consists of zero or more expressions
-separated by commas:
+The decision to support functions and variables in Clac has expanded its scope
+to being a small, mathematical (but not yet Turing-complete) scripting
+language.
+
+Clac is designed to be usable as a calculator, so writing an expression at the
+top level of a program will print its result:
 ```
-clac> 1.5 + 2 * 3, (1.5 + 2) * 3
+clac> 1 + 1
+2
+```
+
+A program may contain zero or more expressions, separated by commas. A trailing
+comma may also be used:
+```
+clac> 1.5 + 2 * 3, (1.5 + 2) * 3,
 7.5
 10.5
 ```
 
-The expressions are evaluated in order, and their returned values are printed.
+Commas are optional, but are sometimes necessary to separate expressions:
+```
+clac> 0 1 -2
+0
+-1
 
-## Types
-The Clac language is dynamically typed. Expressions can return different types
-of values, and the types are only checked at runtime when it is necessary to do
-so. There are currently 3 types:
+clac> 0 1, -2
+0
+1
+-2
+```
 
-### Number
-The number type is the fundamental type of the Clac language. The type holds a
-64-bit floating-point number, which is mostly used for evaluating mathematical
-expressions.
-
-### Function
-The function type holds a function that can be called with zero or more
-argument values to return an optional result value. Being a type of value
-allows functions to be passed to and returned from other functions.
-
-### Void
-Void is the type of no value. Some expressions may return no value to indicate
-a side-effect or a lack of a meaningful value to return.
-
-The void type has some restrictions that do not apply to other types:
-* Void cannot be used as a value in an expression's input.
-* Void cannot be stored in a variable.
-* Void is not printed when it is returned from a top-level expression.
-
+<!--
 ## Variables
 Variables can be defined or assigned with the `=` operator:
 ```
@@ -222,7 +211,7 @@ The Clac language includes built-in functions for commonly-used operations:
 | `sqrt(n: number) -> number` | Returns the square root of `n`. |
 -->
 
-# Grammar
+## Grammar
 All valid Clac programs should have the following grammar:
 ```ebnf
 program  = sequence, Eof ;
