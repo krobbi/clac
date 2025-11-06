@@ -43,7 +43,6 @@ impl Compiler {
     /// Compiles [`Hir`].
     fn compile_hir(&mut self, hir: &Hir) {
         self.compile_stmts(&hir.0);
-        self.compile(Instruction::Halt);
     }
 
     /// Compiles a slice of [`Stmt`]s.
@@ -135,7 +134,6 @@ impl Compiler {
         }
 
         compiler.compile_expr(body);
-        compiler.compile(Instruction::Return);
         let value = Value::Function(Function(params.len(), compiler.into_body()).into());
         self.compile(Instruction::Push(value));
     }

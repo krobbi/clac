@@ -42,13 +42,6 @@ pub enum Instruction {
 
     /// Call a function with a number of argument [`Value`]s on the stack.
     Call(usize),
-
-    /// Pop a [`Value`] from the stack, clear the current function's stack,
-    /// return to the call site, and push the [`Value`] to the stack.
-    Return,
-
-    /// Halt execution.
-    Halt,
 }
 
 /// A value with a dynamic type.

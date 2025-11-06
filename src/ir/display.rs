@@ -38,8 +38,6 @@ impl Display for Instruction {
             Self::StoreGlobal(name) => write!(f, "{:8}{name}", "store"),
             Self::Binary(op) => write!(f, "{:8}{op}", "binary"),
             Self::Call(arity) => write!(f, "{:8}{arity}", "call"),
-            Self::Return => f.write_str("return"),
-            Self::Halt => f.write_str("halt"),
         }
     }
 }

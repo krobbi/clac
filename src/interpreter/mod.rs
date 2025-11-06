@@ -44,8 +44,6 @@ pub fn interpret_ir(ir: &Ir, globals: &mut Globals) -> Result<(), InterpretError
                 stack.push(Value::Number(result));
             }
             Instruction::Call(..) => todo!("interpreting `Instruction::Call`"),
-            Instruction::Return => todo!("interpreting `Instruction::Return`"),
-            Instruction::Halt => break,
         }
     }
 
