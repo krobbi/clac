@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use crate::interpreter::InterpretError;
+
 /// An intermediate representation of a program.
 pub struct Ir(pub Body);
 
@@ -48,6 +50,9 @@ pub enum Value {
 
     /// A function.
     Function(Rc<Function>),
+
+    /// A native function.
+    Native(fn(&[Value]) -> Result<Value, InterpretError>),
 }
 
 /// A binary operation.

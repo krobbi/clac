@@ -78,18 +78,23 @@ impl<'a, 'b> Interpreter<'a, 'b> {
                     let arity = *arity;
                     let args = self.stack.split_off(self.stack.len() - arity);
 
-                    let Value::Function(function) = self.pop() else {
-                        return Err(InterpretError::InvalidType);
+                    let return_value = match self.pop() {
+                        Value::Number(_) => return Err(InterpretError::CalledNonFunction),
+                        Value::Function(function) => {
+                            if function.0 != arity {
+                                return Err(InterpretError::IncorrectCallArity);
+                            }
+
+                            let mut interpreter =
+                                Interpreter::new(&function.1, self.globals.clone());
+                            interpreter.stack = args;
+                            interpreter.run()?;
+                            interpreter.pop()
+                        }
+                        Value::Native(function) => function(&args)?,
                     };
 
-                    if function.0 != arity {
-                        return Err(InterpretError::InvalidType);
-                    }
-
-                    let mut interpreter = Interpreter::new(&function.1, self.globals.clone());
-                    interpreter.stack = args;
-                    interpreter.run()?;
-                    self.stack.push(interpreter.pop());
+                    self.stack.push(return_value);
                 }
             }
         }
