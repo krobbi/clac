@@ -50,33 +50,35 @@ clac> 0 1, -2
 -2
 ```
 
-<!--
 ## Variables
-Variables can be defined or assigned with the `=` operator:
+Variables can be defined with the `=` operator:
 ```
-clac> x = 5, x * x, x = 2 * x
+clac> x = 5, x * x
 25
 
 clac> x
-10
+5
 ```
 
-Variable assignments are not printed because they do not return a value. This
-also means that variable assignments cannot be chained:
+Reassigning an existing variable is not currently supported:
+```
+clac> count = 1, count = 1 + 1
+Error: variable 'count' is already defined
+```
+
+Variable names must consist of one or more ASCII letters or underscores, with
+digits allowed after the first character.
+
+### Expressions and Statements
+Variable definitions are not printed because they are statements, not
+expressions. Unlike expressions, statements do not produce a value. This means
+that variable definitions cannot be chained:
 ```
 clac> x = y = 1
-Runtime error: cannot use void as a value
-
-clac> x
-Runtime error: variable 'x' is undefined
-
-clac> y
-1
+Error: assignments cannot be chained
 ```
 
-Variable names consist of one or more ASCII letters or underscores with digits
-allowed after the first character.
-
+<!--
 ## Blocks
 Zero or more expressions can be grouped into a block by surrounding them with
 curly braces and separating them with commas:

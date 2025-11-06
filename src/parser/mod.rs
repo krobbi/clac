@@ -68,6 +68,11 @@ impl<'a> Parser<'a> {
 
         let stmt = if self.eat(TokenType::Eq)? {
             let source = self.parse_expr()?;
+
+            if self.peek() == TokenType::Eq {
+                return Err(ParseError::ChainedAssignment);
+            }
+
             Stmt::Assign(target.into(), source.into())
         } else {
             Stmt::Expr(target.into())

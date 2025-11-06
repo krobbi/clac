@@ -69,7 +69,7 @@ fn run_repl(globals: &mut Globals) {
 /// Executes source code with [`Globals`].
 fn execute_source(source: &str, globals: &mut Globals) {
     if let Err(error) = try_execute_source(source, globals) {
-        eprintln!("{error}");
+        eprintln!("Error: {error}");
     }
 }
 

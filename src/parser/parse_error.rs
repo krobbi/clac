@@ -18,6 +18,9 @@ pub enum ParseError {
     /// A [`Token`] that does not begin an expected [`Expr`][crate::ast::Expr]
     /// was encountered.
     ExpectedExpr(Token),
+
+    /// A chained assignment was attempted.
+    ChainedAssignment,
 }
 
 impl From<LexError> for ParseError {
@@ -43,6 +46,7 @@ impl Display for ParseError {
                 write!(f, "expected {expected}, got {actual}")
             }
             Self::ExpectedExpr(token) => write!(f, "expected an expression, got {token}"),
+            Self::ChainedAssignment => f.write_str("assignments cannot be chained"),
         }
     }
 }

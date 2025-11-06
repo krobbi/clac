@@ -178,7 +178,7 @@ fn tuples() {
 /// Tests that assignment cannot be used as an expression.
 #[test]
 fn assignment_exprs() {
-    assert_error!("x = y = 0", ParseError::ExpectedExpr(Token::Eq));
+    assert_error!("x = y = 0", ParseError::ChainedAssignment);
     assert_error!(
         "1 + (x = 2)",
         ParseError::UnexpectedToken(TokenType::CloseParen, Token::Eq)
