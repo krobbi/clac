@@ -1,5 +1,3 @@
-#![expect(dead_code, reason = "functions are not yet implemented")]
-
 use std::rc::Rc;
 
 mod display;

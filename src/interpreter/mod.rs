@@ -73,7 +73,23 @@ impl<'a, 'b> Interpreter<'a, 'b> {
 
                     self.stack.push(Value::Number(result));
                 }
-                Instruction::Call(..) => todo!("interpreting `Instruction::Call`"),
+                Instruction::Call(arity) => {
+                    let arity = *arity;
+                    let args = self.stack.split_off(self.stack.len() - arity);
+
+                    let Value::Function(function) = self.pop() else {
+                        return Err(InterpretError::InvalidType);
+                    };
+
+                    if function.0 != arity {
+                        return Err(InterpretError::InvalidType);
+                    }
+
+                    let mut interpreter = Interpreter::new(&function.1, self.globals.clone());
+                    interpreter.stack = args;
+                    interpreter.run()?;
+                    self.stack.push(interpreter.pop());
+                }
             }
         }
 
