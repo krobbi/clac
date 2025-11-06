@@ -1,9 +1,7 @@
 /// A high-level intermediate representation of a program.
-#[derive(Debug)]
 pub struct Hir(pub Vec<Stmt>);
 
 /// A statement.
-#[derive(Debug)]
 pub enum Stmt {
     /// A block.
     Block(Vec<Stmt>),
@@ -22,7 +20,6 @@ pub enum Stmt {
 }
 
 /// An expression.
-#[derive(Debug)]
 pub enum Expr {
     /// A number.
     Number(f64),
@@ -47,7 +44,7 @@ pub enum Expr {
 }
 
 /// A binary operator.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum BinOp {
     /// An addition.
     Add,

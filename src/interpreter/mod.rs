@@ -1,5 +1,6 @@
 mod globals;
 mod interpret_error;
+mod value;
 
 pub use self::{globals::Globals, interpret_error::InterpretError};
 

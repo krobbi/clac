@@ -78,9 +78,7 @@ fn execute_source(source: &str, globals: &mut Globals) {
 fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
     let ast = parser::parse_source(source)?;
     let hir = resolver::resolve_ast(&ast, globals.names().iter())?;
-    println!("{hir:#?}");
     let ir = compiler::compile_hir(&hir);
-    println!("{ir}");
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

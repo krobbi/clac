@@ -1,11 +1,9 @@
 use std::rc::Rc;
 
-mod display;
-
 /// An intermediate representation of a program.
 pub struct Ir(pub Body);
 
-/// A function.
+/// A function with a number of parameters and a [`Body`].
 pub struct Function(pub usize, pub Body);
 
 /// A sequence of [`Instruction`]s in a program or function body.
