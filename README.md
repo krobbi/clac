@@ -66,6 +66,12 @@ clac> count = 1, count = 1 + 1
 Error: variable 'count' is already defined
 ```
 
+Variables cannot be defined if the variable name is surrounded by parentheses:
+```
+clac> (x) = 20
+Error: can only assign to variables and function signatures
+```
+
 Variable names must consist of one or more ASCII letters or underscores, with
 digits allowed after the first character.
 
@@ -123,18 +129,84 @@ clac> depth = 0, {depth = depth + 1, depth} depth
 0
 ```
 
-<!--
 ## Functions
-Functions can be called by following a function expression with zero or more
-arguments surrounded by parentheses and separated by commas:
+Functions can be called by following the function with zero or more arguments
+surrounded by parentheses:
 ```
 clac> sqrt(25)
 5
 ```
 
+Functions must be called with the expected number of arguments:
+```
+clac> sqrt()
+Error: incorrect number of arguments for function call
+
+clac> sqrt(1, 2)
+Error: incorrect number of arguments for function call
+```
+
+### User-defined Functions
+Functions can be defined with algebraic syntax. An expression defining the
+function's body can be assigned to a 'call' that defines the function's name
+and parameters:
+```
+clac> f(x) = 2 * x + 1
+
+clac> f(1), f(2), f(3)
+3
+5
+7
+```
+
+Function bodies must be an expression that produces a value:
+```
+clac> nop() = {}
+Error: functions must return a value
+```
+
+Unlike blocks and the top level of the program, function parameters and call
+arguments *must* be separated with commas. Trailing commas may optionally be
+used:
+```
+clac> sqdist(x0 x1) = {dx = x1 - x0, dx * dx}
+Error: expected a closing ')', got identifier 'x1'
+
+clac> sqdist(x0, x1,) = {dx = x1 - x0, dx * dx}
+
+clac> sqdist(10 20)
+Error: expected a closing ')', got number '20'
+
+clac> sqdist(10, 20,)
+100
+```
+
+The function's name and parameters must be defined as identifiers
+(variable names) that are not surrounded by parentheses. Additionally, each
+parameter must have a different name to any other parameter:
+```
+clac> 1(x) = x + 1
+Error: function names must be identifiers
+
+clac> (f)(x) = x + x
+Error: function names must be identifiers
+
+clac> f(1) = 2
+Error: function parameters must be identifiers
+
+clac> f((x)) = 1 / x
+Error: function parameters must be identifiers
+
+clac> f(x, x) = x * x
+Error: function parameter 'x' is duplicated
+```
+
 Functions are values that can be stored in variables, and passed to and
 returned from functions:
 ```
+clac> sqrt
+function
+
 clac> magic = sqrt
 
 clac> get_magic() = magic
@@ -145,74 +217,36 @@ clac> apply(get_magic(), 64)
 8
 ```
 
-### User-defined Functions
-Functions can be defined with algebraic syntax by assigning a body expression
-to a function 'call' that defines the function's name and parameters:
+Because functions are values, named functions are variables that contain a
+function value:
 ```
-clac> f(x) = 2 * x + 1
+clac> sqrt = -1
+Error: variable 'sqrt' is already defined
 
-clac> f(1), f(2), f(3)
-3
-5
-7
-```
+clac> {sqrt(n) = n + 1, sqrt(36)}
+37
 
-The function's name and parameters must be defined as identifiers
-(variable names.) Additionally, each parameter must have a different name to
-any other parameters:
-```
-clac> 1(x) = {}
-Runtime error: function names must be identifiers
-
-clac> f(1) = {}
-Runtime error: function parameter names must be identifiers
-
-clac> f(x, x) = {}
-Runtime error: functions cannot have duplicate parameter names
+clac> sqrt(36)
+6
 ```
 
 ### Function Scoping
-Unlike variable assignments, user-defined functions are always defined as a new
-variable in the innermost scope:
+Functions are lexically scoped, meaning they have access to the variables that
+are in scope where they are defined, not where they are called:
 ```
-clac> shadow = 0, {shadow() = 1, shadow}, shadow
-function
-0
-```
-
-Function calls always create a new innermost scope for their parameters, even
-if the function body is not a block:
-```
-clac> f(x) = result = 2 * x
-
-clac> f(10)
-
-clac> result
-Runtime error: variable 'result' is undefined
+clac> triple_value() = 3 * value, value = 123, triple_value()
+Error: variable 'value' is undefined
 ```
 
-Functions are dynamically scoped, meaning they have access to the variables
-that were in scope *when the function was called*. This makes the language
-easier to implement, but can cause confusing or unexpected behavior:
+Functions can access global variables, but not local variables in outer scopes:
 ```
-clac> triple_value() = 3 * value
+clac> pi_approx = 3, area_approx(r) = pi_approx * (r * r)
 
-clac> {value = 123, triple_value()}
-369
+clac> area_approx(4)
+48
 
-clac> triple_value()
-Runtime error: variable 'value' is undefined
-```
-
-Unfortunately, this means it is not possible to create closures with the
-current function scoping rules:
-```
-clac> new_counter() = {n = 0, counter() = {n = n + 1, n}, counter}
-
-clac> counter = new_counter()
-
-clac> counter()
-Runtime error: variable 'n' is undefined
+clac> {secret = 42, get_secret() = secret}
+Error: function cannot capture local variable 'secret'
 ```
 
 ### Built-in Functions
@@ -220,9 +254,8 @@ The Clac language includes built-in functions for commonly-used operations:
 | Function                    | Usage                           |
 | :-------------------------- | :------------------------------ |
 | `sqrt(n: number) -> number` | Returns the square root of `n`. |
--->
 
-## Grammar
+# Grammar
 All valid Clac programs should have the following grammar:
 ```ebnf
 program  = sequence, Eof ;
@@ -237,6 +270,9 @@ expr_prefix  = "-", expr_prefix | expr_call ;
 expr_call    = expr_primary, { tuple } ;
 expr_primary = "(", expr, ")" | "{", sequence, "}" | Number | Ident ;
 ```
+
+A program that follows the grammar will be successfully parsed, but this does
+not guarantee that the program is valid.
 
 # Credits
 * Infix parser based on
