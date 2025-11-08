@@ -78,43 +78,52 @@ clac> x = y = 1
 Error: assignments cannot be chained
 ```
 
-<!--
 ## Blocks
-Zero or more expressions can be grouped into a block by surrounding them with
-curly braces and separating them with commas:
+Zero or more expressions and statements can be grouped into a block by
+surrounding them with curly braces. The items in a block can be separated with
+commas using the same rules as the top level of the program. If a block ends
+with an expression, then the block is an expression that produces the value of
+its last expression:
 ```
-clac> {}
-
-clac> {1}
-1
-
 clac> {1, 2, 3}
 3
 ```
 
-The expressions in the block are evaluated in order and the value returned by
-the last expression is returned by the block. If the block is empty or the last
-expression does not return a value, then the block will not return a value.
-
-### Scopes
-Beginning a block creates a new innermost scope. Variables defined inside a
-block cannot be used after the block:
+If a block is empty or ends with a statement, then the block is a statement
+that does not produce a value:
 ```
-clac> global = 5, global, {local = 2 * global, local}, local
-5
+clac> 123, {} {4, x = 5} {6, {}} 789
+123
+789
+```
+
+### Block Scopes
+Each block has its own scope. Variables defined inside a block can be used in
+the block and any nested blocks, but cannot be used after the block ends:
+```
+clac> global = 5, {local = 2 * global, {local}}
 10
-Runtime error: variable 'local' is undefined
+
+clac> global
+5
+
+clac> local
+Error: variable 'local' is undefined
+
+clac> {{inner = 100} inner}
+Error: variable 'inner' is undefined
 ```
 
-When a variable is assigned, an already defined variable in the innermost scope
-is attempted to be assigned, following the next scope outwards until the global
-scope is reached. A new variable will only be defined in the innermost scope if
-no variable with the same name was found in any outer scope:
+Block scopes allow variables to be defined with names that are already defined
+in an outer scope. The new variable temporarily 'shadows' the old variable and
+does not modify it:
 ```
-clac> shadow = 0, {shadow = 1}, shadow
+clac> depth = 0, {depth = depth + 1, depth} depth
 1
+0
 ```
 
+<!--
 ## Functions
 Functions can be called by following a function expression with zero or more
 arguments surrounded by parentheses and separated by commas:
