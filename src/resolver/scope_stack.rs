@@ -83,6 +83,19 @@ impl ScopeStack {
         scope.has_variable(name)
     }
 
+    /// Returns `true` if a variable is defined as an upvalue.
+    pub fn has_upvalue(&self, name: &str) -> bool {
+        for stack in &self.outer_stacks {
+            for scope in stack {
+                if scope.has_variable(name) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     /// Returns the [`ScopeKind`] where a variable is defined. This function
     /// returns [`None`] if the variable is undefined.
     pub fn resolve_variable(&self, name: &str) -> Option<ScopeKind> {

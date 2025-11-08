@@ -144,10 +144,28 @@ impl Resolver {
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
     fn resolve_expr_ident(&self, name: &str) -> Result<hir::Expr> {
+        // HACK: Closures would be a nice feature, but could be difficult to
+        // implement. No specific solution has been chosen, but the checks for
+        // upvalues below ensure forward-compatible behavior and useful error
+        // messages.
         match self.scope_stack.resolve_variable(name) {
-            None => Err(ResolveError::UndefinedVariable(name.to_owned())),
+            None => {
+                let error = if self.scope_stack.has_upvalue(name) {
+                    ResolveError::AccessedUpvalue(name.to_owned())
+                } else {
+                    ResolveError::UndefinedVariable(name.to_owned())
+                };
+
+                Err(error)
+            }
             Some(ScopeKind::Local) => Ok(hir::Expr::Local(name.to_owned())),
-            Some(ScopeKind::Global) => Ok(hir::Expr::Global(name.to_owned())),
+            Some(ScopeKind::Global) => {
+                if self.scope_stack.has_upvalue(name) {
+                    Err(ResolveError::AccessedUpvalue(name.to_owned()))
+                } else {
+                    Ok(hir::Expr::Global(name.to_owned()))
+                }
+            }
         }
     }
 

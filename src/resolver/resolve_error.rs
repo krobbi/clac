@@ -22,6 +22,9 @@ pub enum ResolveError {
     /// A function was defined with a duplicate parameter.
     DuplicateParam(String),
 
+    /// An upvalue was accessed.
+    AccessedUpvalue(String),
+
     /// A variable that is already defined was defined again.
     AlreadyDefinedVariable(String),
 
@@ -52,6 +55,9 @@ impl Display for ResolveError {
             Self::InvalidFunctionName => f.write_str("function names must be identifiers"),
             Self::InvalidParam => f.write_str("function parameters must be identifiers"),
             Self::DuplicateParam(param) => write!(f, "function parameter '{param}' is duplicated"),
+            Self::AccessedUpvalue(name) => {
+                write!(f, "function cannot capture local variable '{name}'")
+            }
             Self::AlreadyDefinedVariable(name) => write!(f, "variable '{name}' is already defined"),
             Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
         }
