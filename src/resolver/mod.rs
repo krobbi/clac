@@ -12,6 +12,7 @@ use crate::{
 };
 
 use self::{
+    resolve_error::ExprArea,
     scope_stack::{ScopeKind, ScopeStack},
     voidable::Voidable,
 };
@@ -81,8 +82,8 @@ impl Resolver {
     }
 
     /// Resolves an assignment [`Stmt`] to an [`hir::Stmt`]. This function
-    /// returns a [`ResolveError`] if the source [`Expr`] is void or could not
-    /// be resolved, or if the target [`Expr`] is invalid.
+    /// returns a [`ResolveError`] if the source [`Expr`] is a statement or
+    /// could not be resolved, or if the target [`Expr`] is invalid.
     fn resolve_stmt_assign(
         &mut self,
         target: &Expr,
@@ -90,7 +91,7 @@ impl Resolver {
         scope_kind: ScopeKind,
     ) -> Result<hir::Stmt> {
         let (name, value) = match target {
-            Expr::Ident(name) => (name, self.resolve_expr(source)?),
+            Expr::Ident(name) => (name, self.resolve_expr(source, ExprArea::AssignSource)?),
             Expr::Call(callee, args) => {
                 let Expr::Ident(name) = callee.as_ref() else {
                     return Err(ResolveError::InvalidFunctionName);
@@ -114,12 +115,13 @@ impl Resolver {
         Ok(stmt)
     }
 
-    /// Resolves an [`Expr`] to an [`hir::Expr`]. This function returns a
-    /// [`ResolveError`] if the [`Expr`] is void or could not be resolved.
-    fn resolve_expr(&mut self, expr: &Expr) -> Result<hir::Expr> {
+    /// Resolves an [`Expr`] to an [`hir::Expr`] in an [`ExprArea`]. This
+    /// function returns a [`ResolveError`] if the [`Expr`] is a statement or
+    /// could not be resolved.
+    fn resolve_expr(&mut self, expr: &Expr, area: ExprArea) -> Result<hir::Expr> {
         match self.resolve_expr_voidable(expr)? {
             Voidable::Expr(expr) => Ok(expr),
-            Voidable::Stmt(_) => Err(ResolveError::VoidArgument),
+            Voidable::Stmt(_) => Err(ResolveError::UsedStmt(area)),
         }
     }
 
@@ -129,7 +131,7 @@ impl Resolver {
         let expr = match expr {
             Expr::Number(value) => hir::Expr::Number(*value),
             Expr::Ident(name) => self.resolve_expr_ident(name)?,
-            Expr::Paren(expr) => self.resolve_expr(expr)?,
+            Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren)?,
             Expr::Block(stmts) => return self.resolve_expr_block(stmts),
             Expr::Call(callee, args) => self.resolve_expr_call(callee, args)?,
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs)?,
@@ -151,7 +153,7 @@ impl Resolver {
 
     /// Resolves a function [`Expr`] to an [`hir::Expr`]. This function returns
     /// a [`ResolveError`] if the function has an invalid signature or if the
-    /// function body is void.
+    /// function body is a statement.
     fn resolve_expr_function(&mut self, params: &[Expr], body: &Expr) -> Result<hir::Expr> {
         let mut resolved_params = Vec::with_capacity(params.len());
 
@@ -168,7 +170,7 @@ impl Resolver {
         }
 
         self.scope_stack.begin_function(&resolved_params);
-        let body = self.resolve_expr(body)?;
+        let body = self.resolve_expr(body, ExprArea::FunctionBody)?;
         self.scope_stack.end_function();
         Ok(hir::Expr::Function(resolved_params, body.into()))
     }
@@ -201,14 +203,14 @@ impl Resolver {
     }
 
     /// Resolves a function call [`Expr`] to an [`hir::Expr`]. This function
-    /// returns a [`ResolveError`] if the callee or arguments are void or could
-    /// not be resolved.
+    /// returns a [`ResolveError`] if the callee or arguments are statements or
+    /// could not be resolved.
     fn resolve_expr_call(&mut self, callee: &Expr, args: &[Expr]) -> Result<hir::Expr> {
-        let callee = self.resolve_expr(callee)?;
+        let callee = self.resolve_expr(callee, ExprArea::Callee)?;
         let mut resolved_args = Vec::with_capacity(args.len());
 
         for arg in args {
-            let arg = self.resolve_expr(arg)?;
+            let arg = self.resolve_expr(arg, ExprArea::Arg)?;
             resolved_args.push(arg);
         }
 
@@ -216,9 +218,9 @@ impl Resolver {
     }
 
     /// Resolves a unary [`Expr`] to an [`hir::Expr`]. This function returns a
-    /// [`ResolveError`] if the operand is void or could not be resolved.
+    /// [`ResolveError`] if the operand is a statement or could not be resolved.
     fn resolve_expr_unary(&mut self, op: UnOp, rhs: &Expr) -> Result<hir::Expr> {
-        let rhs = self.resolve_expr(rhs)?;
+        let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
 
         match op {
             UnOp::Negate => {
@@ -230,10 +232,11 @@ impl Resolver {
     }
 
     /// Resolves a binary [`Expr`] to an [`hir::Expr`]. This function returns a
-    /// [`ResolveError`] if either operand is void or could not be resolved.
+    /// [`ResolveError`] if either operand is a statement or could not be
+    /// resolved.
     fn resolve_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) -> Result<hir::Expr> {
-        let lhs = self.resolve_expr(lhs)?;
-        let rhs = self.resolve_expr(rhs)?;
+        let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
+        let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
 
         let op = match op {
             BinOp::Add => hir::BinOp::Add,

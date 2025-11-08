@@ -7,8 +7,8 @@ use std::{
 /// [`Hir`][crate::hir::Hir].
 #[derive(Debug)]
 pub enum ResolveError {
-    /// Void was used as an argument.
-    VoidArgument,
+    /// A statement was used in an area where an expression was expected.
+    UsedStmt(ExprArea),
 
     /// An invalid target was assigned to.
     InvalidAssignTarget,
@@ -34,7 +34,18 @@ impl Error for ResolveError {}
 impl Display for ResolveError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::VoidArgument => f.write_str("void cannot be used as an argument"),
+            Self::UsedStmt(area) => {
+                let message = match area {
+                    ExprArea::Paren => "statements cannot be used inside parentheses",
+                    ExprArea::Operand => "statements cannot be used as operands",
+                    ExprArea::AssignSource => "statements cannot be assigned to variables",
+                    ExprArea::FunctionBody => "functions must return a value",
+                    ExprArea::Callee => "statements cannot be called",
+                    ExprArea::Arg => "statements cannot be used as function arguments",
+                };
+
+                f.write_str(message)
+            }
             Self::InvalidAssignTarget => {
                 f.write_str("can only assign to variables and function signatures")
             }
@@ -45,4 +56,26 @@ impl Display for ResolveError {
             Self::UndefinedVariable(name) => write!(f, "variable '{name}' is undefined"),
         }
     }
+}
+
+/// An area where an expression must be used instead of a statement.
+#[derive(Clone, Copy, Debug)]
+pub enum ExprArea {
+    /// Inside parentheses.
+    Paren,
+
+    /// An operand.
+    Operand,
+
+    /// An assignment source.
+    AssignSource,
+
+    /// A function body.
+    FunctionBody,
+
+    /// A callee.
+    Callee,
+
+    /// An argument.
+    Arg,
 }
