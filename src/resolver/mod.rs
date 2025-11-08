@@ -1,5 +1,5 @@
 mod resolve_error;
-mod variables;
+mod scope_stack;
 mod voidable;
 
 pub use self::resolve_error::ResolveError;
@@ -12,7 +12,7 @@ use crate::{
 };
 
 use self::{
-    variables::{ScopeKind, ScopeStack},
+    scope_stack::{ScopeKind, ScopeStack},
     voidable::Voidable,
 };
 
