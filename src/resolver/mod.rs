@@ -63,12 +63,15 @@ impl Resolver {
                 Stmt::Assign(target, source) => {
                     self.resolve_stmt_assign(target, source, scope_kind)?
                 }
-                Stmt::Expr(expr) => match (self.resolve_expr_voidable(expr)?, scope_kind) {
-                    (Voidable::Nop, _) => continue,
-                    (Voidable::Expr(expr), ScopeKind::Local) => hir::Stmt::Expr(expr.into()),
-                    (Voidable::Expr(expr), ScopeKind::Global) => hir::Stmt::Print(expr.into()),
-                    (Voidable::Stmt(stmt), _) => stmt,
-                },
+                Stmt::Expr(expr) => {
+                    let voidable = self.resolve_expr_voidable(expr)?;
+
+                    match (voidable, scope_kind) {
+                        (Voidable::Expr(expr), ScopeKind::Local) => hir::Stmt::Expr(expr.into()),
+                        (Voidable::Expr(expr), ScopeKind::Global) => hir::Stmt::Print(expr.into()),
+                        (Voidable::Stmt(stmt), _) => stmt,
+                    }
+                }
             };
 
             resolved_stmts.push(stmt);
@@ -116,7 +119,7 @@ impl Resolver {
     fn resolve_expr(&mut self, expr: &Expr) -> Result<hir::Expr> {
         match self.resolve_expr_voidable(expr)? {
             Voidable::Expr(expr) => Ok(expr),
-            _ => Err(ResolveError::VoidArgument),
+            Voidable::Stmt(_) => Err(ResolveError::VoidArgument),
         }
     }
 
@@ -178,7 +181,7 @@ impl Resolver {
         self.scope_stack.pop_scope();
 
         let block = match stmts.pop() {
-            None => Voidable::Nop,
+            None => hir::Stmt::Nop.into(),
             Some(hir::Stmt::Expr(expr)) => {
                 let expr = if stmts.is_empty() {
                     *expr

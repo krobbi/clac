@@ -2,9 +2,6 @@ use crate::hir::{Expr, Stmt};
 
 /// An [`Hir`][crate::hir::Hir] node that is either an [`Expr`] or a [`Stmt`].
 pub enum Voidable {
-    /// No operation.
-    Nop,
-
     /// An [`Expr`].
     Expr(Expr),
 

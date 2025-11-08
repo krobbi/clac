@@ -55,6 +55,7 @@ impl Compiler {
     /// Compiles a [`Stmt`].
     fn compile_stmt(&mut self, stmt: &Stmt) {
         match stmt {
+            Stmt::Nop => (),
             Stmt::Block(stmts) => self.compile_stmt_block(stmts),
             Stmt::DefineLocal(name, value) => self.compile_stmt_define_local(name, value),
             Stmt::AssignGlobal(name, value) => self.compile_stmt_assign_global(name, value),

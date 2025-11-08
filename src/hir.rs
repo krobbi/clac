@@ -3,6 +3,9 @@ pub struct Hir(pub Vec<Stmt>);
 
 /// A statement.
 pub enum Stmt {
+    /// No operation.
+    Nop,
+
     /// A block.
     Block(Vec<Stmt>),
 
