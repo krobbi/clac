@@ -10,13 +10,19 @@ use self::stack::Stack;
 
 /// Compiles [`Hir`] to [`Ir`] with a [`DeclTable`].
 pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Ir {
-    let mut compiler = Compiler::new(decls);
+    let mut compiler = Compiler::new(0, decls);
     compiler.compile_hir(hir);
     Ir(compiler.into_body())
 }
 
-/// A structure that compiles a program or function's [`Body`].
+/// A structure that compiles a program or [`Function`]'s [`Body`].
 struct Compiler<'a> {
+    /// The current [`Body`]'s call depth.
+    call_depth: usize,
+
+    /// The call depth of the shallowest accessed upvalue.
+    shallowest_upvalue_call_depth: usize,
+
     /// The [`DeclTable`].
     decls: &'a DeclTable,
 
@@ -28,9 +34,11 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    /// Creates a new `Compiler`.
-    fn new(decls: &'a DeclTable) -> Self {
+    /// Creates a new `Compiler` from a call depth and a [`DeclTable`].
+    fn new(call_depth: usize, decls: &'a DeclTable) -> Self {
         Self {
+            call_depth,
+            shallowest_upvalue_call_depth: call_depth,
             decls,
             stack: Stack::new(),
             instructions: Vec::new(),
@@ -118,8 +126,11 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a local variable [`Expr`].
     fn compile_expr_local(&mut self, id: DeclId) {
-        if self.decls.get(id).is_upvalue {
+        let decl = self.decls.get(id);
+
+        if decl.is_upvalue {
             self.compile(Instruction::LoadUpvalue(id));
+            self.access_upvalue(decl.call_depth);
         } else {
             self.compile(Instruction::LoadLocal(self.stack.local_offset(id)));
         }
@@ -144,7 +155,7 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a function [`Expr`].
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
-        let mut compiler = Self::new(self.decls);
+        let mut compiler = Self::new(self.call_depth + 1, self.decls);
 
         for id in params {
             let id = *id;
@@ -165,6 +176,7 @@ impl<'a> Compiler<'a> {
         }
 
         compiler.compile_expr(body);
+        let upvalue_call_depth = compiler.shallowest_upvalue_call_depth;
 
         let function = Function {
             arity: params.len(),
@@ -173,11 +185,15 @@ impl<'a> Compiler<'a> {
 
         self.compile(Instruction::Push(Value::Function(function.into())));
 
-        // HACK: Convert all functions to closures. Not all functions need to be
-        // closures, but this ensures that functions will behave correctly.
-        // Unfortunately, this adds an unnecessary performance and memory cost
-        // to most functions.
-        self.compile(Instruction::IntoClosure);
+        if upvalue_call_depth <= self.call_depth {
+            // An upvalue accessed in the inner function may outlive the outer
+            // function, so the outer function may need to be a closure.
+            self.access_upvalue(upvalue_call_depth);
+
+            // The inner function is outlived by an upvalue that it accesses, so
+            // it must be converted to a closure.
+            self.compile(Instruction::IntoClosure);
+        }
     }
 
     /// Compiles a function call [`Expr`].
@@ -225,5 +241,10 @@ impl<'a> Compiler<'a> {
         for _ in 0..count {
             self.compile(Instruction::Drop);
         }
+    }
+
+    /// Declares that an upvalue declared at a call depth has been accessed.
+    fn access_upvalue(&mut self, call_depth: usize) {
+        self.shallowest_upvalue_call_depth = self.shallowest_upvalue_call_depth.min(call_depth);
     }
 }

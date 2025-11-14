@@ -251,9 +251,6 @@ clac> add_5(100), subtract_10(100)
 90
 ```
 
-> [!WARNING]
-> Closures have only had minimal testing and may break in edge cases.
-
 ### Built-in Functions
 The Clac language includes built-in functions for commonly-used operations:
 | Function                    | Usage                           |

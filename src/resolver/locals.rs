@@ -48,6 +48,7 @@ impl<'a> Locals<'a> {
             !self.functions.is_empty(),
             "function stack should not be empty"
         );
+
         debug_assert!(!self.scopes.is_empty(), "scope stack should not be empty");
         self.functions.pop();
         self.scopes.pop();
@@ -59,11 +60,13 @@ impl<'a> Locals<'a> {
             .scopes
             .last_mut()
             .expect("scope stack should not be empty");
+
         debug_assert!(
             !scope.contains_key(name),
             "variable should not be already defined"
         );
-        let id = self.decls.declare();
+
+        let id = self.decls.declare(self.functions.len());
         scope.insert(name.to_owned(), id);
         id
     }

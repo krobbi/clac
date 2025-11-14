@@ -11,10 +11,15 @@ impl DeclTable {
         Self::default()
     }
 
-    /// Creates a new [`Decl`] and returns its [`DeclId`].
-    pub fn declare(&mut self) -> DeclId {
+    /// Declares a new [`Decl`] at a call depth and returns its [`DeclId`].
+    pub fn declare(&mut self, call_depth: usize) -> DeclId {
         let index = self.decls.len();
-        self.decls.push(Decl::new());
+
+        self.decls.push(Decl {
+            is_upvalue: false,
+            call_depth,
+        });
+
         DeclId(index)
     }
 
@@ -34,15 +39,10 @@ impl DeclTable {
 pub struct DeclId(usize);
 
 /// A local variable declaration.
-#[derive(Default)]
 pub struct Decl {
     /// Whether the `Decl` is accessed as an upvalue.
     pub is_upvalue: bool,
-}
 
-impl Decl {
-    /// Creates a new [`Decl`].
-    fn new() -> Self {
-        Self::default()
-    }
+    /// The call depth the `Decl` is declared at.
+    pub call_depth: usize,
 }
