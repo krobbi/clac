@@ -242,7 +242,7 @@ Functions can become closures by capturing local variables in outer scopes:
 ```
 clac> add(l, r) = l + r, subtract(l, r) = l - r
 
-clac> curry(f, r) = { curried(l) = f(l, r), curried }
+clac> curry(f, r) = {curried(l) = f(l, r), curried}
 
 clac> add_5 = curry(add, 5), subtract_10 = curry(subtract, 10)
 
