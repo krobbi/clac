@@ -1,14 +1,29 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::interpreter::InterpretError;
+use crate::{decl_table::DeclId, interpreter::InterpretError};
 
 /// An intermediate representation of a program.
 pub struct Ir(pub Body);
 
 /// A function with a number of parameters and a [`Body`].
-pub struct Function(pub usize, pub Body);
+pub struct Function {
+    /// The number of arguments expected by the `Function`.
+    pub arity: usize,
 
-/// A sequence of [`Instruction`]s in a program or function body.
+    /// The `Function` [`Body`].
+    pub body: Body,
+}
+
+/// A [`Function`] with a captured environment of upvalues.
+pub struct Closure {
+    /// The [`Function`].
+    pub function: Rc<Function>,
+
+    /// The environment of upvalues.
+    pub upvalues: HashMap<DeclId, Rc<Value>>,
+}
+
+/// A sequence of [`Instruction`]s in a program or [`Function`] body.
 pub struct Body(pub Box<[Instruction]>);
 
 /// An executable instruction.
@@ -38,6 +53,10 @@ pub enum Instruction {
     /// and push the result to the stack.
     Binary(BinOp),
 
+    /// Pop a function [`Value`] from the stack, convert it to a closure, and
+    /// push the result to the stack.
+    IntoClosure,
+
     /// Call a function with a number of argument [`Value`]s on the stack.
     Call(usize),
 }
@@ -50,6 +69,9 @@ pub enum Value {
 
     /// A function.
     Function(Rc<Function>),
+
+    /// A closure.
+    Closure(Rc<Closure>),
 
     /// A native function.
     Native(fn(&[Value]) -> Result<Value, InterpretError>),

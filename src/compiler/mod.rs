@@ -136,8 +136,19 @@ impl Compiler {
         }
 
         compiler.compile_expr(body);
-        let value = Value::Function(Function(params.len(), compiler.into_body()).into());
-        self.compile(Instruction::Push(value));
+
+        let function = Function {
+            arity: params.len(),
+            body: compiler.into_body(),
+        };
+
+        self.compile(Instruction::Push(Value::Function(function.into())));
+
+        // HACK: Convert all functions to closures. Not all functions need to be
+        // closures, but this ensures that functions will behave correctly.
+        // Unfortunately, this adds an unnecessary performance and memory cost
+        // to most functions.
+        self.compile(Instruction::IntoClosure);
     }
 
     /// Compiles a function call [`Expr`].
