@@ -230,24 +230,29 @@ clac> sqrt(36)
 6
 ```
 
-### Function Scoping
+### Closures
 Functions are lexically scoped, meaning they have access to the variables that
-are in scope where they are defined, not where they are called:
+are in scope *where* they are defined, not *when* they are called:
 ```
 clac> triple_value() = 3 * value, value = 123, triple_value()
 Error: variable 'value' is undefined
 ```
 
-Functions can access global variables, but not local variables in outer scopes:
+Functions can become closures by capturing local variables in outer scopes:
 ```
-clac> pi_approx = 3, area_approx(r) = pi_approx * (r * r)
+clac> add(l, r) = l + r, subtract(l, r) = l - r
 
-clac> area_approx(4)
-48
+clac> curry(f, r) = { curried(l) = f(l, r), curried }
 
-clac> {secret = 42, get_secret() = secret}
-Error: function cannot capture local variable 'secret'
+clac> add_5 = curry(add, 5), subtract_10 = curry(subtract, 10)
+
+clac> add_5(100), subtract_10(100)
+105
+90
 ```
+
+> [!WARNING]
+> Closures have only had minimal testing and may break in edge cases.
 
 ### Built-in Functions
 The Clac language includes built-in functions for commonly-used operations:
