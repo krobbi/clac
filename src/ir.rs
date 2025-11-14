@@ -37,17 +37,23 @@ pub enum Instruction {
     /// Pop a [`Value`] from the stack and print it.
     Print,
 
-    /// Load a [`Value`] from a local variable and push it to the stack.
-    LoadLocal(usize),
-
     /// Load a [`Value`] from a global variable and push it to the stack.
     LoadGlobal(String),
 
-    /// Pop a [`Value`] from the stack and store it in a local variable.
-    StoreLocal(usize),
+    /// Load an upvalue and push it to the stack.
+    LoadUpvalue(DeclId),
+
+    /// Load a [`Value`] from a local variable and push it to the stack.
+    LoadLocal(usize),
+
+    /// Pop a [`Value`] from the stack and declare it as an upvalue.
+    DeclareUpvalue(DeclId),
 
     /// Pop a [`Value`] from the stack and store it in a global variable.
     StoreGlobal(String),
+
+    /// Pop a [`Value`] from the stack and store it in a local variable.
+    StoreLocal(usize),
 
     /// Pop two [`Value`]s from the stack, perform a binary operation on them,
     /// and push the result to the stack.

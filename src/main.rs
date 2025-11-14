@@ -80,7 +80,7 @@ fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacErr
     let ast = parser::parse_source(source)?;
     let mut decls = DeclTable::new();
     let hir = resolver::resolve_ast(&ast, globals, &mut decls)?;
-    let ir = compiler::compile_hir(&hir);
+    let ir = compiler::compile_hir(&hir, &decls);
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

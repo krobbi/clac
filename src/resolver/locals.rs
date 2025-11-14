@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::decl_table::{Decl, DeclId, DeclTable};
+use crate::decl_table::{DeclId, DeclTable};
 
 /// A scoped map of local variable names to [`DeclId`]s.
 pub struct Locals<'a> {
@@ -90,10 +90,5 @@ impl<'a> Locals<'a> {
     pub fn contains_inner(&self, name: &str) -> bool {
         let scope = self.scopes.last().expect("scope stack should not be empty");
         scope.contains_key(name)
-    }
-
-    /// Returns a reference to a [`Decl`] from its [`DeclId`]
-    pub fn get(&self, id: DeclId) -> &Decl {
-        self.decls.get(id)
     }
 }

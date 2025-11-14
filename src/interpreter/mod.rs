@@ -52,15 +52,22 @@ impl<'a, 'b> Interpreter<'a, 'b> {
                 Instruction::Push(value) => self.stack.push(value.clone()),
                 Instruction::Drop => self.stack.truncate(self.stack.len() - 1),
                 Instruction::Print => println!("{}", self.pop()),
-                Instruction::LoadLocal(index) => self.stack.push(self.stack[*index].clone()),
                 Instruction::LoadGlobal(name) => {
                     self.stack.push(self.globals.borrow().get(name).clone());
                 }
-                Instruction::StoreLocal(index) => self.stack[*index] = self.pop(),
+                Instruction::LoadUpvalue(id) => self.stack.push(Rc::unwrap_or_clone(
+                    self.upvalues.get(id).expect("upvalue should exist").clone(),
+                )),
+                Instruction::LoadLocal(index) => self.stack.push(self.stack[*index].clone()),
+                Instruction::DeclareUpvalue(id) => {
+                    let value = self.pop();
+                    self.upvalues.insert(*id, value.into());
+                }
                 Instruction::StoreGlobal(name) => {
                     let value = self.pop();
                     self.globals.borrow_mut().set(name, value);
                 }
+                Instruction::StoreLocal(index) => self.stack[*index] = self.pop(),
                 Instruction::Binary(op) => {
                     let rhs = self.pop_number()?;
                     let lhs = self.pop_number()?;

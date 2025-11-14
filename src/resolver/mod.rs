@@ -139,11 +139,6 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
     fn resolve_expr_ident(&mut self, name: &str) -> Result<hir::Expr> {
         if let Some(id) = self.locals.read(name) {
-            if self.locals.get(id).is_upvalue {
-                // TODO: Remove this error by implementing closures.
-                return Err(ResolveError::AccessedUpvalue(name.to_owned()));
-            }
-
             Ok(hir::Expr::Local(id))
         } else if self.is_global_defined(name) {
             Ok(hir::Expr::Global(name.to_owned()))

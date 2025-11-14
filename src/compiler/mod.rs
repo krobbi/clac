@@ -1,22 +1,25 @@
 mod stack;
 
 use crate::{
-    decl_table::DeclId,
+    decl_table::{DeclId, DeclTable},
     hir::{BinOp, Expr, Hir, Stmt},
     ir::{self, Body, Function, Instruction, Ir, Value},
 };
 
 use self::stack::Stack;
 
-/// Compiles [`Hir`] to [`Ir`].
-pub fn compile_hir(hir: &Hir) -> Ir {
-    let mut compiler = Compiler::new();
+/// Compiles [`Hir`] to [`Ir`] with a [`DeclTable`].
+pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Ir {
+    let mut compiler = Compiler::new(decls);
     compiler.compile_hir(hir);
     Ir(compiler.into_body())
 }
 
 /// A structure that compiles a program or function's [`Body`].
-struct Compiler {
+struct Compiler<'a> {
+    /// The [`DeclTable`].
+    decls: &'a DeclTable,
+
     /// The [`Stack`] for tracking the locations of local variables.
     stack: Stack,
 
@@ -24,15 +27,13 @@ struct Compiler {
     instructions: Vec<Instruction>,
 }
 
-impl Compiler {
+impl<'a> Compiler<'a> {
     /// Creates a new `Compiler`.
-    fn new() -> Self {
-        let stack = Stack::new();
-        let instructions = Vec::new();
-
+    fn new(decls: &'a DeclTable) -> Self {
         Self {
-            stack,
-            instructions,
+            decls,
+            stack: Stack::new(),
+            instructions: Vec::new(),
         }
     }
 
@@ -82,7 +83,12 @@ impl Compiler {
     /// Compiles a local variable declaration [`Stmt`].
     fn compile_stmt_declare_local(&mut self, id: DeclId, value: &Expr) {
         self.compile_expr(value);
-        self.stack.declare_local(id);
+
+        if self.decls.get(id).is_upvalue {
+            self.compile(Instruction::DeclareUpvalue(id));
+        } else {
+            self.stack.declare_local(id);
+        }
     }
 
     /// Compiles a print [`Stmt`].
@@ -102,11 +108,20 @@ impl Compiler {
         match expr {
             Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
-            Expr::Local(id) => self.compile(Instruction::LoadLocal(self.stack.local_offset(*id))),
+            Expr::Local(id) => self.compile_expr_local(*id),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
+        }
+    }
+
+    /// Compiles a local variable [`Expr`].
+    fn compile_expr_local(&mut self, id: DeclId) {
+        if self.decls.get(id).is_upvalue {
+            self.compile(Instruction::LoadUpvalue(id));
+        } else {
+            self.compile(Instruction::LoadLocal(self.stack.local_offset(id)));
         }
     }
 
@@ -129,10 +144,24 @@ impl Compiler {
 
     /// Compiles a function [`Expr`].
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
-        let mut compiler = Self::new();
+        let mut compiler = Self::new(self.decls);
 
-        for param in params {
-            compiler.stack.declare_local(*param);
+        for id in params {
+            let id = *id;
+
+            // All of the arguments to the function are passed on the stack,
+            // even if they are unused or used as upvalues. Every argument is
+            // declared as a local variable to ensure that other local variables
+            // use the correct stack offset.
+            compiler.stack.declare_local(id);
+
+            // Upvalue arguments must be copied from the stack to an upvalue.
+            // The declaration table will prevent usages of these arguments from
+            // using the redundant copy on the stack.
+            if self.decls.get(id).is_upvalue {
+                compiler.compile(Instruction::LoadLocal(compiler.stack.local_offset(id)));
+                compiler.compile(Instruction::DeclareUpvalue(id));
+            }
         }
 
         compiler.compile_expr(body);
