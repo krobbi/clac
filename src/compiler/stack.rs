@@ -1,22 +1,19 @@
+use crate::decl_table::DeclId;
+
 /// A stack of local variables and intermediate values.
+#[derive(Default)]
 pub struct Stack {
     /// The declared stack elements.
-    elems: Vec<String>,
+    elems: Vec<Elem>,
 
-    /// The offsets to each scope.
+    /// The stack offsets to each scope.
     scope_offsets: Vec<usize>,
 }
 
 impl Stack {
     /// Creates a new `Stack`.
     pub fn new() -> Self {
-        let elems = Vec::new();
-        let scope_offsets = Vec::new();
-
-        Self {
-            elems,
-            scope_offsets,
-        }
+        Self::default()
     }
 
     /// Pushes a new scope to the `Stack`.
@@ -33,13 +30,11 @@ impl Stack {
             .expect("scope stack should not be empty");
 
         #[cfg(debug_assertions)]
-        {
-            for elem in &self.elems[scope_offset..] {
-                debug_assert!(
-                    !elem.is_empty(),
-                    "popped scope should not contain intermediate values"
-                );
-            }
+        for elem in &self.elems[scope_offset..] {
+            debug_assert!(
+                matches!(elem, Elem::Local(_)),
+                "popped scope should not contain intermediate values"
+            );
         }
 
         let local_count = self.len() - scope_offset;
@@ -48,31 +43,33 @@ impl Stack {
     }
 
     /// Declares a new local variable at the top of the `Stack`.
-    pub fn declare_local(&mut self, name: &str) {
-        self.elems.push(name.to_owned());
+    pub fn declare_local(&mut self, id: DeclId) {
+        self.elems.push(Elem::Local(id));
     }
 
     /// Declares a new intermediate value at the top of the `Stack`.
     pub fn declare_intermediate(&mut self) {
-        self.elems.push(String::new());
+        self.elems.push(Elem::Intermediate);
     }
 
     /// Declares the removal of an intermediate value from the top of the
     /// `Stack`.
     pub fn declare_drop_intermediate(&mut self) {
+        let dropped = self.elems.pop();
+
         debug_assert!(
-            matches!(self.elems.last(), Some(n) if n.is_empty()),
+            matches!(dropped, Some(Elem::Intermediate)),
             "there should be an intermediate value on top of the stack"
         );
-
-        self.elems.pop();
     }
 
-    /// Returns the index of a local variable.
-    pub fn local_index(&self, name: &str) -> usize {
-        for (index, declared_name) in self.elems.iter().enumerate().rev() {
-            if declared_name == name {
-                return index;
+    /// Returns the stack offset of a local variable.
+    pub fn local_offset(&self, id: DeclId) -> usize {
+        for (offset, elem) in self.elems.iter().enumerate() {
+            if let Elem::Local(declared_id) = elem
+                && *declared_id == id
+            {
+                return offset;
             }
         }
 
@@ -84,4 +81,13 @@ impl Stack {
     pub fn len(&self) -> usize {
         self.elems.len()
     }
+}
+
+// A stack element.
+enum Elem {
+    /// A local variable.
+    Local(DeclId),
+
+    /// An intermediate value.
+    Intermediate,
 }

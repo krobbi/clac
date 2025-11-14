@@ -1,49 +1,50 @@
+mod locals;
 mod resolve_error;
-mod scope_stack;
 mod voidable;
 
 pub use self::resolve_error::ResolveError;
 
-use std::result;
+use std::{collections::HashSet, result};
 
 use crate::{
     ast::{Ast, BinOp, Expr, Stmt, UnOp},
+    decl_table::DeclTable,
     hir::{self, Hir},
+    interpreter::Globals,
 };
 
-use self::{
-    resolve_error::ExprArea,
-    scope_stack::{ScopeKind, ScopeStack},
-    voidable::Voidable,
-};
+use self::{locals::Locals, resolve_error::ExprArea, voidable::Voidable};
 
 /// A [`Result`][result::Result] that may contain a [`ResolveError`].
 type Result<T> = result::Result<T, ResolveError>;
 
-/// Resolves an [`Ast`] to [`Hir`] with an [`Iterator`] over defined global
-/// variable names. This function returns a [`ResolveError`] if the [`Ast`]
-/// could not be resolved.
-pub fn resolve_ast<'a>(ast: &Ast, globals: impl Iterator<Item = &'a String>) -> Result<Hir> {
-    let mut resolver = Resolver::new();
-
-    for global in globals {
-        resolver.scope_stack.define_variable(global);
-    }
-
+/// Resolves an [`Ast`] to [`Hir`] with [`Globals`] and a [`DeclTable`]. This
+/// function returns a [`ResolveError`] if the [`Ast`] could not be resolved.
+pub fn resolve_ast(ast: &Ast, globals: &Globals, decls: &mut DeclTable) -> Result<Hir> {
+    let mut resolver = Resolver::new(globals, decls);
     resolver.resolve_ast(ast)
 }
 
 /// A structure that resolves an [`Ast`] to [`Hir`].
-struct Resolver {
-    /// The [`ScopeStack`] for tracking variable definitions.
-    scope_stack: ScopeStack,
+struct Resolver<'a: 'b, 'b> {
+    /// The current [`Globals`].
+    globals: &'a Globals,
+
+    /// The set of newly-declared global variable names.
+    new_globals: HashSet<String>,
+
+    /// The [`Locals`].
+    locals: Locals<'b>,
 }
 
-impl Resolver {
-    /// Creates a new `Resolver`.
-    fn new() -> Self {
-        let scope_stack = ScopeStack::new();
-        Self { scope_stack }
+impl<'a, 'b> Resolver<'a, 'b> {
+    /// Creates a new `Resolver` from [`Globals`] and a [`DeclTable`].
+    fn new(globals: &'a Globals, decls: &'b mut DeclTable) -> Self {
+        Self {
+            globals,
+            new_globals: HashSet::new(),
+            locals: Locals::new(decls),
+        }
     }
 
     /// Resolves an [`Ast`] to [`Hir`]. This function returns a [`ResolveError`]
@@ -102,17 +103,10 @@ impl Resolver {
             _ => return Err(ResolveError::InvalidAssignTarget),
         };
 
-        if self.scope_stack.has_inner_variable(name) {
-            return Err(ResolveError::AlreadyDefinedVariable(name.to_owned()));
+        match scope_kind {
+            ScopeKind::Global => self.define_global(name, value),
+            ScopeKind::Local => self.define_local(name, value),
         }
-
-        let stmt = match scope_kind {
-            ScopeKind::Local => hir::Stmt::DefineLocal(name.to_owned(), value.into()),
-            ScopeKind::Global => hir::Stmt::AssignGlobal(name.to_owned(), value.into()),
-        };
-
-        self.scope_stack.define_variable(name);
-        Ok(stmt)
     }
 
     /// Resolves an [`Expr`] to an [`hir::Expr`] in an [`ExprArea`]. This
@@ -143,29 +137,18 @@ impl Resolver {
 
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
-    fn resolve_expr_ident(&self, name: &str) -> Result<hir::Expr> {
-        // HACK: Closures would be a nice feature, but could be difficult to
-        // implement. No specific solution has been chosen, but the checks for
-        // upvalues below ensure forward-compatible behavior and useful error
-        // messages.
-        match self.scope_stack.resolve_variable(name) {
-            None => {
-                let error = if self.scope_stack.has_upvalue(name) {
-                    ResolveError::AccessedUpvalue(name.to_owned())
-                } else {
-                    ResolveError::UndefinedVariable(name.to_owned())
-                };
+    fn resolve_expr_ident(&mut self, name: &str) -> Result<hir::Expr> {
+        if let Some(id) = self.locals.read(name) {
+            if self.locals.get(id).is_upvalue {
+                // TODO: Remove this error by implementing closures.
+                return Err(ResolveError::AccessedUpvalue(name.to_owned()));
+            }
 
-                Err(error)
-            }
-            Some(ScopeKind::Local) => Ok(hir::Expr::Local(name.to_owned())),
-            Some(ScopeKind::Global) => {
-                if self.scope_stack.has_upvalue(name) {
-                    Err(ResolveError::AccessedUpvalue(name.to_owned()))
-                } else {
-                    Ok(hir::Expr::Global(name.to_owned()))
-                }
-            }
+            Ok(hir::Expr::Local(id))
+        } else if self.is_global_defined(name) {
+            Ok(hir::Expr::Global(name.to_owned()))
+        } else {
+            Err(ResolveError::UndefinedVariable(name.to_owned()))
         }
     }
 
@@ -173,32 +156,38 @@ impl Resolver {
     /// a [`ResolveError`] if the function has an invalid signature or if the
     /// function body is a statement.
     fn resolve_expr_function(&mut self, params: &[Expr], body: &Expr) -> Result<hir::Expr> {
-        let mut resolved_params = Vec::with_capacity(params.len());
+        let mut param_names = Vec::with_capacity(params.len());
 
         for param in params {
             let Expr::Ident(param) = param else {
                 return Err(ResolveError::InvalidParam);
             };
 
-            if resolved_params.contains(param) {
+            if param_names.contains(param) {
                 return Err(ResolveError::DuplicateParam(param.to_owned()));
             }
 
-            resolved_params.push(param.to_owned());
+            param_names.push(param.to_owned());
         }
 
-        self.scope_stack.begin_function(&resolved_params);
+        self.locals.begin_function();
+        let mut params = Vec::with_capacity(param_names.len());
+
+        for param in &param_names {
+            params.push(self.locals.declare(param));
+        }
+
         let body = self.resolve_expr(body, ExprArea::FunctionBody)?;
-        self.scope_stack.end_function();
-        Ok(hir::Expr::Function(resolved_params, body.into()))
+        self.locals.end_function();
+        Ok(hir::Expr::Function(params, body.into()))
     }
 
     /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a
     /// [`ResolveError`] if the block's [`Stmt`]s could not be resolved.
     fn resolve_expr_block(&mut self, stmts: &[Stmt]) -> Result<Voidable> {
-        self.scope_stack.push_scope();
+        self.locals.begin_block();
         let mut stmts = self.resolve_stmts(stmts, ScopeKind::Local)?;
-        self.scope_stack.pop_scope();
+        self.locals.end_block();
 
         let block = match stmts.pop() {
             None => hir::Stmt::Nop.into(),
@@ -265,4 +254,43 @@ impl Resolver {
 
         Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
     }
+
+    /// Returns `true` if a global variable is defined.
+    fn is_global_defined(&self, name: &str) -> bool {
+        self.new_globals.contains(name) || self.globals.contains(name)
+    }
+
+    /// Returns an [`hir::Stmt`] defining a global variable with a name and a
+    /// value. This function returns a [`ResolveError`] if a global variable is
+    /// already defined with the given name.
+    fn define_global(&mut self, name: &str, value: hir::Expr) -> Result<hir::Stmt> {
+        if self.is_global_defined(name) {
+            return Err(ResolveError::AlreadyDefinedVariable(name.to_owned()));
+        }
+
+        self.new_globals.insert(name.to_owned());
+        Ok(hir::Stmt::AssignGlobal(name.to_owned(), value.into()))
+    }
+
+    /// Returns an [`hir::Stmt`] defining a local variable with a name and a
+    /// value. This function returns a [`ResolveError`] if a local variable is
+    /// already defined with the given name in the current scope.
+    fn define_local(&mut self, name: &str, value: hir::Expr) -> Result<hir::Stmt> {
+        if self.locals.contains_inner(name) {
+            return Err(ResolveError::AlreadyDefinedVariable(name.to_owned()));
+        }
+
+        let id = self.locals.declare(name);
+        Ok(hir::Stmt::DeclareLocal(id, value.into()))
+    }
+}
+
+/// A kind of `Scope` where a variable may defined.
+#[derive(Clone, Copy)]
+pub enum ScopeKind {
+    /// At the top level of the program.
+    Global,
+
+    /// Inside a block or function parameter.
+    Local,
 }

@@ -1,6 +1,7 @@
 mod ast;
 mod clac_error;
 mod compiler;
+mod decl_table;
 mod hir;
 mod interpreter;
 mod ir;
@@ -12,7 +13,7 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::{clac_error::ClacError, interpreter::Globals};
+use self::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
 
 /// Runs Clac.
 fn main() {
@@ -77,7 +78,8 @@ fn execute_source(source: &str, globals: &mut Globals) {
 /// if the source code could not be executed.
 fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
     let ast = parser::parse_source(source)?;
-    let hir = resolver::resolve_ast(&ast, globals.names().iter())?;
+    let mut decls = DeclTable::new();
+    let hir = resolver::resolve_ast(&ast, globals, &mut decls)?;
     let ir = compiler::compile_hir(&hir);
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())

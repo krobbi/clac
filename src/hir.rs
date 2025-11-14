@@ -1,3 +1,5 @@
+use crate::decl_table::DeclId;
+
 /// A high-level intermediate representation of a program.
 pub struct Hir(pub Vec<Stmt>);
 
@@ -9,11 +11,11 @@ pub enum Stmt {
     /// A block.
     Block(Vec<Stmt>),
 
-    /// A local variable definition.
-    DefineLocal(String, Box<Expr>),
-
     /// A global variable assignment.
     AssignGlobal(String, Box<Expr>),
+
+    /// A local variable declaration.
+    DeclareLocal(DeclId, Box<Expr>),
 
     /// A print statement.
     Print(Box<Expr>),
@@ -27,17 +29,17 @@ pub enum Expr {
     /// A number.
     Number(f64),
 
-    /// A local variable.
-    Local(String),
-
     /// A global variable.
     Global(String),
+
+    /// A local variable.
+    Local(DeclId),
 
     /// A block.
     Block(Vec<Stmt>, Box<Expr>),
 
     /// A function.
-    Function(Vec<String>, Box<Expr>),
+    Function(Vec<DeclId>, Box<Expr>),
 
     /// A function call.
     Call(Box<Expr>, Vec<Expr>),

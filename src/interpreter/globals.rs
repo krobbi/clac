@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::ir::Value;
 
@@ -21,9 +21,9 @@ impl Globals {
         globals
     }
 
-    /// Creates a new [`HashSet`] of all defined global variable names.
-    pub fn names(&self) -> HashSet<String> {
-        self.values.keys().cloned().collect()
+    /// Returns `true` if a global variable is defined.
+    pub fn contains(&self, name: &str) -> bool {
+        self.values.contains_key(name)
     }
 
     /// Returns a reference to a global variable's [`Value`].

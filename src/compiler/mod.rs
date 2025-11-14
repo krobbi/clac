@@ -1,6 +1,7 @@
 mod stack;
 
 use crate::{
+    decl_table::DeclId,
     hir::{BinOp, Expr, Hir, Stmt},
     ir::{self, Body, Function, Instruction, Ir, Value},
 };
@@ -57,8 +58,8 @@ impl Compiler {
         match stmt {
             Stmt::Nop => (),
             Stmt::Block(stmts) => self.compile_stmt_block(stmts),
-            Stmt::DefineLocal(name, value) => self.compile_stmt_define_local(name, value),
             Stmt::AssignGlobal(name, value) => self.compile_stmt_assign_global(name, value),
+            Stmt::DeclareLocal(id, value) => self.compile_stmt_declare_local(*id, value),
             Stmt::Print(value) => self.compile_stmt_print(value),
             Stmt::Expr(expr) => self.compile_stmt_expr(expr),
         }
@@ -72,16 +73,16 @@ impl Compiler {
         self.compile_drop(local_count);
     }
 
-    /// Compiles a local variable definition [`Stmt`].
-    fn compile_stmt_define_local(&mut self, name: &str, value: &Expr) {
-        self.compile_expr(value);
-        self.stack.declare_local(name);
-    }
-
     /// Compiles a global variable assignment [`Stmt`].
     fn compile_stmt_assign_global(&mut self, name: &str, value: &Expr) {
         self.compile_expr(value);
         self.compile(Instruction::StoreGlobal(name.to_owned()));
+    }
+
+    /// Compiles a local variable declaration [`Stmt`].
+    fn compile_stmt_declare_local(&mut self, id: DeclId, value: &Expr) {
+        self.compile_expr(value);
+        self.stack.declare_local(id);
     }
 
     /// Compiles a print [`Stmt`].
@@ -100,8 +101,8 @@ impl Compiler {
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
-            Expr::Local(name) => self.compile(Instruction::LoadLocal(self.stack.local_index(name))),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
+            Expr::Local(id) => self.compile(Instruction::LoadLocal(self.stack.local_offset(*id))),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
@@ -127,11 +128,11 @@ impl Compiler {
     }
 
     /// Compiles a function [`Expr`].
-    fn compile_expr_function(&mut self, params: &[String], body: &Expr) {
+    fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
         let mut compiler = Self::new();
 
         for param in params {
-            compiler.stack.declare_local(param);
+            compiler.stack.declare_local(*param);
         }
 
         compiler.compile_expr(body);
