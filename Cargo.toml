@@ -2,11 +2,11 @@
 name = "clac"
 version = "0.1.0"
 edition = "2024"
-description = "Command line calculator"
+description = "Overgrown command line calculator"
 repository = "https://github.com/krobbi/clac"
 license = "MIT"
-keywords = ["calculator"]
-categories = ["command-line-utilities", "mathematics"]
+keywords = ["calculator", "interpreter", "repl"]
+categories = ["command-line-utilities", "compilers", "mathematics"]
 publish = false
 
 [dependencies]
