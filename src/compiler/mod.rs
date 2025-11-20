@@ -157,21 +157,23 @@ impl<'a> Compiler<'a> {
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
         let mut compiler = Self::new(self.call_depth + 1, self.decls);
 
-        for id in params {
-            let id = *id;
-
-            // All of the arguments to the function are passed on the stack,
-            // even if they are unused or used as upvalues. Every argument is
-            // declared as a local variable to ensure that other local variables
-            // use the correct stack offset.
-            compiler.stack.declare_local(id);
-
-            // Upvalue arguments must be copied from the stack to an upvalue.
-            // The declaration table will prevent usages of these arguments from
-            // using the redundant copy on the stack.
+        // The function's arguments are already on the stack, but need to be
+        // declared.
+        for id in params.iter().copied() {
             if self.decls.get(id).is_upvalue {
-                compiler.compile(Instruction::LoadLocal(compiler.stack.local_offset(id)));
+                let offset = compiler.stack.len();
+                compiler.stack.declare_intermediate();
+
+                // Upvalue arguments are copied from the stack before they are
+                // declared as upvalues. The caller has already placed all of
+                // the arguments on the stack, so the top of the stack may not
+                // be the upvalue that is expected. This load instruction could
+                // possibly be eliminated for upvalues at the end of the
+                // arguments list.
+                compiler.compile(Instruction::LoadLocal(offset));
                 compiler.compile(Instruction::DeclareUpvalue(id));
+            } else {
+                compiler.stack.declare_local(id);
             }
         }
 

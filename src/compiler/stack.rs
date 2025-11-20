@@ -16,6 +16,12 @@ impl Stack {
         Self::default()
     }
 
+    /// Returns the number of local variables and intermediate values on the
+    /// `Stack`.
+    pub fn len(&self) -> usize {
+        self.elems.len()
+    }
+
     /// Pushes a new scope to the `Stack`.
     pub fn push_scope(&mut self) {
         self.scope_offsets.push(self.len());
@@ -74,12 +80,6 @@ impl Stack {
         }
 
         unreachable!("local variable should be declared");
-    }
-
-    /// Returns the number of local variables and intermediate values on the
-    /// `Stack`.
-    pub fn len(&self) -> usize {
-        self.elems.len()
     }
 }
 
