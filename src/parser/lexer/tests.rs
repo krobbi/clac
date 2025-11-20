@@ -1,10 +1,8 @@
 use super::*;
 
-/// Asserts that source code generates an expected stream of [`Token`]s.
+/// Asserts that source code produces an expected stream of [`Token`]s.
 macro_rules! assert_tokens {
-    ($source:literal, [$(
-        $result:pat $(if $guard:expr)?
-    ),* $(,)?] $(,)?) => {
+    ($source:literal, [$($result:pat $(if $guard:expr)?),* $(,)?] $(,)?) => {
         let mut lexer = Lexer::new($source);
 
         $(
@@ -13,30 +11,40 @@ macro_rules! assert_tokens {
 
         assert!(matches!(lexer.bump(), Ok(Token::Eof)));
     };
-    ($source:literal, Ok[$(
-        $token:pat $(if $guard:expr)?
-    ),* $(,)?] $(,)?) => {
-        assert_tokens!($source, [$(
-            Ok($token) $(if $guard)?
-        ),*]);
+    ($source:literal, Ok[$($token:pat $(if $guard:expr)?),* $(,)?] $(,)?) => {
+        assert_tokens!($source, [$(Ok($token) $(if $guard)?),*]);
     };
 }
 
-/// Tests that empty source code does not generate any [`Token`]s.
+/// Tests that empty source code does not produce any [`Token`]s.
 #[test]
-fn empty_source() {
+fn empty_source_code_produces_no_tokens() {
     assert_tokens!("", Ok[]);
 }
 
-/// Tests that whitespace does not generate any [`Token`]s.
+/// Tests that whitespace does not produce any [`Token`]s.
 #[test]
-fn whitespace() {
+fn whitespace_produces_no_tokens() {
     assert_tokens!(" \r\n\t ", Ok[]);
 }
 
-/// Tests that non-ASCII [`char`]s are handled correctly.
+/// Tests that whitespace separates digraph [`Token`]s.
 #[test]
-fn non_ascii() {
+fn whitespace_separates_digraphs() {
+    assert_tokens!(
+        "- >, ->",
+        [
+            Ok(Token::Minus),
+            Err(LexError::UnexpectedChar('>')),
+            Ok(Token::Comma),
+            Ok(Token::RightArrow),
+        ],
+    );
+}
+
+/// Tests that non-ASCII [`char`]s are scanned.
+#[test]
+fn non_ascii_chars_are_scanned() {
     assert_tokens!(
         "(Café ☕!)(🦀💻🧮)",
         [
@@ -51,13 +59,13 @@ fn non_ascii() {
             Err(LexError::UnexpectedChar('💻')),
             Err(LexError::UnexpectedChar('🧮')),
             Ok(Token::CloseParen),
-        ]
+        ],
     );
 }
 
-/// Tests that source code generates trailing EOF [`Token`]s.
+/// Tests that source code produces trailing EOF [`Token`]s.
 #[test]
-fn trailing_eof() {
+fn trailing_eof_tokens_are_produced() {
     let mut lexer = Lexer::new("1 2 3");
     assert!(matches!(lexer.bump(), Ok(Token::Number(1.0))));
     assert!(matches!(lexer.bump(), Ok(Token::Number(2.0))));
@@ -68,41 +76,48 @@ fn trailing_eof() {
     }
 }
 
-/// Tests that all [`Token`]s are generated as expected.
+/// Tests that all [`Token`]s can be produced.
 #[test]
-fn all_tokens() {
-    assert_tokens!("-(1 + 2.5) * 3. / 4, 123.0, {life == 42, _F00},", Ok[
-        Token::Minus,
-        Token::OpenParen,
-        Token::Number(1.0),
-        Token::Plus,
-        Token::Number(2.5),
-        Token::CloseParen,
-        Token::Star,
-        Token::Number(3.0),
-        Token::Slash,
-        Token::Number(4.0),
-        Token::Comma,
+fn all_tokens_are_produced() {
+    assert_tokens!(
+        "-(1 + 2.5) * 3. / 4, 123.0, {life -> 42, _F00 == life()},",
+        Ok[
+            Token::Minus,
+            Token::OpenParen,
+            Token::Number(1.0),
+            Token::Plus,
+            Token::Number(2.5),
+            Token::CloseParen,
+            Token::Star,
+            Token::Number(3.0),
+            Token::Slash,
+            Token::Number(4.0),
+            Token::Comma,
 
-        Token::Number(123.0),
-        Token::Comma,
+            Token::Number(123.0),
+            Token::Comma,
 
-        Token::OpenBrace,
-        Token::Ident(n) if n == "life",
-        Token::Eq,
-        Token::Eq,
-        Token::Number(42.0),
-        Token::Comma,
+            Token::OpenBrace,
+            Token::Ident(n) if n == "life",
+            Token::RightArrow,
+            Token::Number(42.0),
+            Token::Comma,
 
-        Token::Ident(n) if n == "_F00",
-        Token::CloseBrace,
-        Token::Comma,
-    ]);
+            Token::Ident(n) if n == "_F00",
+            Token::Eq,
+            Token::Eq,
+            Token::Ident(n) if n == "life",
+            Token::OpenParen,
+            Token::CloseParen,
+            Token::CloseBrace,
+            Token::Comma,
+        ],
+    );
 }
 
-/// Tests that integer number [`Token`]s are generated as expected.
+/// Tests that integer number [`Token`]s are produced.
 #[test]
-fn integers() {
+fn integers_are_produced() {
     assert_tokens!(
         "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
         Ok[
@@ -137,13 +152,13 @@ fn integers() {
             Token::Number(0.0),
             Token::Ident(n) if n == "xff",
             Token::Comma,
-        ]
+        ],
     );
 }
 
-/// Tests that decimal number [`Token`]s are generated as expected.
+/// Tests that decimal number [`Token`]s are produced.
 #[test]
-fn decimals() {
+fn decimals_are_produced() {
     assert_tokens!(
         "0.0, 1., -2.5, 00300.12500, 4.0625, .5, 0.03125, .,",
         [
@@ -165,13 +180,13 @@ fn decimals() {
             Ok(Token::Comma),
             Err(LexError::UnexpectedChar('.')),
             Ok(Token::Comma),
-        ]
+        ],
     );
 }
 
 /// Tests that decimal number [`Token`]s are parsed accurately.
 #[test]
-fn decimal_accuracy() {
+fn decimals_are_accurate() {
     use std::f64::consts::PI;
 
     // Test pi as it is written in the standard library.

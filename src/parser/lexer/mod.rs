@@ -45,7 +45,13 @@ impl<'a> Lexer<'a> {
             ',' => Token::Comma,
             '=' => Token::Eq,
             '+' => Token::Plus,
-            '-' => Token::Minus,
+            '-' => {
+                if self.scanner.eat('>') {
+                    Token::RightArrow
+                } else {
+                    Token::Minus
+                }
+            }
             '*' => Token::Star,
             '/' => Token::Slash,
             _ => return Err(LexError::UnexpectedChar(char)),

@@ -9,17 +9,13 @@ macro_rules! wildcard {
 
 /// Defines the set of available [`Token`]s.
 macro_rules! define_tokens {
-    ([$((
-        $name:ident $(($field:ty))?, $doc:literal, $description:literal $(,)?
-    )),* $(,)?] $(,)?) => {
+    {$(($name:ident $(($field:ty))?, $doc:literal, $description:literal)),* $(,)?} => {
         #[doc = "A lexical element of source code."]
         #[derive(Debug)]
         pub enum Token {
             $(
                 #[doc = $doc]
-                $name $(
-                    ($field)
-                )?
+                $name $(($field))?
             ),*
         }
 
@@ -28,9 +24,7 @@ macro_rules! define_tokens {
             pub fn as_type(&self) -> TokenType {
                 match self {
                     $(
-                        Self::$name $(
-                            (wildcard!($field))
-                        )? => TokenType::$name
+                        Self::$name $((wildcard!($field)))? => TokenType::$name
                     ),*
                 }
             }
@@ -58,21 +52,22 @@ macro_rules! define_tokens {
     };
 }
 
-define_tokens!([
+define_tokens! {
     (Number(f64), "A number.", "a number"),
     (Ident(String), "An identifier.", "an identifier"),
-    (OpenParen, "An opening parenthesis.", "an opening '('"),
-    (CloseParen, "A closing parenthesis.", "a closing ')'"),
-    (OpenBrace, "An opening brace.", "an opening '{'"),
-    (CloseBrace, "A closing brace.", "a closing '}'"),
-    (Comma, "A comma.", "','"),
-    (Eq, "An equals sign.", "'='"),
-    (Plus, "A plus sign.", "'+'"),
-    (Minus, "A minus sign.", "'-'"),
-    (Star, "An asterisk.", "'*'"),
-    (Slash, "A forward slash.", "'/'"),
+    (OpenParen, "An opening parenthesis (`(`).", "an opening '('"),
+    (CloseParen, "A closing parenthesis (`)`).", "a closing ')'"),
+    (OpenBrace, "An opening brace (`{`).", "an opening '{'"),
+    (CloseBrace, "A closing brace (`}`).", "a closing '}'"),
+    (Comma, "A comma (`,`).", "','"),
+    (Eq, "An equals sign (`=`).", "'='"),
+    (Plus, "A plus sign (`+`).", "'+'"),
+    (Minus, "A minus sign (`-`).", "'-'"),
+    (Star, "An asterisk (`*`).", "'*'"),
+    (Slash, "A forward slash (`/`).", "'/'"),
+    (RightArrow, "A right arrow (`->`).", "'->'"),
     (Eof, "An end of source code marker.", "end of file"),
-]);
+}
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
