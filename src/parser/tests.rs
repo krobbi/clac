@@ -147,32 +147,13 @@ fn plus_signs() {
 /// Tests that tuple values are not supported.
 #[test]
 fn tuples() {
-    assert_error!("()", ParseError::ExpectedExpr(Token::CloseParen));
+    assert_error!("()", ParseError::TupleValue);
     assert_error!("(,)", ParseError::ExpectedExpr(Token::Comma));
-    assert_error!(
-        "(1,)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Comma)
-    );
-
-    assert_error!(
-        "(x, y)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Comma)
-    );
-
-    assert_error!(
-        "(u, v,)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Comma)
-    );
-
-    assert_error!(
-        "(r, g, b)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Comma)
-    );
-
-    assert_error!(
-        "(h, s, v,)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Comma)
-    );
+    assert_error!("(1,)", ParseError::TupleValue);
+    assert_error!("(x, y)", ParseError::TupleValue);
+    assert_error!("(u, v,)", ParseError::TupleValue);
+    assert_error!("(r, g, b)", ParseError::TupleValue);
+    assert_error!("(h, s, v,)", ParseError::TupleValue);
 }
 
 /// Tests that assignment cannot be used as an expression.

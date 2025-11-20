@@ -273,8 +273,7 @@ expr_call    = expr_primary, { tuple } ;
 expr_primary = "(", expr, ")" | "{", sequence, "}" | Number | Ident ;
 ```
 
-A program that follows the grammar will be successfully parsed, but this does
-not guarantee that the program is valid.
+Not all programs that follow this grammar are valid.
 
 # Credits
 * Infix parser based on

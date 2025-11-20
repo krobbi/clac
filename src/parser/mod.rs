@@ -45,19 +45,18 @@ impl<'a> Parser<'a> {
         Ok(Ast(stmts))
     }
 
-    /// Parses a sequence of [`Stmt`]s and consumes a [`Token`] that matches a
+    /// Parses a sequence of [`Stmt`]s until the next [`Token`] matches a
     /// terminator [`TokenType`]. This function returns a [`ParseError`] if a
-    /// [`Stmt`] sequence could not be parsed.
+    /// sequence could not be parsed.
     fn parse_sequence(&mut self, terminator: TokenType) -> Result<Vec<Stmt>, ParseError> {
         let mut stmts = Vec::new();
 
-        while self.is_before_terminator(terminator) {
+        while !self.is_terminated(terminator) {
             let stmt = self.parse_stmt()?;
             self.eat(TokenType::Comma)?;
             stmts.push(stmt);
         }
 
-        self.expect(terminator)?;
         Ok(stmts)
     }
 
@@ -83,20 +82,27 @@ impl<'a> Parser<'a> {
 
     /// Parses a tuple of [`Expr`]s after consuming its opening parenthesis.
     /// This function returns a [`ParseError`] if a tuple could not be parsed.
-    fn parse_tuple(&mut self) -> Result<Vec<Expr>, ParseError> {
+    /// This function also returns `true` if a tuple was parsed rather than a
+    /// parenthesized [`Expr`].
+    fn parse_tuple(&mut self) -> Result<(Vec<Expr>, bool), ParseError> {
         let mut exprs = Vec::new();
 
-        while self.is_before_terminator(TokenType::CloseParen) {
+        let is_empty_or_has_trailing_comma = loop {
+            if self.is_terminated(TokenType::CloseParen) {
+                break true;
+            }
+
             let expr = self.parse_expr()?;
             exprs.push(expr);
 
             if !self.eat(TokenType::Comma)? {
-                break;
+                break false;
             }
-        }
+        };
 
         self.expect(TokenType::CloseParen)?;
-        Ok(exprs)
+        let is_tuple = is_empty_or_has_trailing_comma || exprs.len() != 1;
+        Ok((exprs, is_tuple))
     }
 
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
@@ -112,12 +118,18 @@ impl<'a> Parser<'a> {
             Token::Number(value) => Expr::Number(value),
             Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => {
-                let expr = self.parse_expr()?;
-                self.expect(TokenType::CloseParen)?;
+                let (mut exprs, is_tuple) = self.parse_tuple()?;
+
+                if is_tuple {
+                    return Err(ParseError::TupleValue);
+                }
+
+                let expr = exprs.pop().expect("tuple should not be empty");
                 Expr::Paren(expr.into())
             }
             Token::OpenBrace => {
                 let stmts = self.parse_sequence(TokenType::CloseBrace)?;
+                self.expect(TokenType::CloseBrace)?;
                 Expr::Block(stmts)
             }
             Token::Minus => {
@@ -128,7 +140,7 @@ impl<'a> Parser<'a> {
         };
 
         while self.eat(TokenType::OpenParen)? {
-            let args = self.parse_tuple()?;
+            let (args, _) = self.parse_tuple()?;
             callee = Expr::Call(callee.into(), args);
         }
 
@@ -140,11 +152,11 @@ impl<'a> Parser<'a> {
         self.next_token.as_type()
     }
 
-    /// Returns `true` if the next [`Token`] does not match a terminator
-    /// [`TokenType`] and is before the end of source code.
-    fn is_before_terminator(&self, terminator: TokenType) -> bool {
+    /// Returns `true` if the next [`Token`] matches a terminator [`TokenType`]
+    /// or is the end of source code.
+    fn is_terminated(&self, terminator: TokenType) -> bool {
         let next_token_type = self.peek();
-        next_token_type != terminator && next_token_type != TokenType::Eof
+        next_token_type == terminator || next_token_type == TokenType::Eof
     }
 
     /// Consumes the next [`Token`]. This function returns a [`LexError`] if a
