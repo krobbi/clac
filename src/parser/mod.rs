@@ -80,10 +80,58 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    /// Parses a parenthesized [`Expr`] or a tuple [`Expr`] after consuming its
-    /// opening parenthesis. This function returns a [`ParseError`] if an
+    /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
     /// [`Expr`] could not be parsed.
-    fn parse_paren(&mut self) -> Result<Expr, ParseError> {
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.parse_expr_function()
+    }
+
+    /// Parses a function [`Expr`]. This function returns a [`ParseError`] if a
+    /// function [`Expr`] could not be parsed.
+    fn parse_expr_function(&mut self) -> Result<Expr, ParseError> {
+        let params = self.parse_expr_infix(0)?;
+
+        let function = if self.eat(TokenType::RightArrow)? {
+            let body = self.parse_expr_function()?;
+            Expr::Function(unwrap_list(params), body.into())
+        } else {
+            params
+        };
+
+        Ok(function)
+    }
+
+    /// Parses a call [`Expr`]. This function returns a [`ParseError`] if a call
+    /// [`Expr`] could not be parsed.
+    fn parse_expr_call(&mut self) -> Result<Expr, ParseError> {
+        let mut callee = match self.bump()? {
+            Token::Number(value) => Expr::Number(value),
+            Token::Ident(name) => Expr::Ident(name),
+            Token::OpenParen => self.parse_expr_paren()?,
+            Token::OpenBrace => {
+                let stmts = self.parse_sequence(TokenType::CloseBrace)?;
+                self.expect(TokenType::CloseBrace)?;
+                Expr::Block(stmts)
+            }
+            Token::Minus => {
+                let rhs = self.parse_expr_call()?;
+                Expr::Unary(UnOp::Negate, rhs.into())
+            }
+            token => return Err(ParseError::ExpectedExpr(token)),
+        };
+
+        while self.eat(TokenType::OpenParen)? {
+            let args = self.parse_expr_paren()?;
+            callee = Expr::Call(callee.into(), unwrap_list(args));
+        }
+
+        Ok(callee)
+    }
+
+    /// Parses a parenthesized [`Expr`] or tuple [`Expr`] after consuming its
+    /// opening parenthesis. This function returns a [`ParseError`] if a
+    /// parenthesized [`Expr`] or tuple [`Expr`] could not be parsed.
+    fn parse_expr_paren(&mut self) -> Result<Expr, ParseError> {
         let mut exprs = Vec::new();
 
         let is_empty_or_has_trailing_comma = loop {
@@ -108,44 +156,6 @@ impl<'a> Parser<'a> {
         };
 
         Ok(expr)
-    }
-
-    /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
-    /// [`Expr`] could not be parsed.
-    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expr_infix(0)
-    }
-
-    /// Parses an atom [`Expr`]. This function returns a [`ParseError`] if an
-    /// atom [`Expr`] could not be parsed.
-    fn parse_expr_atom(&mut self) -> Result<Expr, ParseError> {
-        let mut callee = match self.bump()? {
-            Token::Number(value) => Expr::Number(value),
-            Token::Ident(name) => Expr::Ident(name),
-            Token::OpenParen => self.parse_paren()?,
-            Token::OpenBrace => {
-                let stmts = self.parse_sequence(TokenType::CloseBrace)?;
-                self.expect(TokenType::CloseBrace)?;
-                Expr::Block(stmts)
-            }
-            Token::Minus => {
-                let rhs = self.parse_expr_atom()?;
-                Expr::Unary(UnOp::Negate, rhs.into())
-            }
-            token => return Err(ParseError::ExpectedExpr(token)),
-        };
-
-        while self.eat(TokenType::OpenParen)? {
-            let args = match self.parse_paren()? {
-                Expr::Paren(expr) => vec![*expr],
-                Expr::Tuple(exprs) => exprs,
-                _ => unreachable!("a parenthesized expression or tuple should have been parsed"),
-            };
-
-            callee = Expr::Call(callee.into(), args);
-        }
-
-        Ok(callee)
     }
 
     /// Returns the next [`Token`]'s [`TokenType`].
@@ -191,5 +201,14 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParseError::UnexpectedToken(expected, actual))
         }
+    }
+}
+
+/// Unwraps a function parameter or call argument list from an [`Expr`].
+fn unwrap_list(expr: Expr) -> Vec<Expr> {
+    match expr {
+        Expr::Paren(expr) => vec![*expr],
+        Expr::Tuple(exprs) => exprs,
+        expr => vec![expr],
     }
 }

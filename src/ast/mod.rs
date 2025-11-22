@@ -30,6 +30,9 @@ pub enum Expr {
     /// A block.
     Block(Vec<Stmt>),
 
+    /// A function.
+    Function(Vec<Expr>, Box<Expr>),
+
     /// A function call.
     Call(Box<Expr>, Vec<Expr>),
 

@@ -182,8 +182,8 @@ clac> sqdist(10, 20,)
 ```
 
 The function's name and parameters must be defined as identifiers
-(variable names) that are not surrounded by parentheses. Additionally, each
-parameter must have a different name to any other parameter:
+(variable names) that are not surrounded by parentheses. Each parameter must
+also have a unique name:
 ```
 clac> 1(x) = x + 1
 Error: function names must be identifiers
@@ -230,7 +230,32 @@ clac> sqrt(36)
 6
 ```
 
-### Closures
+### Anonymous Functions
+A function can be defined without a name by surrounding its parameters with
+parentheses and defining its body with an arrow (`->`):
+```
+clac> () -> 3.14
+function
+
+clac> get_adder() = (l, r) -> l + r
+
+clac> get_adder()(9, 10)
+19
+```
+
+If an anonymous function only has one parameter, then the parentheses may be
+omitted:
+```
+clac> apply_123(f) = f(123)
+
+clac> apply_123((x) -> 2 * x)
+246
+
+clac> apply_123(x -> 3 * x)
+369
+```
+
+### Function Scoping
 Functions are lexically scoped, meaning they have access to the variables that
 are in scope *where* they are defined, not *when* they are called:
 ```
@@ -238,11 +263,13 @@ clac> triple_value() = 3 * value, value = 123, triple_value()
 Error: variable 'value' is undefined
 ```
 
-Functions can become closures by capturing local variables in outer scopes:
+Functions can access local variables defined outside of their body and
+parameters. When they do this, they 'capture' the variables and become
+closures:
 ```
 clac> add(l, r) = l + r, subtract(l, r) = l - r
 
-clac> curry(f, r) = {curried(l) = f(l, r), curried}
+clac> curry(f, r) = l -> f(l, r)
 
 clac> add_5 = curry(add, 5), subtract_10 = curry(subtract, 10)
 
@@ -263,14 +290,15 @@ All valid Clac programs should have the following grammar:
 program  = sequence, Eof ;
 sequence = { stmt, [ "," ] } ;
 stmt     = expr, [ "=", expr ] ;
-paren    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
-expr     = expr_sum ;
+expr     = expr_function ;
 
-expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
-expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
-expr_prefix  = "-", expr_prefix | expr_call ;
-expr_call    = expr_primary, { paren } ;
-expr_primary = paren | "{", sequence, "}" | Number | Ident ;
+expr_function = expr_sum, [ "->", expr_function ] ;
+expr_sum      = expr_term, { ( "+" | "-" ), expr_term } ;
+expr_term     = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
+expr_prefix   = "-", expr_prefix | expr_call ;
+expr_call     = expr_primary, { expr_paren } ;
+expr_primary  = expr_paren | "{", sequence, "}" | Number | Ident ;
+expr_paren    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
 ```
 
 Programs that follow this grammar will be parsed successfully, but may fail

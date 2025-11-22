@@ -6,7 +6,7 @@ impl Parser<'_> {
     /// Parses an infix [`Expr`] with a minimum precedence level. This function
     /// returns a [`ParseError`] if an infix [`Expr`] could not be parsed.
     pub fn parse_expr_infix(&mut self, min_precedence: u8) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_atom()?;
+        let mut lhs = self.parse_expr_call()?;
 
         while let Some(op) = BinOp::from_token_type(self.peek()) {
             let precedence = op.precedence();

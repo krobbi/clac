@@ -25,6 +25,11 @@ impl Display for Expr {
             Self::Paren(expr) => write_s_expr(f, "p:", &[expr]),
             Self::Tuple(exprs) => write_s_expr(f, "t:", exprs),
             Self::Block(stmts) => write_s_expr(f, "b:", stmts),
+            Self::Function(params, body) => {
+                let mut args = params.iter().collect::<Vec<_>>();
+                args.push(body);
+                write_s_expr(f, "->", &args)
+            }
             Self::Call(callee, args) => write_s_expr(f, callee, args),
             Self::Unary(op, expr) => write_s_expr(f, op, &[expr]),
             Self::Binary(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),

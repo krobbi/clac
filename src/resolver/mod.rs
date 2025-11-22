@@ -123,17 +123,18 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// [`ResolveError`] if the [`Expr`] could not be resolved.
     fn resolve_expr_voidable(&mut self, expr: &Expr) -> Result<Voidable> {
         let expr = match expr {
-            Expr::Number(value) => hir::Expr::Number(*value),
-            Expr::Ident(name) => self.resolve_expr_ident(name)?,
-            Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren)?,
-            Expr::Tuple(_) => return Err(ResolveError::TupleValue),
+            Expr::Number(value) => Ok(hir::Expr::Number(*value)),
+            Expr::Ident(name) => self.resolve_expr_ident(name),
+            Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren),
+            Expr::Tuple(_) => Err(ResolveError::TupleValue),
             Expr::Block(stmts) => return self.resolve_expr_block(stmts),
-            Expr::Call(callee, args) => self.resolve_expr_call(callee, args)?,
-            Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs)?,
-            Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs)?,
+            Expr::Function(params, body) => self.resolve_expr_function(params, body),
+            Expr::Call(callee, args) => self.resolve_expr_call(callee, args),
+            Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
+            Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
         };
 
-        Ok(expr.into())
+        expr.map(Voidable::Expr)
     }
 
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
@@ -146,6 +147,33 @@ impl<'a, 'b> Resolver<'a, 'b> {
         } else {
             Err(ResolveError::UndefinedVariable(name.to_owned()))
         }
+    }
+
+    /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a
+    /// [`ResolveError`] if the block's [`Stmt`]s could not be resolved.
+    fn resolve_expr_block(&mut self, stmts: &[Stmt]) -> Result<Voidable> {
+        self.locals.begin_block();
+        let mut stmts = self.resolve_stmts(stmts, ScopeKind::Local)?;
+        self.locals.end_block();
+
+        let block = match stmts.pop() {
+            None => hir::Stmt::Nop.into(),
+            Some(hir::Stmt::Expr(expr)) => {
+                let expr = if stmts.is_empty() {
+                    *expr
+                } else {
+                    hir::Expr::Block(stmts, expr)
+                };
+
+                expr.into()
+            }
+            Some(stmt) => {
+                stmts.push(stmt);
+                hir::Stmt::Block(stmts).into()
+            }
+        };
+
+        Ok(block)
     }
 
     /// Resolves a function [`Expr`] to an [`hir::Expr`]. This function returns
@@ -176,33 +204,6 @@ impl<'a, 'b> Resolver<'a, 'b> {
         let body = self.resolve_expr(body, ExprArea::FunctionBody)?;
         self.locals.end_function();
         Ok(hir::Expr::Function(params, body.into()))
-    }
-
-    /// Resolves a block [`Expr`] to a [`Voidable`]. This function returns a
-    /// [`ResolveError`] if the block's [`Stmt`]s could not be resolved.
-    fn resolve_expr_block(&mut self, stmts: &[Stmt]) -> Result<Voidable> {
-        self.locals.begin_block();
-        let mut stmts = self.resolve_stmts(stmts, ScopeKind::Local)?;
-        self.locals.end_block();
-
-        let block = match stmts.pop() {
-            None => hir::Stmt::Nop.into(),
-            Some(hir::Stmt::Expr(expr)) => {
-                let expr = if stmts.is_empty() {
-                    *expr
-                } else {
-                    hir::Expr::Block(stmts, expr)
-                };
-
-                expr.into()
-            }
-            Some(stmt) => {
-                stmts.push(stmt);
-                hir::Stmt::Block(stmts).into()
-            }
-        };
-
-        Ok(block)
     }
 
     /// Resolves a function call [`Expr`] to an [`hir::Expr`]. This function

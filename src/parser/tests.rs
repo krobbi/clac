@@ -41,6 +41,7 @@ fn assignments_are_not_expressions() {
 fn non_identifier_bindings_are_unchecked() {
     assert_ast("1 + x = 2", "(a: (= (+ 1 x) 2))");
     assert_ast("3(4 + 5) = 6", "(a: (= (3 (+ 4 5)) 6))");
+    assert_ast("(7, 8) -> 9", "(a: (-> 7 8 9))");
 }
 
 /// Tests that empty blocks are parsed.
@@ -69,7 +70,6 @@ fn sequence_commas_are_optional() {
     assert_ast("1 2 3,", "(a: 1 2 3)");
     assert_ast("1, 2, 3", "(a: 1 2 3)");
     assert_ast("1, 2, 3,", "(a: 1 2 3)");
-
     assert_error!("{, 1}", ParseError::ExpectedExpr(Token::Comma));
     assert_ast("{1 2 3}", "(a: (b: 1 2 3))");
     assert_ast("{1 2 3,}", "(a: (b: 1 2 3))");
@@ -112,9 +112,31 @@ fn parens_and_blocks_can_be_nested() {
     assert_ast("((1), (2))", "(a: (t: (p: 1) (p: 2)))");
 }
 
-/// Tests that separating commas are required between function arguments.
+/// Tests that functions are parsed.
 #[test]
-fn function_arguments_require_separating_commas() {
+fn functions_are_parsed() {
+    assert_ast("() -> 1", "(a: (-> 1))");
+    assert_ast("(x) -> 2", "(a: (-> x 2))");
+    assert_ast("(y,) -> 3", "(a: (-> y 3))");
+    assert_ast("z -> 4", "(a: (-> z 4))");
+    assert_ast("(a, b) -> c", "(a: (-> a b c))");
+    assert_error!(
+        "(d e) -> f",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(n)) if n == "e",
+    );
+
+    assert_ast("(g, h,) -> i", "(a: (-> g h i))");
+}
+
+/// Tests that empty function parameters are not parsed.
+#[test]
+fn empty_function_parameters_are_not_parsed() {
+    assert_error!("-> 3.14", ParseError::ExpectedExpr(Token::RightArrow));
+}
+
+/// Tests that separating commas are required between call arguments.
+#[test]
+fn call_arguments_require_separating_commas() {
     assert_ast("f()", "(a: (f))");
     assert_ast("f(1)", "(a: (f 1))");
     assert_error!(
@@ -125,9 +147,9 @@ fn function_arguments_require_separating_commas() {
     assert_ast("f(1, 2)", "(a: (f 1 2))");
 }
 
-/// Tests that trailing commas are allowed after function arguments.
+/// Tests that trailing commas are allowed after call arguments.
 #[test]
-fn function_arguments_allow_trailing_commas() {
+fn call_arguments_allow_trailing_commas() {
     assert_error!("f(,)", ParseError::ExpectedExpr(Token::Comma));
     assert_ast("f(1,)", "(a: (f 1))");
     assert_ast("f(1, 2,)", "(a: (f 1 2))");
@@ -148,11 +170,15 @@ fn operators_have_expected_associativity() {
     assert_ast("7 * 8 * 9", "(a: (* (* 7 8) 9))");
     assert_ast("a / b / c", "(a: (/ (/ a b) c))");
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
+    assert_ast("x -> y -> z", "(a: (-> x (-> y z)))");
 }
 
 /// Tests that operators have the expected precedence levels.
 #[test]
 fn operators_have_expected_precedence_levels() {
+    // Functions have the lowest precedence.
+    assert_ast("1 + x -> x - 2(10)", "(a: (-> (+ 1 x) (- x (2 10))))");
+
     // The precedence of `+` is equal to `-`.
     assert_ast("1 + 2 - 3", "(a: (- (+ 1 2) 3))");
     assert_ast("1 - 2 + 3", "(a: (+ (- 1 2) 3))");
@@ -167,6 +193,10 @@ fn operators_have_expected_precedence_levels() {
 
     // Precedence can be overridden with parentheses.
     assert_ast("(1 + 2) * 3", "(a: (* (p: (+ 1 2)) 3))");
+    assert_ast(
+        "1 + (x -> x - 2)(10)",
+        "(a: (+ 1 ((p: (-> x (- x 2))) 10)))",
+    );
 }
 
 /// Tests that the unary negation operator has the expected precedence.
@@ -177,6 +207,8 @@ fn unary_negation_has_expected_precedence() {
     assert_ast("1, -1", "(a: 1 (- 1))");
     assert_ast("-f(x)", "(a: (- (f x)))");
     assert_ast("-f(x)(y)", "(a: (- ((f x) y)))");
+    assert_ast("-x -> y", "(a: (-> (- x) y))");
+    assert_ast("-(x) -> y", "(a: (-> (- (p: x)) y))");
 }
 
 /// Tests that [`LexError`]s are caught and encapsulated as [`ParseError`]s.
