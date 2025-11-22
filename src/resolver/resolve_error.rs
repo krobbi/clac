@@ -44,7 +44,7 @@ impl Display for ResolveError {
                     ExprArea::AssignSource => "statements cannot be assigned to variables",
                     ExprArea::FunctionBody => "functions must return a value",
                     ExprArea::Callee => "statements cannot be called",
-                    ExprArea::Arg => "statements cannot be used as function arguments",
+                    ExprArea::Arg => "statements cannot be used as call arguments",
                 };
 
                 f.write_str(message)
