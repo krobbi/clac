@@ -80,11 +80,10 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    /// Parses a tuple of [`Expr`]s after consuming its opening parenthesis.
-    /// This function returns a [`ParseError`] if a tuple could not be parsed.
-    /// This function also returns `true` if a tuple was parsed rather than a
-    /// parenthesized [`Expr`].
-    fn parse_tuple(&mut self) -> Result<(Vec<Expr>, bool), ParseError> {
+    /// Parses a parenthesized [`Expr`] or a tuple [`Expr`] after consuming its
+    /// opening parenthesis. This function returns a [`ParseError`] if an
+    /// [`Expr`] could not be parsed.
+    fn parse_paren(&mut self) -> Result<Expr, ParseError> {
         let mut exprs = Vec::new();
 
         let is_empty_or_has_trailing_comma = loop {
@@ -101,8 +100,14 @@ impl<'a> Parser<'a> {
         };
 
         self.expect(TokenType::CloseParen)?;
-        let is_tuple = is_empty_or_has_trailing_comma || exprs.len() != 1;
-        Ok((exprs, is_tuple))
+
+        let expr = if is_empty_or_has_trailing_comma || exprs.len() != 1 {
+            Expr::Tuple(exprs)
+        } else {
+            Expr::Paren(exprs.pop().expect("parentheses should not be empty").into())
+        };
+
+        Ok(expr)
     }
 
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
@@ -117,16 +122,7 @@ impl<'a> Parser<'a> {
         let mut callee = match self.bump()? {
             Token::Number(value) => Expr::Number(value),
             Token::Ident(name) => Expr::Ident(name),
-            Token::OpenParen => {
-                let (mut exprs, is_tuple) = self.parse_tuple()?;
-
-                if is_tuple {
-                    return Err(ParseError::TupleValue);
-                }
-
-                let expr = exprs.pop().expect("tuple should not be empty");
-                Expr::Paren(expr.into())
-            }
+            Token::OpenParen => self.parse_paren()?,
             Token::OpenBrace => {
                 let stmts = self.parse_sequence(TokenType::CloseBrace)?;
                 self.expect(TokenType::CloseBrace)?;
@@ -140,7 +136,12 @@ impl<'a> Parser<'a> {
         };
 
         while self.eat(TokenType::OpenParen)? {
-            let (args, _) = self.parse_tuple()?;
+            let args = match self.parse_paren()? {
+                Expr::Paren(expr) => vec![*expr],
+                Expr::Tuple(exprs) => exprs,
+                _ => unreachable!("a parenthesized expression or tuple should have been parsed"),
+            };
+
             callee = Expr::Call(callee.into(), args);
         }
 

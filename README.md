@@ -263,17 +263,18 @@ All valid Clac programs should have the following grammar:
 program  = sequence, Eof ;
 sequence = { stmt, [ "," ] } ;
 stmt     = expr, [ "=", expr ] ;
-tuple    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
+paren    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
 expr     = expr_sum ;
 
 expr_sum     = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term    = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix  = "-", expr_prefix | expr_call ;
-expr_call    = expr_primary, { tuple } ;
-expr_primary = "(", expr, ")" | "{", sequence, "}" | Number | Ident ;
+expr_call    = expr_primary, { paren } ;
+expr_primary = paren | "{", sequence, "}" | Number | Ident ;
 ```
 
-Not all programs that follow this grammar are valid.
+Programs that follow this grammar will be parsed successfully, but may fail
+during semantic analysis or at runtime.
 
 # Credits
 * Infix parser based on

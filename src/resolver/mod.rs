@@ -126,6 +126,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
             Expr::Number(value) => hir::Expr::Number(*value),
             Expr::Ident(name) => self.resolve_expr_ident(name)?,
             Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren)?,
+            Expr::Tuple(_) => return Err(ResolveError::TupleValue),
             Expr::Block(stmts) => return self.resolve_expr_block(stmts),
             Expr::Call(callee, args) => self.resolve_expr_call(callee, args)?,
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs)?,

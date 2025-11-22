@@ -2,7 +2,7 @@ use super::*;
 
 /// Tests that no [`char`]s are scanned from empty source code.
 #[test]
-fn empty_source() {
+fn empty_source_code_produces_no_chars() {
     let mut scanner = Scanner::new("");
     assert!(scanner.rest.is_empty());
     assert!(scanner.peek().is_none());
@@ -13,7 +13,7 @@ fn empty_source() {
 
 /// Tests that lexemes have expected boundaries, including non-ASCII [`char`]s.
 #[test]
-fn lexemes() {
+fn lexemes_are_scanned_at_expected_boundaries() {
     const SOURCE: &str = "{áéíóú}[☕🧀🍗]";
 
     let mut scanner = Scanner::new(SOURCE);
@@ -49,9 +49,9 @@ fn lexemes() {
     assert_eq!(scanner.rest, scanner.lexeme());
 }
 
-/// Tests that [`Scanner::eat_while`] terminates at EOF.
+/// Tests that [`Scanner::eat_while`] terminates at the end of source code.
 #[test]
-fn eat_while_terminates() {
+fn eat_while_terminates_at_eof() {
     const SOURCE: &str = "0123456789";
 
     let mut scanner = Scanner::new(SOURCE);

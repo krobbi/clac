@@ -2,51 +2,146 @@ use super::*;
 
 /// Asserts that an expected [`ParseError`] is produced from source code.
 macro_rules! assert_error {
-    ($source:literal, $error:pat $(,)?) => {
+    ($source:literal, $error:pat $(if $guard:expr)? $(,)?) => {
         // Can't use `Result::expect_err` because `Ast` does not implement
         // `Debug`.
         let Err(error) = parse_source($source) else {
             panic!("source code should be invalid");
         };
 
-        assert!(matches!(error, $error));
+        assert!(matches!(error, $error $(if $guard)?));
     };
 }
 
-/// Tests that empty source code is parsed as an empty AST.
+/// Tests that empty source code is parsed as an empty [`Ast`].
 #[test]
-fn empty_source() {
+fn empty_source_code_is_parsed() {
     assert_ast("", "(a:)");
 }
 
-/// Tests that blocks can be empty.
+/// Tests that assignments are parsed.
 #[test]
-fn empty_blocks() {
+fn assignments_are_parsed() {
+    assert_ast("n = 10", "(a: (= n 10))");
+    assert_ast("f(x) = x * x", "(a: (= (f x) (* x x)))");
+}
+
+/// Tests that assignments are not [`Expr`]s.
+#[test]
+fn assignments_are_not_expressions() {
+    assert_error!("x = y = 0", ParseError::ChainedAssignment);
+    assert_error!(
+        "1 + (x = 2)",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Eq),
+    );
+}
+
+/// Tests that non-identifier bindings are not checked by the [`Parser`].
+#[test]
+fn non_identifier_bindings_are_unchecked() {
+    assert_ast("1 + x = 2", "(a: (= (+ 1 x) 2))");
+    assert_ast("3(4 + 5) = 6", "(a: (= (3 (+ 4 5)) 6))");
+}
+
+/// Tests that empty blocks are parsed.
+#[test]
+fn empty_blocks_are_parsed() {
     assert_ast("{}", "(a: (b:))");
 }
 
-/// Tests that parenthesized expressions can be nested.
+/// Tests that blocks can contain [`Stmt`]s.
 #[test]
-fn nested_parens() {
-    assert_ast("0, (1), ((2))", "(a: 0 (p: 1) (p: (p: 2)))");
+fn blocks_can_contain_statements() {
+    assert_ast("1 + {x = 2, x}", "(a: (+ 1 (b: (= x 2) x)))");
 }
 
 /// Tests that blocks can be nested.
 #[test]
-fn nested_blocks() {
+fn blocks_can_be_nested() {
     assert_ast("0, {1}, {{2}}", "(a: 0 (b: 1) (b: (b: 2)))");
 }
 
-/// Tests that parenthesized expressions and blocks can be nested inside each
-/// other.
+/// Tests that commas between [`Stmt`]s are optional and may be trailing.
 #[test]
-fn mixed_nesting() {
-    assert_ast("{({})}", "(a: (b: (p: (b:))))");
+fn sequence_commas_are_optional() {
+    assert_error!(", 1", ParseError::ExpectedExpr(Token::Comma));
+    assert_ast("1 2 3", "(a: 1 2 3)");
+    assert_ast("1 2 3,", "(a: 1 2 3)");
+    assert_ast("1, 2, 3", "(a: 1 2 3)");
+    assert_ast("1, 2, 3,", "(a: 1 2 3)");
+
+    assert_error!("{, 1}", ParseError::ExpectedExpr(Token::Comma));
+    assert_ast("{1 2 3}", "(a: (b: 1 2 3))");
+    assert_ast("{1 2 3,}", "(a: (b: 1 2 3))");
+    assert_ast("{1, 2, 3}", "(a: (b: 1 2 3))");
+    assert_ast("{1, 2, 3,},", "(a: (b: 1 2 3))");
 }
 
-/// Tests operator associativity.
+/// Tests that parenthesized [`Expr`]s and tuples are parsed.
 #[test]
-fn associativity() {
+fn parens_are_parsed() {
+    assert_ast("()", "(a: (t:))");
+    assert_error!("(,)", ParseError::ExpectedExpr(Token::Comma));
+    assert_ast("(1)", "(a: (p: 1))");
+    assert_ast("(2,)", "(a: (t: 2))");
+    assert_ast("(x, y)", "(a: (t: x y))");
+    assert_error!(
+        "(z w)",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(n)) if n == "w",
+    );
+
+    assert_ast("(u, v,)", "(a: (t: u v))");
+    assert_ast("(r, g, b)", "(a: (t: r g b))");
+    assert_ast("(h, s, v,)", "(a: (t: h s v))");
+}
+
+/// Tests that parenthesized [`Expr`]s and tuples can be nested.
+#[test]
+fn parens_can_be_nested() {
+    assert_ast("0, (1), ((2))", "(a: 0 (p: 1) (p: (p: 2)))");
+    assert_ast("((1, 2), (3,), ())", "(a: (t: (t: 1 2) (t: 3) (t:)))");
+}
+
+/// Tests that parenthesized [`Expr`]s, tuples, and blocks can be nested inside
+/// each other.
+#[test]
+fn parens_and_blocks_can_be_nested() {
+    assert_ast("{({})}", "(a: (b: (p: (b:))))");
+    assert_ast("{({}, {})}", "(a: (b: (t: (b:) (b:))))");
+    assert_ast("(())", "(a: (p: (t:)))");
+    assert_ast("((1), (2))", "(a: (t: (p: 1) (p: 2)))");
+}
+
+/// Tests that separating commas are required between function arguments.
+#[test]
+fn function_arguments_require_separating_commas() {
+    assert_ast("f()", "(a: (f))");
+    assert_ast("f(1)", "(a: (f 1))");
+    assert_error!(
+        "f(1 2)",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Number(2.0)),
+    );
+
+    assert_ast("f(1, 2)", "(a: (f 1 2))");
+}
+
+/// Tests that trailing commas are allowed after function arguments.
+#[test]
+fn function_arguments_allow_trailing_commas() {
+    assert_error!("f(,)", ParseError::ExpectedExpr(Token::Comma));
+    assert_ast("f(1,)", "(a: (f 1))");
+    assert_ast("f(1, 2,)", "(a: (f 1 2))");
+}
+
+/// Tests that leading plus signs are not parsed.
+#[test]
+fn leading_plus_signs_are_not_parsed() {
+    assert_error!("+1", ParseError::ExpectedExpr(Token::Plus));
+}
+
+/// Tests that operators have the expected associativity.
+#[test]
+fn operators_have_expected_associativity() {
     assert_ast("---1", "(a: (- (- (- 1))))");
     assert_ast("1 + 2 + 3", "(a: (+ (+ 1 2) 3))");
     assert_ast("4 - 5 - 6", "(a: (- (- 4 5) 6))");
@@ -55,9 +150,9 @@ fn associativity() {
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
 }
 
-/// Tests operator precedence levels.
+/// Tests that operators have the expected precedence levels.
 #[test]
-fn precedence_levels() {
+fn operators_have_expected_precedence_levels() {
     // The precedence of `+` is equal to `-`.
     assert_ast("1 + 2 - 3", "(a: (- (+ 1 2) 3))");
     assert_ast("1 - 2 + 3", "(a: (+ (- 1 2) 3))");
@@ -74,9 +169,9 @@ fn precedence_levels() {
     assert_ast("(1 + 2) * 3", "(a: (* (p: (+ 1 2)) 3))");
 }
 
-/// Tests the precedence of the unary negation operator.
+/// Tests that the unary negation operator has the expected precedence.
 #[test]
-fn negation_precedence() {
+fn unary_negation_has_expected_precedence() {
     assert_ast("-1 * x", "(a: (* (- 1) x))");
     assert_ast("1 -1", "(a: (- 1 1))");
     assert_ast("1, -1", "(a: 1 (- 1))");
@@ -84,86 +179,10 @@ fn negation_precedence() {
     assert_ast("-f(x)(y)", "(a: (- ((f x) y)))");
 }
 
-/// Tests that assignments are parsed as expected.
+/// Tests that [`LexError`]s are caught and encapsulated as [`ParseError`]s.
 #[test]
-fn assignments() {
-    assert_ast("n = 10", "(a: (= n 10))");
-    assert_ast("f(x) = x * x", "(a: (= (f x) (* x x)))");
-
-    // Nonsensical assignments may be parsed, but should be checked later.
-    assert_ast("1 + x = 2", "(a: (= (+ 1 x) 2))");
-}
-
-/// Tests that blocks may contain statements.
-#[test]
-fn block_stmts() {
-    assert_ast("1 + {x = 2, x}", "(a: (+ 1 (b: (= x 2) x)))");
-}
-
-/// Tests that commas between statements are optional and may be trailing.
-#[test]
-fn sequence_commas() {
-    assert_error!(", 1", ParseError::ExpectedExpr(Token::Comma));
-    assert_ast("1 2 3", "(a: 1 2 3)");
-    assert_ast("1 2 3,", "(a: 1 2 3)");
-    assert_ast("1, 2, 3", "(a: 1 2 3)");
-    assert_ast("1, 2, 3,", "(a: 1 2 3)");
-    assert_ast("{1 2 3}", "(a: (b: 1 2 3))");
-    assert_ast("{1 2 3,}", "(a: (b: 1 2 3))");
-    assert_ast("{1, 2, 3}", "(a: (b: 1 2 3))");
-    assert_ast("{1, 2, 3,},", "(a: (b: 1 2 3))");
-}
-
-/// Tests that commas between expressions are required, but may optionally be
-/// trailing.
-#[test]
-fn tuple_commas() {
-    assert_ast("f()", "(a: (f))");
-    assert_error!("f(,)", ParseError::ExpectedExpr(Token::Comma));
-    assert_ast("f(1)", "(a: (f 1))");
-    assert_ast("f(1,)", "(a: (f 1))");
-    assert_error!(
-        "f(1 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Number(2.0))
-    );
-
-    assert_ast("f(1, 2)", "(a: (f 1 2))");
-    assert_ast("f(1, 2,)", "(a: (f 1 2))");
-}
-
-/// Tests that unexpected character [`LexError`]s are encapsulated in
-/// [`ParseError`]s.
-#[test]
-fn unexpected_chars() {
+fn lex_errors_are_caught() {
     assert_error!("foo + $bar", ParseError::Lex(LexError::UnexpectedChar('$')));
-}
-
-/// Tests that leading plus signs are not supported.
-#[test]
-fn plus_signs() {
-    assert_error!("+1", ParseError::ExpectedExpr(Token::Plus));
-}
-
-/// Tests that tuple values are not supported.
-#[test]
-fn tuples() {
-    assert_error!("()", ParseError::TupleValue);
-    assert_error!("(,)", ParseError::ExpectedExpr(Token::Comma));
-    assert_error!("(1,)", ParseError::TupleValue);
-    assert_error!("(x, y)", ParseError::TupleValue);
-    assert_error!("(u, v,)", ParseError::TupleValue);
-    assert_error!("(r, g, b)", ParseError::TupleValue);
-    assert_error!("(h, s, v,)", ParseError::TupleValue);
-}
-
-/// Tests that assignment cannot be used as an expression.
-#[test]
-fn assignment_exprs() {
-    assert_error!("x = y = 0", ParseError::ChainedAssignment);
-    assert_error!(
-        "1 + (x = 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Eq)
-    );
 }
 
 /// Asserts that an expected [`Ast`] is parsed from source code.

@@ -10,6 +10,9 @@ pub enum ResolveError {
     /// A statement was used in an area where an expression was expected.
     UsedStmt(ExprArea),
 
+    /// A tuple was used as a standalone value.
+    TupleValue,
+
     /// An invalid target was assigned to.
     InvalidAssignTarget,
 
@@ -46,6 +49,7 @@ impl Display for ResolveError {
 
                 f.write_str(message)
             }
+            Self::TupleValue => f.write_str("tuple values are not supported"),
             Self::InvalidAssignTarget => {
                 f.write_str("can only assign to variables and function signatures")
             }

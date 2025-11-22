@@ -24,6 +24,9 @@ pub enum Expr {
     /// A parenthesized expression.
     Paren(Box<Expr>),
 
+    /// A tuple.
+    Tuple(Vec<Expr>),
+
     /// A block.
     Block(Vec<Stmt>),
 

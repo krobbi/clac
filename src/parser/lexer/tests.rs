@@ -30,7 +30,7 @@ fn whitespace_produces_no_tokens() {
 
 /// Tests that whitespace separates digraph [`Token`]s.
 #[test]
-fn whitespace_separates_digraphs() {
+fn whitespace_separates_digraph_tokens() {
     assert_tokens!(
         "- >, ->",
         [
@@ -117,7 +117,7 @@ fn all_tokens_are_produced() {
 
 /// Tests that integer number [`Token`]s are produced.
 #[test]
-fn integers_are_produced() {
+fn integers_tokens_are_produced() {
     assert_tokens!(
         "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
         Ok[
@@ -158,7 +158,7 @@ fn integers_are_produced() {
 
 /// Tests that decimal number [`Token`]s are produced.
 #[test]
-fn decimals_are_produced() {
+fn decimal_tokens_are_produced() {
     assert_tokens!(
         "0.0, 1., -2.5, 00300.12500, 4.0625, .5, 0.03125, .,",
         [
@@ -186,7 +186,7 @@ fn decimals_are_produced() {
 
 /// Tests that decimal number [`Token`]s are parsed accurately.
 #[test]
-fn decimals_are_accurate() {
+fn decimal_tokens_are_accurate() {
     use std::f64::consts::PI;
 
     // Test pi as it is written in the standard library.

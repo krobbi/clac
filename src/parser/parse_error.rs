@@ -21,9 +21,6 @@ pub enum ParseError {
 
     /// A chained assignment was attempted.
     ChainedAssignment,
-
-    /// A tuple was used as a standalone value.
-    TupleValue,
 }
 
 impl From<LexError> for ParseError {
@@ -50,7 +47,6 @@ impl Display for ParseError {
             }
             Self::ExpectedExpr(token) => write!(f, "expected an expression, got {token}"),
             Self::ChainedAssignment => f.write_str("assignments cannot be chained"),
-            Self::TupleValue => f.write_str("tuple values are not supported"),
         }
     }
 }
