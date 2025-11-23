@@ -3,7 +3,7 @@ use crate::decl_table::DeclId;
 /// A stack of local variables and intermediate values.
 #[derive(Default)]
 pub struct Stack {
-    /// The declared stack elements.
+    /// The declared [`Elem`]s.
     elems: Vec<Elem>,
 
     /// The stack offsets to each scope.
@@ -22,29 +22,29 @@ impl Stack {
         self.elems.len()
     }
 
-    /// Pushes a new scope to the `Stack`.
-    pub fn push_scope(&mut self) {
+    /// Begins a scope.
+    pub fn begin_scope(&mut self) {
         self.scope_offsets.push(self.len());
     }
 
-    /// Pops a scope from the `Stack` and returns the number of local
-    /// variables that were declared in the popped scope.
-    pub fn pop_scope(&mut self) -> usize {
-        let scope_offset = self
+    /// Ends a scope and returns the number of local variables that were
+    /// declared in the scope.
+    pub fn end_scope(&mut self) -> usize {
+        let stack_offset = self
             .scope_offsets
             .pop()
             .expect("scope stack should not be empty");
 
         #[cfg(debug_assertions)]
-        for elem in &self.elems[scope_offset..] {
+        for elem in &self.elems[stack_offset..] {
             debug_assert!(
                 matches!(elem, Elem::Local(_)),
-                "popped scope should not contain intermediate values"
+                "dropped elements should only be local variables"
             );
         }
 
-        let local_count = self.len() - scope_offset;
-        self.elems.truncate(scope_offset);
+        let local_count = self.len() - stack_offset;
+        self.elems.truncate(stack_offset);
         local_count
     }
 
@@ -58,15 +58,20 @@ impl Stack {
         self.elems.push(Elem::Intermediate);
     }
 
-    /// Declares the removal of an intermediate value from the top of the
-    /// `Stack`.
-    pub fn declare_drop_intermediate(&mut self) {
-        let dropped = self.elems.pop();
+    /// Declares the removal of a number of intermediate values from the top of
+    /// the `Stack`.
+    pub fn drop_intermediates(&mut self, count: usize) {
+        let stack_offset = self.len() - count;
 
-        debug_assert!(
-            matches!(dropped, Some(Elem::Intermediate)),
-            "there should be an intermediate value on top of the stack"
-        );
+        #[cfg(debug_assertions)]
+        for elem in &self.elems[stack_offset..] {
+            debug_assert!(
+                matches!(elem, Elem::Intermediate),
+                "dropped elements should only be intermediate values"
+            );
+        }
+
+        self.elems.truncate(stack_offset);
     }
 
     /// Returns the stack offset of a local variable.

@@ -76,9 +76,9 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a block [`Stmt`].
     fn compile_stmt_block(&mut self, stmts: &[Stmt]) {
-        self.stack.push_scope();
+        self.stack.begin_scope();
         self.compile_stmts(stmts);
-        let local_count = self.stack.pop_scope();
+        let local_count = self.stack.end_scope();
         self.compile_drop(local_count);
     }
 
@@ -138,10 +138,10 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a block [`Expr`].
     fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
-        self.stack.push_scope();
+        self.stack.begin_scope();
         self.compile_stmts(stmts);
         self.compile_expr(expr);
-        let local_count = self.stack.pop_scope();
+        let local_count = self.stack.end_scope();
 
         if local_count > 0 {
             // The result of the block expression is on top of the stack, but
@@ -210,10 +210,7 @@ impl<'a> Compiler<'a> {
 
         let arity = args.len();
         self.compile(Instruction::Call(arity));
-
-        for _ in 0..=arity {
-            self.stack.declare_drop_intermediate();
-        }
+        self.stack.drop_intermediates(arity + 1);
     }
 
     /// Compiles a binary [`Expr`].
@@ -230,7 +227,7 @@ impl<'a> Compiler<'a> {
         };
 
         self.compile(Instruction::Binary(op));
-        self.stack.declare_drop_intermediate();
+        self.stack.drop_intermediates(1);
     }
 
     /// Appends an [`Instruction`] to the current block.
