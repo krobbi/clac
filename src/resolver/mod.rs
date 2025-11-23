@@ -278,7 +278,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
         }
 
         let id = self.locals.declare(name);
-        Ok(hir::Stmt::DeclareLocal(id, value.into()))
+        Ok(hir::Stmt::DefineLocal(id, value.into()))
     }
 }
 

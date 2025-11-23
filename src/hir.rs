@@ -14,8 +14,8 @@ pub enum Stmt {
     /// A global variable assignment.
     AssignGlobal(String, Box<Expr>),
 
-    /// A local variable declaration.
-    DeclareLocal(DeclId, Box<Expr>),
+    /// A local variable definition.
+    DefineLocal(DeclId, Box<Expr>),
 
     /// A print statement.
     Print(Box<Expr>),

@@ -46,8 +46,8 @@ pub enum Instruction {
     /// Load a [`Value`] from a local variable and push it to the stack.
     LoadLocal(usize),
 
-    /// Pop a [`Value`] from the stack and declare it as an upvalue.
-    DeclareUpvalue(DeclId),
+    /// Pop a [`Value`] from the stack and define it as an upvalue.
+    DefineUpvalue(DeclId),
 
     /// Pop a [`Value`] from the stack and store it in a global variable.
     StoreGlobal(String),

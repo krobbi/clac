@@ -59,7 +59,7 @@ impl<'a, 'b> Interpreter<'a, 'b> {
                     self.upvalues.get(id).expect("upvalue should exist").clone(),
                 )),
                 Instruction::LoadLocal(index) => self.stack.push(self.stack[*index].clone()),
-                Instruction::DeclareUpvalue(id) => {
+                Instruction::DefineUpvalue(id) => {
                     let value = self.pop();
                     self.upvalues.insert(*id, value.into());
                 }

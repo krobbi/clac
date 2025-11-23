@@ -68,7 +68,7 @@ impl<'a> Compiler<'a> {
             Stmt::Nop => (),
             Stmt::Block(stmts) => self.compile_stmt_block(stmts),
             Stmt::AssignGlobal(name, value) => self.compile_stmt_assign_global(name, value),
-            Stmt::DeclareLocal(id, value) => self.compile_stmt_declare_local(*id, value),
+            Stmt::DefineLocal(id, value) => self.compile_stmt_define_local(*id, value),
             Stmt::Print(value) => self.compile_stmt_print(value),
             Stmt::Expr(expr) => self.compile_stmt_expr(expr),
         }
@@ -88,12 +88,12 @@ impl<'a> Compiler<'a> {
         self.compile(Instruction::StoreGlobal(name.to_owned()));
     }
 
-    /// Compiles a local variable declaration [`Stmt`].
-    fn compile_stmt_declare_local(&mut self, id: DeclId, value: &Expr) {
+    /// Compiles a local variable definition [`Stmt`].
+    fn compile_stmt_define_local(&mut self, id: DeclId, value: &Expr) {
         self.compile_expr(value);
 
         if self.decls.get(id).is_upvalue {
-            self.compile(Instruction::DeclareUpvalue(id));
+            self.compile(Instruction::DefineUpvalue(id));
         } else {
             self.stack.declare_local(id);
         }
@@ -165,13 +165,13 @@ impl<'a> Compiler<'a> {
                 compiler.stack.declare_intermediate();
 
                 // Upvalue arguments are copied from the stack before they are
-                // declared as upvalues. The caller has already placed all of
-                // the arguments on the stack, so the top of the stack may not
-                // be the upvalue that is expected. This load instruction could
+                // defined as upvalues. The caller has already placed all of the
+                // arguments on the stack, so the top of the stack may not be
+                // the upvalue that is expected. This load instruction could
                 // possibly be eliminated for upvalues at the end of the
                 // arguments list.
                 compiler.compile(Instruction::LoadLocal(offset));
-                compiler.compile(Instruction::DeclareUpvalue(id));
+                compiler.compile(Instruction::DefineUpvalue(id));
             } else {
                 compiler.stack.declare_local(id);
             }

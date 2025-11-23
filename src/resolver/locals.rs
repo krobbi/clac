@@ -32,14 +32,14 @@ impl<'a> Locals<'a> {
     /// Ends a block.
     pub fn end_block(&mut self) {
         debug_assert!(!self.scopes.is_empty(), "scope stack should not be empty");
-        self.scopes.pop();
+        self.scopes.truncate(self.scopes.len() - 1);
     }
 
     /// Begins a function.
     pub fn begin_function(&mut self) {
-        let depth = self.scopes.len();
+        let scope_depth = self.scopes.len();
         self.scopes.push(HashMap::new());
-        self.functions.push(depth);
+        self.functions.push(scope_depth);
     }
 
     /// Ends a function.
@@ -50,8 +50,8 @@ impl<'a> Locals<'a> {
         );
 
         debug_assert!(!self.scopes.is_empty(), "scope stack should not be empty");
-        self.functions.pop();
-        self.scopes.pop();
+        self.functions.truncate(self.functions.len() - 1);
+        self.scopes.truncate(self.scopes.len() - 1);
     }
 
     /// Declares a local variable and returns its [`DeclId`].
@@ -66,7 +66,8 @@ impl<'a> Locals<'a> {
             "variable should not be already defined"
         );
 
-        let id = self.decls.declare(self.functions.len());
+        let call_depth = self.functions.len();
+        let id = self.decls.declare(call_depth);
         scope.insert(name.to_owned(), id);
         id
     }
@@ -74,11 +75,11 @@ impl<'a> Locals<'a> {
     /// Reads a local variable and returns its [`DeclId`]. This function returns
     /// [`None`] if the local variable is undefined.
     pub fn read(&mut self, name: &str) -> Option<DeclId> {
-        for (depth, scope) in self.scopes.iter().enumerate().rev() {
-            if let Some(id) = scope.get(name).copied() {
-                let function_depth = self.functions.last().copied().unwrap_or(0);
+        let function_scope_depth = self.functions.last().copied().unwrap_or(0);
 
-                if depth < function_depth {
+        for (scope_depth, scope) in self.scopes.iter().enumerate().rev() {
+            if let Some(id) = scope.get(name).copied() {
+                if scope_depth < function_scope_depth {
                     self.decls.get_mut(id).is_upvalue = true;
                 }
 
