@@ -1,4 +1,5 @@
 mod ast;
+mod cfg;
 mod clac_error;
 mod compiler;
 mod decl_table;
@@ -80,7 +81,8 @@ fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacErr
     let ast = parser::parse_source(source)?;
     let mut decls = DeclTable::new();
     let hir = resolver::resolve_ast(&ast, globals, &mut decls)?;
-    let ir = compiler::compile_hir(&hir, &decls);
+    let (ir, cfg) = compiler::compile_hir(&hir, &decls);
+    println!("{cfg}");
     interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

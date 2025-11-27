@@ -3,6 +3,7 @@ mod body;
 use std::mem;
 
 use crate::{
+    cfg::Cfg,
     decl_table::{DeclId, DeclTable},
     hir::{BinOp, Expr, Hir, Stmt},
     ir::{self, Function, Instruction, Ir, Value},
@@ -10,17 +11,22 @@ use crate::{
 
 use self::body::Body;
 
-/// Compiles [`Hir`] to [`Ir`] with a [`DeclTable`].
-pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Ir {
-    let mut compiler = Compiler::new(decls);
+/// Compiles [`Hir`] to [`Ir`] and a [`Cfg`] with a [`DeclTable`].
+pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> (Ir, Cfg) {
+    let mut cfg = Cfg::new();
+    let mut compiler = Compiler::new(decls, &mut cfg);
     compiler.compile_hir(hir);
-    Ir(compiler.into_body())
+    (Ir(compiler.into_body()), cfg)
 }
 
-/// A structure that compiles [`Hir`] to an [`ir::Body`].
-struct Compiler<'a> {
+/// A structure that compiles [`Hir`] to an [`ir::Body`] and a [`Cfg`].
+struct Compiler<'a, 'b> {
     /// The [`DeclTable`].
     decls: &'a DeclTable,
+
+    /// The [`Cfg`].
+    #[expect(dead_code, reason = "not yet implemented")]
+    cfg: &'b mut Cfg,
 
     /// The current call depth.
     call_depth: usize,
@@ -29,11 +35,12 @@ struct Compiler<'a> {
     body: Body,
 }
 
-impl<'a> Compiler<'a> {
-    /// Creates a new `Compiler` from a [`DeclTable`].
-    fn new(decls: &'a DeclTable) -> Self {
+impl<'a, 'b> Compiler<'a, 'b> {
+    /// Creates a new `Compiler` from a [`DeclTable`] and a [`Cfg`].
+    fn new(decls: &'a DeclTable, cfg: &'b mut Cfg) -> Self {
         Self {
             decls,
+            cfg,
             call_depth: 0,
             body: Body::new(0),
         }
