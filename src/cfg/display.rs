@@ -31,8 +31,11 @@ impl Display for Block {
 
 impl Display for Exit {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Halt => f.write_str("halt"),
-        }
+        let message = match self {
+            Self::Halt => "halt",
+            Self::Return => "return",
+        };
+
+        f.write_str(message)
     }
 }

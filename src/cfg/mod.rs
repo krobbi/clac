@@ -16,6 +16,18 @@ impl Cfg {
             blocks: vec![Block { exit: Exit::Halt }],
         }
     }
+
+    /// Inserts a new [`Block`] into the `Cfg` and returns its [`Label`].
+    pub fn insert_block(&mut self) -> Label {
+        let index = self.blocks.len();
+        self.blocks.push(Block { exit: Exit::Halt });
+        Label(index)
+    }
+
+    /// Returns a mutable reference to a [`Block`] from its [`Label`].
+    pub fn block_mut(&mut self, label: Label) -> &mut Block {
+        &mut self.blocks[label.0]
+    }
 }
 
 /// A label for a [`Block`].
@@ -32,4 +44,7 @@ pub struct Block {
 pub enum Exit {
     /// Halts execution.
     Halt,
+
+    /// Pops a value from the top of the stack and returns it.
+    Return,
 }

@@ -3,7 +3,7 @@ mod body;
 use std::mem;
 
 use crate::{
-    cfg::Cfg,
+    cfg::{Block, Cfg, Exit, Label},
     decl_table::{DeclId, DeclTable},
     hir::{BinOp, Expr, Hir, Stmt},
     ir::{self, Function, Instruction, Ir, Value},
@@ -24,15 +24,17 @@ struct Compiler<'a, 'b> {
     /// The [`DeclTable`].
     decls: &'a DeclTable,
 
-    /// The [`Cfg`].
-    #[expect(dead_code, reason = "not yet implemented")]
-    cfg: &'b mut Cfg,
-
     /// The current call depth.
     call_depth: usize,
 
     /// The current [`Body`].
     body: Body,
+
+    /// The current [`Label`].
+    label: Label,
+
+    /// The [`Cfg`].
+    cfg: &'b mut Cfg,
 }
 
 impl<'a, 'b> Compiler<'a, 'b> {
@@ -40,9 +42,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn new(decls: &'a DeclTable, cfg: &'b mut Cfg) -> Self {
         Self {
             decls,
-            cfg,
             call_depth: 0,
             body: Body::new(0),
+            label: Label::default(),
+            cfg,
         }
     }
 
@@ -158,6 +161,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
         self.call_depth += 1;
         let outer_body = mem::replace(&mut self.body, Body::new(self.call_depth));
+        let outer_label = mem::replace(&mut self.label, self.cfg.insert_block());
 
         // The function's arguments are already on the stack, but need to be
         // declared.
@@ -180,6 +184,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
         }
 
         self.compile_expr(body);
+        self.block_mut().exit = Exit::Return;
+        self.label = outer_label;
         let upvalue_call_depth = self.body.upvalue_call_depth;
 
         let function = Function {
@@ -243,5 +249,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
         for _ in 0..count {
             self.compile(Instruction::Drop);
         }
+    }
+
+    /// Returns a mutable reference to the current [`Block`].
+    fn block_mut(&mut self) -> &mut Block {
+        self.cfg.block_mut(self.label)
     }
 }
