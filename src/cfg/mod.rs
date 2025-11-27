@@ -56,6 +56,9 @@ pub enum Instruction {
 
     /// Pops a value from the stack and discards it.
     Drop,
+
+    /// Pops a value from the stack and prints it.
+    Print,
 }
 
 /// A [`Block`]'s exit point.

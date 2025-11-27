@@ -107,6 +107,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles a print [`Stmt`].
     fn compile_stmt_print(&mut self, value: &Expr) {
         self.compile_expr(value);
+        self.compile(Instruction::Print);
         self.compile_ir(ir::Instruction::Print);
     }
 

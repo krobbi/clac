@@ -47,6 +47,7 @@ impl Display for Instruction {
         match self {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
             Self::Drop => f.write_str("drop"),
+            Self::Print => f.write_str("print"),
         }
     }
 }
