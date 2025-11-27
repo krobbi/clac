@@ -1,5 +1,7 @@
 mod display;
 
+use crate::ast::Literal;
+
 /// A control flow graph.
 pub struct Cfg {
     // NOTE: Any labels in the CFG will break if these blocks are rearranged
@@ -12,15 +14,19 @@ pub struct Cfg {
 impl Cfg {
     /// Creates a new `Cfg`.
     pub fn new() -> Self {
-        Self {
-            blocks: vec![Block { exit: Exit::Halt }],
-        }
+        let mut cfg = Self { blocks: Vec::new() };
+        cfg.insert_block();
+        cfg
     }
 
     /// Inserts a new [`Block`] into the `Cfg` and returns its [`Label`].
     pub fn insert_block(&mut self) -> Label {
         let index = self.blocks.len();
-        self.blocks.push(Block { exit: Exit::Halt });
+        self.blocks.push(Block {
+            instructions: Vec::new(),
+            exit: Exit::Halt,
+        });
+
         Label(index)
     }
 
@@ -36,8 +42,20 @@ pub struct Label(usize);
 
 /// A basic block.
 pub struct Block {
+    /// The [`Instruction`]s.
+    pub instructions: Vec<Instruction>,
+
     /// The [`Exit`].
     pub exit: Exit,
+}
+
+/// An instruction that may appear in the middle of a [`Block`].
+pub enum Instruction {
+    /// Pushes a [`Literal`] value to the stack.
+    PushLiteral(Literal),
+
+    /// Pops a value from the stack and discards it.
+    Drop,
 }
 
 /// A [`Block`]'s exit point.

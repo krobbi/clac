@@ -4,10 +4,10 @@ use std::mem;
 
 use crate::{
     ast::{BinOp, Literal},
-    cfg::{Block, Cfg, Exit, Label},
+    cfg::{Block, Cfg, Exit, Instruction, Label},
     decl_table::{DeclId, DeclTable},
     hir::{Expr, Hir, Stmt},
-    ir::{self, Function, Instruction, Ir, Value},
+    ir::{self, Function, Ir, Value},
 };
 
 use self::body::Body;
@@ -90,7 +90,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles a global variable assignment [`Stmt`].
     fn compile_stmt_assign_global(&mut self, name: &str, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::StoreGlobal(name.to_owned()));
+        self.compile_ir(ir::Instruction::StoreGlobal(name.to_owned()));
     }
 
     /// Compiles a local variable definition [`Stmt`].
@@ -98,7 +98,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_expr(value);
 
         if self.decls.get(id).is_upvalue {
-            self.compile(Instruction::DefineUpvalue(id));
+            self.compile_ir(ir::Instruction::DefineUpvalue(id));
         } else {
             self.body.stack.declare_local(id);
         }
@@ -107,20 +107,21 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles a print [`Stmt`].
     fn compile_stmt_print(&mut self, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::Print);
+        self.compile_ir(ir::Instruction::Print);
     }
 
     /// Compiles an expression [`Stmt`].
     fn compile_stmt_expr(&mut self, expr: &Expr) {
         self.compile_expr(expr);
         self.compile(Instruction::Drop);
+        self.compile_ir(ir::Instruction::Drop);
     }
 
     /// Compiles an [`Expr`].
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Literal(literal) => self.compile_expr_literal(literal),
-            Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
+            Expr::Global(name) => self.compile_ir(ir::Instruction::LoadGlobal(name.to_owned())),
             Expr::Local(id) => self.compile_expr_local(*id),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
@@ -131,8 +132,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles a literal [`Expr`].
     fn compile_expr_literal(&mut self, literal: &Literal) {
+        self.compile(Instruction::PushLiteral(literal.clone()));
+
         match literal {
-            Literal::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
+            Literal::Number(value) => self.compile_ir(ir::Instruction::Push(Value::Number(*value))),
         }
     }
 
@@ -141,10 +144,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
         let decl = self.decls.get(id);
 
         if decl.is_upvalue {
-            self.compile(Instruction::LoadUpvalue(id));
+            self.compile_ir(ir::Instruction::LoadUpvalue(id));
             self.body.access_upvalue(decl.call_depth);
         } else {
-            self.compile(Instruction::LoadLocal(self.body.stack.local_offset(id)));
+            self.compile_ir(ir::Instruction::LoadLocal(self.body.stack.local_offset(id)));
         }
     }
 
@@ -160,7 +163,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             // there are local variables below it that need to be dropped. Move
             // the result into the first local variable and drop any local
             // variables above it.
-            self.compile(Instruction::StoreLocal(self.body.stack.len()));
+            self.compile_ir(ir::Instruction::StoreLocal(self.body.stack.len()));
             self.compile_drop(local_count - 1);
         }
     }
@@ -184,8 +187,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
                 // the upvalue that is expected. This load instruction could
                 // possibly be eliminated for upvalues at the end of the
                 // arguments list.
-                self.compile(Instruction::LoadLocal(offset));
-                self.compile(Instruction::DefineUpvalue(id));
+                self.compile_ir(ir::Instruction::LoadLocal(offset));
+                self.compile_ir(ir::Instruction::DefineUpvalue(id));
             } else {
                 self.body.stack.declare_local(id);
             }
@@ -202,7 +205,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         };
 
         self.call_depth -= 1;
-        self.compile(Instruction::Push(Value::Function(function.into())));
+        self.compile_ir(ir::Instruction::Push(Value::Function(function.into())));
 
         if upvalue_call_depth <= self.call_depth {
             // An upvalue accessed in the inner function may outlive the outer
@@ -211,7 +214,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
             // The inner function is outlived by an upvalue that it accesses, so
             // it must be converted to a closure.
-            self.compile(Instruction::IntoClosure);
+            self.compile_ir(ir::Instruction::IntoClosure);
         }
     }
 
@@ -226,7 +229,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         }
 
         let arity = args.len();
-        self.compile(Instruction::Call(arity));
+        self.compile_ir(ir::Instruction::Call(arity));
         self.body.stack.drop_intermediates(arity + 1);
     }
 
@@ -243,24 +246,32 @@ impl<'a, 'b> Compiler<'a, 'b> {
             BinOp::Divide => ir::BinOp::Divide,
         };
 
-        self.compile(Instruction::Binary(op));
+        self.compile_ir(ir::Instruction::Binary(op));
         self.body.stack.drop_intermediates(1);
     }
 
-    /// Appends an [`Instruction`] to the current block.
+    /// Appends an [`Instruction`] to the current [`Block`].
     fn compile(&mut self, instruction: Instruction) {
-        self.body.instructions.push(instruction);
+        self.block_mut().instructions.push(instruction);
     }
 
-    /// Appends multiple drop [`Instruction`]s to the current block.
+    /// Appends multiple drop [`Instruction`]s to the current [`Block`].
     fn compile_drop(&mut self, count: usize) {
         for _ in 0..count {
             self.compile(Instruction::Drop);
+            self.compile_ir(ir::Instruction::Drop);
         }
     }
 
     /// Returns a mutable reference to the current [`Block`].
     fn block_mut(&mut self) -> &mut Block {
         self.cfg.block_mut(self.label)
+    }
+
+    /// Compiles an [`ir::Instruction`] for the current [`ir::Body`]. This
+    /// function is deprecated and will be removed when the [`Cfg`] is
+    /// implemented.
+    fn compile_ir(&mut self, instruction: ir::Instruction) {
+        self.body.instructions.push(instruction);
     }
 }
