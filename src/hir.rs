@@ -1,4 +1,7 @@
-use crate::{ast::Literal, decl_table::DeclId};
+use crate::{
+    ast::{BinOp, Literal},
+    decl_table::DeclId,
+};
 
 /// A high-level intermediate representation of a program.
 pub struct Hir(pub Vec<Stmt>);
@@ -46,20 +49,4 @@ pub enum Expr {
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),
-}
-
-/// A binary operator.
-#[derive(Clone, Copy)]
-pub enum BinOp {
-    /// An addition.
-    Add,
-
-    /// A subtraction.
-    Subtract,
-
-    /// A multiplication.
-    Multiply,
-
-    /// A division.
-    Divide,
 }

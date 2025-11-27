@@ -3,10 +3,10 @@ mod body;
 use std::mem;
 
 use crate::{
-    ast::Literal,
+    ast::{BinOp, Literal},
     cfg::{Block, Cfg, Exit, Label},
     decl_table::{DeclId, DeclTable},
-    hir::{BinOp, Expr, Hir, Stmt},
+    hir::{Expr, Hir, Stmt},
     ir::{self, Function, Instruction, Ir, Value},
 };
 

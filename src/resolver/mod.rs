@@ -226,13 +226,15 @@ impl<'a, 'b> Resolver<'a, 'b> {
     fn resolve_expr_unary(&mut self, op: UnOp, rhs: &Expr) -> Result<hir::Expr> {
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
 
-        match op {
-            UnOp::Negate => {
-                let op = hir::BinOp::Subtract;
-                let lhs = hir::Expr::Literal(Literal::Number(0.0));
-                Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
-            }
-        }
+        let op = match op {
+            UnOp::Negate => BinOp::Subtract,
+        };
+
+        Ok(hir::Expr::Binary(
+            op,
+            hir::Expr::Literal(Literal::Number(0.0)).into(),
+            rhs.into(),
+        ))
     }
 
     /// Resolves a binary [`Expr`] to an [`hir::Expr`]. This function returns a
@@ -241,14 +243,6 @@ impl<'a, 'b> Resolver<'a, 'b> {
     fn resolve_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) -> Result<hir::Expr> {
         let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
-
-        let op = match op {
-            BinOp::Add => hir::BinOp::Add,
-            BinOp::Subtract => hir::BinOp::Subtract,
-            BinOp::Multiply => hir::BinOp::Multiply,
-            BinOp::Divide => hir::BinOp::Divide,
-        };
-
         Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
     }
 
