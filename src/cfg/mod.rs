@@ -59,6 +59,9 @@ pub enum Instruction {
 
     /// Pops a value from the stack and prints it.
     Print,
+
+    /// Pops a value from the stack and stores it in a global variable.
+    StoreGlobal(String),
 }
 
 /// A [`Block`]'s exit point.

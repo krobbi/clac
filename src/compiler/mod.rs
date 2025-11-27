@@ -90,6 +90,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles a global variable assignment [`Stmt`].
     fn compile_stmt_assign_global(&mut self, name: &str, value: &Expr) {
         self.compile_expr(value);
+        self.compile(Instruction::StoreGlobal(name.to_owned()));
         self.compile_ir(ir::Instruction::StoreGlobal(name.to_owned()));
     }
 

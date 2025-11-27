@@ -48,6 +48,7 @@ impl Display for Instruction {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
             Self::Drop => f.write_str("drop"),
             Self::Print => f.write_str("print"),
+            Self::StoreGlobal(name) => write!(f, "{:16}{name}", "store_global"),
         }
     }
 }
