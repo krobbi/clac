@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use super::*;
+use super::{Ast, BinOp, Expr, Literal, Stmt, UnOp};
 
 impl Display for Ast {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -20,7 +20,7 @@ impl Display for Stmt {
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(value) => value.fmt(f),
+            Self::Literal(literal) => literal.fmt(f),
             Self::Ident(name) => f.write_str(name),
             Self::Paren(expr) => write_s_expr(f, "p:", &[expr]),
             Self::Tuple(exprs) => write_s_expr(f, "t:", exprs),
@@ -33,6 +33,14 @@ impl Display for Expr {
             Self::Call(callee, args) => write_s_expr(f, callee, args),
             Self::Unary(op, expr) => write_s_expr(f, op, &[expr]),
             Self::Binary(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
+        }
+    }
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Number(value) => value.fmt(f),
         }
     }
 }

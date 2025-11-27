@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
     /// [`Expr`] could not be parsed.
     fn parse_expr_call(&mut self) -> Result<Expr, ParseError> {
         let mut callee = match self.bump()? {
-            Token::Number(value) => Expr::Number(value),
+            Token::Literal(literal) => Expr::Literal(literal),
             Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => self.parse_expr_paren()?,
             Token::OpenBrace => {

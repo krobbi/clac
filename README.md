@@ -297,7 +297,7 @@ expr_sum      = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term     = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix   = "-", expr_prefix | expr_call ;
 expr_call     = expr_primary, { expr_paren } ;
-expr_primary  = expr_paren | "{", sequence, "}" | Number | Ident ;
+expr_primary  = expr_paren | "{", sequence, "}" | Literal | Ident ;
 expr_paren    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
 ```
 

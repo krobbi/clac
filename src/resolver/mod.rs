@@ -7,7 +7,7 @@ pub use self::resolve_error::ResolveError;
 use std::{collections::HashSet, result};
 
 use crate::{
-    ast::{Ast, BinOp, Expr, Stmt, UnOp},
+    ast::{Ast, BinOp, Expr, Literal, Stmt, UnOp},
     decl_table::DeclTable,
     hir::{self, Hir},
     interpreter::Globals,
@@ -123,7 +123,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// [`ResolveError`] if the [`Expr`] could not be resolved.
     fn resolve_expr_voidable(&mut self, expr: &Expr) -> Result<Voidable> {
         let expr = match expr {
-            Expr::Number(value) => Ok(hir::Expr::Number(*value)),
+            Expr::Literal(literal) => Ok(hir::Expr::Literal(literal.clone())),
             Expr::Ident(name) => self.resolve_expr_ident(name),
             Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren),
             Expr::Tuple(_) => Err(ResolveError::TupleValue),
@@ -229,7 +229,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
         match op {
             UnOp::Negate => {
                 let op = hir::BinOp::Subtract;
-                let lhs = hir::Expr::Number(0.0);
+                let lhs = hir::Expr::Literal(Literal::Number(0.0));
                 Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
             }
         }

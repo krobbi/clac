@@ -1,4 +1,4 @@
-use crate::decl_table::DeclId;
+use crate::{ast::Literal, decl_table::DeclId};
 
 /// A high-level intermediate representation of a program.
 pub struct Hir(pub Vec<Stmt>);
@@ -26,8 +26,8 @@ pub enum Stmt {
 
 /// An expression.
 pub enum Expr {
-    /// A number.
-    Number(f64),
+    /// A [`Literal`].
+    Literal(Literal),
 
     /// A global variable.
     Global(String),

@@ -1,10 +1,11 @@
-#[cfg(test)]
-mod test_display;
+mod display;
 
 /// An abstract syntax tree.
+#[derive(Debug)]
 pub struct Ast(pub Vec<Stmt>);
 
 /// A statement.
+#[derive(Debug)]
 pub enum Stmt {
     /// An assignment.
     Assign(Box<Expr>, Box<Expr>),
@@ -14,9 +15,10 @@ pub enum Stmt {
 }
 
 /// An expression.
+#[derive(Debug)]
 pub enum Expr {
-    /// A number.
-    Number(f64),
+    /// A [`Literal`].
+    Literal(Literal),
 
     /// An identifier.
     Ident(String),
@@ -43,15 +45,24 @@ pub enum Expr {
     Binary(BinOp, Box<Expr>, Box<Expr>),
 }
 
+// NOTE: 'Token' cannot be linked in the documentation because it is
+// encapsulated in the parser module.
+/// A value that can be represented with a single token.
+#[derive(Clone, Debug)]
+pub enum Literal {
+    /// A number.
+    Number(f64),
+}
+
 /// A unary operator.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum UnOp {
     /// A negation.
     Negate,
 }
 
 /// A binary operator.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BinOp {
     /// An addition.
     Add,

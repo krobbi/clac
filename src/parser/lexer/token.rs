@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
+use crate::ast::Literal;
+
 /// Converts a type metavariable to a wildcard pattern.
 macro_rules! wildcard {
     ($type:ty) => {
@@ -53,7 +55,7 @@ macro_rules! define_tokens {
 }
 
 define_tokens! {
-    (Number(f64), "A number.", "a number"),
+    (Literal(Literal), "A [`Literal`].", "a literal"),
     (Ident(String), "An identifier.", "an identifier"),
     (OpenParen, "An opening parenthesis (`(`).", "an opening '('"),
     (CloseParen, "A closing parenthesis (`)`).", "a closing ')'"),
@@ -72,7 +74,9 @@ define_tokens! {
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(value) => write!(f, "number '{value}'"),
+            Self::Literal(literal) => match literal {
+                Literal::Number(value) => write!(f, "number '{value}'"),
+            },
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             _ => self.as_type().fmt(f),
         }

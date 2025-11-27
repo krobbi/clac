@@ -10,6 +10,8 @@ pub use self::{
     token::{Token, TokenType},
 };
 
+use crate::ast::Literal;
+
 use self::scanner::Scanner;
 
 /// A structure that reads a stream of [`Token`]s from source code.
@@ -70,7 +72,7 @@ impl<'a> Lexer<'a> {
 
         let value = self.scanner.lexeme();
         let value = value.parse().expect("value should be a valid float");
-        Token::Number(value)
+        Token::Literal(Literal::Number(value))
     }
 
     /// Reads the next identifier [`Token`] after consuming its first [`char`].

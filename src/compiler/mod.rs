@@ -3,6 +3,7 @@ mod body;
 use std::mem;
 
 use crate::{
+    ast::Literal,
     cfg::{Block, Cfg, Exit, Label},
     decl_table::{DeclId, DeclTable},
     hir::{BinOp, Expr, Hir, Stmt},
@@ -118,13 +119,20 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles an [`Expr`].
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
+            Expr::Literal(literal) => self.compile_expr_literal(literal),
             Expr::Global(name) => self.compile(Instruction::LoadGlobal(name.to_owned())),
             Expr::Local(id) => self.compile_expr_local(*id),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
+        }
+    }
+
+    /// Compiles a literal [`Expr`].
+    fn compile_expr_literal(&mut self, literal: &Literal) {
+        match literal {
+            Literal::Number(value) => self.compile(Instruction::Push(Value::Number(*value))),
         }
     }
 

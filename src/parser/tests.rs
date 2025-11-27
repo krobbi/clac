@@ -1,14 +1,11 @@
+use crate::ast::Literal;
+
 use super::*;
 
 /// Asserts that an expected [`ParseError`] is produced from source code.
 macro_rules! assert_error {
     ($source:literal, $error:pat $(if $guard:expr)? $(,)?) => {
-        // Can't use `Result::expect_err` because `Ast` does not implement
-        // `Debug`.
-        let Err(error) = parse_source($source) else {
-            panic!("source code should be invalid");
-        };
-
+        let error = parse_source($source).expect_err("source code should be invalid");
         assert!(matches!(error, $error $(if $guard)?));
     };
 }
@@ -141,7 +138,7 @@ fn call_arguments_require_separating_commas() {
     assert_ast("f(1)", "(a: (f 1))");
     assert_error!(
         "f(1 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Number(2.0)),
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0))),
     );
 
     assert_ast("f(1, 2)", "(a: (f 1 2))");

@@ -67,9 +67,20 @@ fn non_ascii_chars_are_scanned() {
 #[test]
 fn trailing_eof_tokens_are_produced() {
     let mut lexer = Lexer::new("1 2 3");
-    assert!(matches!(lexer.bump(), Ok(Token::Number(1.0))));
-    assert!(matches!(lexer.bump(), Ok(Token::Number(2.0))));
-    assert!(matches!(lexer.bump(), Ok(Token::Number(3.0))));
+    assert!(matches!(
+        lexer.bump(),
+        Ok(Token::Literal(Literal::Number(1.0))),
+    ));
+
+    assert!(matches!(
+        lexer.bump(),
+        Ok(Token::Literal(Literal::Number(2.0))),
+    ));
+
+    assert!(matches!(
+        lexer.bump(),
+        Ok(Token::Literal(Literal::Number(3.0))),
+    ));
 
     for _ in 0..16 {
         assert!(matches!(lexer.bump(), Ok(Token::Eof)));
@@ -84,23 +95,23 @@ fn all_tokens_are_produced() {
         Ok[
             Token::Minus,
             Token::OpenParen,
-            Token::Number(1.0),
+            Token::Literal(Literal::Number(1.0)),
             Token::Plus,
-            Token::Number(2.5),
+            Token::Literal(Literal::Number(2.5)),
             Token::CloseParen,
             Token::Star,
-            Token::Number(3.0),
+            Token::Literal(Literal::Number(3.0)),
             Token::Slash,
-            Token::Number(4.0),
+            Token::Literal(Literal::Number(4.0)),
             Token::Comma,
 
-            Token::Number(123.0),
+            Token::Literal(Literal::Number(123.0)),
             Token::Comma,
 
             Token::OpenBrace,
             Token::Ident(n) if n == "life",
             Token::RightArrow,
-            Token::Number(42.0),
+            Token::Literal(Literal::Number(42.0)),
             Token::Comma,
 
             Token::Ident(n) if n == "_F00",
@@ -121,35 +132,35 @@ fn integers_tokens_are_produced() {
     assert_tokens!(
         "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
         Ok[
-            Token::Number(0.0),
+            Token::Literal(Literal::Number(0.0)),
             Token::Comma,
 
             Token::Minus,
-            Token::Number(1.0),
+            Token::Literal(Literal::Number(1.0)),
             Token::Comma,
 
-            Token::Number(2.0),
+            Token::Literal(Literal::Number(2.0)),
             Token::Comma,
 
-            Token::Number(300.0),
+            Token::Literal(Literal::Number(300.0)),
             Token::Comma,
 
-            Token::Number(400.0),
+            Token::Literal(Literal::Number(400.0)),
             Token::Comma,
 
-            Token::Number(5.0),
+            Token::Literal(Literal::Number(5.0)),
             Token::Ident(n) if n == "_000",
             Token::Comma,
 
-            Token::Number(0.0),
+            Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "b1010",
             Token::Comma,
 
-            Token::Number(0.0),
+            Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "o10",
             Token::Comma,
 
-            Token::Number(0.0),
+            Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "xff",
             Token::Comma,
         ],
@@ -162,21 +173,21 @@ fn decimal_tokens_are_produced() {
     assert_tokens!(
         "0.0, 1., -2.5, 00300.12500, 4.0625, .5, 0.03125, .,",
         [
-            Ok(Token::Number(0.0)),
+            Ok(Token::Literal(Literal::Number(0.0))),
             Ok(Token::Comma),
-            Ok(Token::Number(1.0)),
+            Ok(Token::Literal(Literal::Number(1.0))),
             Ok(Token::Comma),
             Ok(Token::Minus),
-            Ok(Token::Number(2.5)),
+            Ok(Token::Literal(Literal::Number(2.5))),
             Ok(Token::Comma),
-            Ok(Token::Number(300.125)),
+            Ok(Token::Literal(Literal::Number(300.125))),
             Ok(Token::Comma),
-            Ok(Token::Number(4.0625)),
+            Ok(Token::Literal(Literal::Number(4.0625))),
             Ok(Token::Comma),
             Err(LexError::UnexpectedChar('.')),
-            Ok(Token::Number(5.0)),
+            Ok(Token::Literal(Literal::Number(5.0))),
             Ok(Token::Comma),
-            Ok(Token::Number(0.03125)),
+            Ok(Token::Literal(Literal::Number(0.03125))),
             Ok(Token::Comma),
             Err(LexError::UnexpectedChar('.')),
             Ok(Token::Comma),
@@ -192,12 +203,12 @@ fn decimal_tokens_are_accurate() {
     // Test pi as it is written in the standard library.
     assert_tokens!(
         "3.14159265358979323846264338327950288",
-        Ok[Token::Number(PI)],
+        Ok[Token::Literal(Literal::Number(PI))],
     );
 
     // Test pi with more decimal places than can be represented.
     assert_tokens!(
         "3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628035",
-        Ok[Token::Number(PI)],
+        Ok[Token::Literal(Literal::Number(PI))],
     );
 }
