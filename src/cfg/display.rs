@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter, Write as _};
 
-use super::{Block, Cfg, Exit, Instruction, Label};
+use super::{Block, Cfg, Exit, Instruction, Label, UpvalueId};
 
 impl Display for Cfg {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -48,8 +48,15 @@ impl Display for Instruction {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
             Self::Drop => f.write_str("drop"),
             Self::Print => f.write_str("print"),
+            Self::DefineUpvalue(id) => write!(f, "{:16}{id}", "define_upvalue"),
             Self::StoreGlobal(name) => write!(f, "{:16}{name}", "store_global"),
         }
+    }
+}
+
+impl Display for UpvalueId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "upvalue_{}", self.0)
     }
 }
 

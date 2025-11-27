@@ -60,9 +60,16 @@ pub enum Instruction {
     /// Pops a value from the stack and prints it.
     Print,
 
+    /// Pops a value from the stack and defines it as an upvalue.
+    DefineUpvalue(UpvalueId),
+
     /// Pops a value from the stack and stores it in a global variable.
     StoreGlobal(String),
 }
+
+/// A unique identifier for an upvalue.
+#[derive(Clone, Copy)]
+pub struct UpvalueId(pub usize);
 
 /// A [`Block`]'s exit point.
 pub enum Exit {

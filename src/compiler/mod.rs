@@ -1,4 +1,5 @@
 mod body;
+mod upvalue_table;
 
 use std::mem;
 
@@ -10,7 +11,7 @@ use crate::{
     ir::{self, Function, Ir, Value},
 };
 
-use self::body::Body;
+use self::{body::Body, upvalue_table::UpvalueTable};
 
 /// Compiles [`Hir`] to [`Ir`] and a [`Cfg`] with a [`DeclTable`].
 pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> (Ir, Cfg) {
@@ -24,6 +25,9 @@ pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> (Ir, Cfg) {
 struct Compiler<'a, 'b> {
     /// The [`DeclTable`].
     decls: &'a DeclTable,
+
+    /// The [`UpvalueTable`].
+    upvalues: UpvalueTable,
 
     /// The current call depth.
     call_depth: usize,
@@ -43,6 +47,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn new(decls: &'a DeclTable, cfg: &'b mut Cfg) -> Self {
         Self {
             decls,
+            upvalues: UpvalueTable::new(),
             call_depth: 0,
             body: Body::new(0),
             label: Label::default(),
@@ -99,7 +104,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_expr(value);
 
         if self.decls.get(id).is_upvalue {
-            self.compile_ir(ir::Instruction::DefineUpvalue(id));
+            self.compile_define_upvalue(id);
         } else {
             self.body.stack.declare_local(id);
         }
@@ -190,7 +195,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                 // possibly be eliminated for upvalues at the end of the
                 // arguments list.
                 self.compile_ir(ir::Instruction::LoadLocal(offset));
-                self.compile_ir(ir::Instruction::DefineUpvalue(id));
+                self.compile_define_upvalue(id);
             } else {
                 self.body.stack.declare_local(id);
             }
@@ -255,6 +260,13 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Appends an [`Instruction`] to the current [`Block`].
     fn compile(&mut self, instruction: Instruction) {
         self.block_mut().instructions.push(instruction);
+    }
+
+    /// Appends an upvalue definition instruction to the current [`Block`].
+    fn compile_define_upvalue(&mut self, id: DeclId) {
+        self.compile_ir(ir::Instruction::DefineUpvalue(id));
+        let id = self.upvalues.declare(id);
+        self.compile(Instruction::DefineUpvalue(id));
     }
 
     /// Appends multiple drop [`Instruction`]s to the current [`Block`].
