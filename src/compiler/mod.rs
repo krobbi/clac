@@ -1,53 +1,47 @@
-mod stack;
+mod body;
+
+use std::mem;
 
 use crate::{
     decl_table::{DeclId, DeclTable},
     hir::{BinOp, Expr, Hir, Stmt},
-    ir::{self, Body, Function, Instruction, Ir, Value},
+    ir::{self, Function, Instruction, Ir, Value},
 };
 
-use self::stack::Stack;
+use self::body::Body;
 
 /// Compiles [`Hir`] to [`Ir`] with a [`DeclTable`].
 pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Ir {
-    let mut compiler = Compiler::new(0, decls);
+    let mut compiler = Compiler::new(decls);
     compiler.compile_hir(hir);
     Ir(compiler.into_body())
 }
 
-/// A structure that compiles a program or [`Function`]'s [`Body`].
+/// A structure that compiles [`Hir`] to an [`ir::Body`].
 struct Compiler<'a> {
-    /// The current [`Body`]'s call depth.
-    call_depth: usize,
-
-    /// The call depth of the shallowest accessed upvalue.
-    shallowest_upvalue_call_depth: usize,
-
     /// The [`DeclTable`].
     decls: &'a DeclTable,
 
-    /// The [`Stack`] for tracking the locations of local variables.
-    stack: Stack,
+    /// The current call depth.
+    call_depth: usize,
 
-    /// The [`Instruction`]s that have been compiled.
-    instructions: Vec<Instruction>,
+    /// The current [`Body`].
+    body: Body,
 }
 
 impl<'a> Compiler<'a> {
-    /// Creates a new `Compiler` from a call depth and a [`DeclTable`].
-    fn new(call_depth: usize, decls: &'a DeclTable) -> Self {
+    /// Creates a new `Compiler` from a [`DeclTable`].
+    fn new(decls: &'a DeclTable) -> Self {
         Self {
-            call_depth,
-            shallowest_upvalue_call_depth: call_depth,
             decls,
-            stack: Stack::new(),
-            instructions: Vec::new(),
+            call_depth: 0,
+            body: Body::new(0),
         }
     }
 
-    /// Consumes the `Compiler` and converts it to a [`Body`].
-    fn into_body(self) -> Body {
-        Body(self.instructions.into_boxed_slice())
+    /// Consumes the `Compiler` and converts it to an [`ir::Body`].
+    fn into_body(self) -> ir::Body {
+        self.body.into_body()
     }
 
     /// Compiles [`Hir`].
@@ -76,9 +70,9 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a block [`Stmt`].
     fn compile_stmt_block(&mut self, stmts: &[Stmt]) {
-        self.stack.begin_scope();
+        self.body.stack.begin_scope();
         self.compile_stmts(stmts);
-        let local_count = self.stack.end_scope();
+        let local_count = self.body.stack.end_scope();
         self.compile_drop(local_count);
     }
 
@@ -95,7 +89,7 @@ impl<'a> Compiler<'a> {
         if self.decls.get(id).is_upvalue {
             self.compile(Instruction::DefineUpvalue(id));
         } else {
-            self.stack.declare_local(id);
+            self.body.stack.declare_local(id);
         }
     }
 
@@ -130,39 +124,40 @@ impl<'a> Compiler<'a> {
 
         if decl.is_upvalue {
             self.compile(Instruction::LoadUpvalue(id));
-            self.access_upvalue(decl.call_depth);
+            self.body.access_upvalue(decl.call_depth);
         } else {
-            self.compile(Instruction::LoadLocal(self.stack.local_offset(id)));
+            self.compile(Instruction::LoadLocal(self.body.stack.local_offset(id)));
         }
     }
 
     /// Compiles a block [`Expr`].
     fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
-        self.stack.begin_scope();
+        self.body.stack.begin_scope();
         self.compile_stmts(stmts);
         self.compile_expr(expr);
-        let local_count = self.stack.end_scope();
+        let local_count = self.body.stack.end_scope();
 
         if local_count > 0 {
             // The result of the block expression is on top of the stack, but
             // there are local variables below it that need to be dropped. Move
             // the result into the first local variable and drop any local
             // variables above it.
-            self.compile(Instruction::StoreLocal(self.stack.len()));
+            self.compile(Instruction::StoreLocal(self.body.stack.len()));
             self.compile_drop(local_count - 1);
         }
     }
 
     /// Compiles a function [`Expr`].
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
-        let mut compiler = Self::new(self.call_depth + 1, self.decls);
+        self.call_depth += 1;
+        let outer_body = mem::replace(&mut self.body, Body::new(self.call_depth));
 
         // The function's arguments are already on the stack, but need to be
         // declared.
         for id in params.iter().copied() {
             if self.decls.get(id).is_upvalue {
-                let offset = compiler.stack.len();
-                compiler.stack.declare_intermediate();
+                let offset = self.body.stack.len();
+                self.body.stack.declare_intermediate();
 
                 // Upvalue arguments are copied from the stack before they are
                 // defined as upvalues. The caller has already placed all of the
@@ -170,27 +165,28 @@ impl<'a> Compiler<'a> {
                 // the upvalue that is expected. This load instruction could
                 // possibly be eliminated for upvalues at the end of the
                 // arguments list.
-                compiler.compile(Instruction::LoadLocal(offset));
-                compiler.compile(Instruction::DefineUpvalue(id));
+                self.compile(Instruction::LoadLocal(offset));
+                self.compile(Instruction::DefineUpvalue(id));
             } else {
-                compiler.stack.declare_local(id);
+                self.body.stack.declare_local(id);
             }
         }
 
-        compiler.compile_expr(body);
-        let upvalue_call_depth = compiler.shallowest_upvalue_call_depth;
+        self.compile_expr(body);
+        let upvalue_call_depth = self.body.upvalue_call_depth;
 
         let function = Function {
             arity: params.len(),
-            body: compiler.into_body(),
+            body: mem::replace(&mut self.body, outer_body).into_body(),
         };
 
+        self.call_depth -= 1;
         self.compile(Instruction::Push(Value::Function(function.into())));
 
         if upvalue_call_depth <= self.call_depth {
             // An upvalue accessed in the inner function may outlive the outer
             // function, so the outer function may need to be a closure.
-            self.access_upvalue(upvalue_call_depth);
+            self.body.access_upvalue(upvalue_call_depth);
 
             // The inner function is outlived by an upvalue that it accesses, so
             // it must be converted to a closure.
@@ -201,22 +197,22 @@ impl<'a> Compiler<'a> {
     /// Compiles a function call [`Expr`].
     fn compile_expr_call(&mut self, callee: &Expr, args: &[Expr]) {
         self.compile_expr(callee);
-        self.stack.declare_intermediate();
+        self.body.stack.declare_intermediate();
 
         for arg in args {
             self.compile_expr(arg);
-            self.stack.declare_intermediate();
+            self.body.stack.declare_intermediate();
         }
 
         let arity = args.len();
         self.compile(Instruction::Call(arity));
-        self.stack.drop_intermediates(arity + 1);
+        self.body.stack.drop_intermediates(arity + 1);
     }
 
     /// Compiles a binary [`Expr`].
     fn compile_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) {
         self.compile_expr(lhs);
-        self.stack.declare_intermediate();
+        self.body.stack.declare_intermediate();
         self.compile_expr(rhs);
 
         let op = match op {
@@ -227,12 +223,12 @@ impl<'a> Compiler<'a> {
         };
 
         self.compile(Instruction::Binary(op));
-        self.stack.drop_intermediates(1);
+        self.body.stack.drop_intermediates(1);
     }
 
     /// Appends an [`Instruction`] to the current block.
     fn compile(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
+        self.body.instructions.push(instruction);
     }
 
     /// Appends multiple drop [`Instruction`]s to the current block.
@@ -240,10 +236,5 @@ impl<'a> Compiler<'a> {
         for _ in 0..count {
             self.compile(Instruction::Drop);
         }
-    }
-
-    /// Declares that an upvalue declared at a call depth has been accessed.
-    fn access_upvalue(&mut self, call_depth: usize) {
-        self.shallowest_upvalue_call_depth = self.shallowest_upvalue_call_depth.min(call_depth);
     }
 }
