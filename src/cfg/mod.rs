@@ -1,6 +1,6 @@
 mod display;
 
-use crate::ast::Literal;
+use crate::ast::{BinOp, Literal};
 
 /// A control flow graph.
 pub struct Cfg {
@@ -84,6 +84,10 @@ pub enum Instruction {
     /// Pops a function value from the stack, converts it to a closure, and
     /// pushes the result to the stack.
     IntoClosure,
+
+    /// Pops two values from the stack, applies a binary operator to them, and
+    /// pushes the result to the stack.
+    Binary(BinOp),
 }
 
 /// A unique identifier for an upvalue.

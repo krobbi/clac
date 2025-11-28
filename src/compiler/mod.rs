@@ -262,6 +262,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_expr(lhs);
         self.body.stack.declare_intermediate();
         self.compile_expr(rhs);
+        self.compile(Instruction::Binary(op));
 
         let op = match op {
             BinOp::Add => ir::BinOp::Add,

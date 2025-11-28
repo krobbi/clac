@@ -56,6 +56,7 @@ impl Display for Instruction {
             Self::StoreLocal(offset) => write!(f, "{:16}{offset}", "store_local"),
             Self::StoreGlobal(name) => write!(f, "{:16}{name}", "store_global"),
             Self::IntoClosure => f.write_str("into_closure"),
+            Self::Binary(op) => write!(f, "{:16}{op}", "binary"),
         }
     }
 }
