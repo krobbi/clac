@@ -46,6 +46,7 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
+            Self::PushGlobal(name) => write!(f, "{:16}{name}", "push_global"),
             Self::Drop => f.write_str("drop"),
             Self::Print => f.write_str("print"),
             Self::DefineUpvalue(id) => write!(f, "{:16}{id}", "define_upvalue"),

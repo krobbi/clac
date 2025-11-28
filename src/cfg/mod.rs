@@ -54,6 +54,9 @@ pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
     PushLiteral(Literal),
 
+    /// Loads a value from a global variable and pushes it to the stack.
+    PushGlobal(String),
+
     /// Pops a value from the stack and discards it.
     Drop,
 

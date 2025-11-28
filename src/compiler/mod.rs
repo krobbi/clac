@@ -128,7 +128,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Literal(literal) => self.compile_expr_literal(literal),
-            Expr::Global(name) => self.compile_ir(ir::Instruction::LoadGlobal(name.to_owned())),
+            Expr::Global(name) => self.compile_expr_global(name),
             Expr::Local(id) => self.compile_expr_local(*id),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
@@ -144,6 +144,12 @@ impl<'a, 'b> Compiler<'a, 'b> {
         match literal {
             Literal::Number(value) => self.compile_ir(ir::Instruction::Push(Value::Number(*value))),
         }
+    }
+
+    /// Compiles a global variable [`Expr`].
+    fn compile_expr_global(&mut self, name: &str) {
+        self.compile(Instruction::PushGlobal(name.to_owned()));
+        self.compile_ir(ir::Instruction::LoadGlobal(name.to_owned()));
     }
 
     /// Compiles a local variable [`Expr`].
