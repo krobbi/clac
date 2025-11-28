@@ -1,3 +1,4 @@
+mod interpret_error;
 mod value;
 
 use std::collections::HashMap;
@@ -6,7 +7,10 @@ use crate::ast::BinOp;
 
 use super::{Cfg, Exit, Instruction, Label};
 
-use self::value::{Function, Value};
+use self::{
+    interpret_error::InterpretError,
+    value::{Function, Value},
+};
 
 // TODO: Preserve global variables between REPL lines. Consider grouping this
 // global context with some other data - maybe implement a symbol table? Storing
@@ -17,7 +21,10 @@ use self::value::{Function, Value};
 /// is also being considered, but this is less likely to be implemented.
 pub fn interpret_cfg(cfg: &Cfg) {
     let mut interpreter = Interpreter::new(cfg);
-    interpreter.interpret();
+
+    if let Err(error) = interpreter.interpret() {
+        eprintln!("Error: {error}");
+    }
 }
 
 /// A structure that interprets a [`Cfg`].
@@ -50,29 +57,34 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    /// Interprets the [`Cfg`] until execution halts.
-    fn interpret(&mut self) {
+    /// Interprets the [`Cfg`] until execution halts. This function returns an
+    /// [`InterpretError`] if an error occurred.
+    fn interpret(&mut self) -> Result<(), InterpretError> {
         let mut label = Label::default();
 
-        while let Some(next_label) = self.interpret_label(label) {
+        while let Some(next_label) = self.interpret_label(label)? {
             label = next_label;
         }
+
+        Ok(())
     }
 
     /// Interprets a [`Label`] and returns the next [`Label`] to branch to. This
-    /// function returns [`None`] if execution should halt.
-    fn interpret_label(&mut self, label: Label) -> Option<Label> {
+    /// function returns [`None`] if execution should halt. This function also
+    /// returns an [`InterpretError`] if an error occurred.
+    fn interpret_label(&mut self, label: Label) -> Result<Option<Label>, InterpretError> {
         let block = self.cfg.block(label);
 
         for instruction in &block.instructions {
-            self.interpret_instruction(instruction);
+            self.interpret_instruction(instruction)?;
         }
 
         self.interpret_exit(&block.exit)
     }
 
-    /// Interprets an [`Instruction`].
-    fn interpret_instruction(&mut self, instruction: &Instruction) {
+    /// Interprets an [`Instruction`]. This function returns an
+    /// [`InterpretError`] if an error occurred.
+    fn interpret_instruction(&mut self, instruction: &Instruction) -> Result<(), InterpretError> {
         match instruction {
             Instruction::PushLiteral(literal) => self.push(literal.into()),
             Instruction::PushFunction(label, arity) => self.push(Value::Function(
@@ -85,8 +97,8 @@ impl<'a> Interpreter<'a> {
             Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
             Instruction::Binary(op) => {
-                let rhs = self.pop_number();
-                let lhs = self.pop_number();
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
 
                 let result = match op {
                     BinOp::Add => lhs + rhs,
@@ -94,7 +106,7 @@ impl<'a> Interpreter<'a> {
                     BinOp::Multiply => lhs * rhs,
                     BinOp::Divide => {
                         if !rhs.is_normal() {
-                            todo!("error handling for division by zero");
+                            return Err(InterpretError::DivideByZero);
                         }
 
                         lhs / rhs
@@ -115,13 +127,16 @@ impl<'a> Interpreter<'a> {
             Instruction::DropUpvalues(_count) => todo!("interpret instruction"),
             Instruction::IntoClosure => todo!("interpret instruction"),
         }
+
+        Ok(())
     }
 
     /// Interprets an [`Exit`] and returns the next [`Label`] to branch to. This
-    /// function returns [`None`] if execution should halt.
-    fn interpret_exit(&mut self, exit: &Exit) -> Option<Label> {
-        match exit {
-            Exit::Halt => None,
+    /// function returns [`None`] if execution should halt. This function also
+    /// returns an [`InterpretError`] if an error occurred.
+    fn interpret_exit(&mut self, exit: &Exit) -> Result<Option<Label>, InterpretError> {
+        let label = match exit {
+            Exit::Halt => return Ok(None),
             Exit::Call(arity, return_label) => {
                 self.returns.push(Return {
                     label: *return_label,
@@ -132,14 +147,14 @@ impl<'a> Interpreter<'a> {
                 self.frame = self.stack.len() - arity;
 
                 let Value::Function(function) = &self.stack[self.frame - 1] else {
-                    todo!("error handling for non-function calls");
+                    return Err(InterpretError::CalledNonFunction);
                 };
 
                 if arity != function.arity {
-                    todo!("error handling for incorrect call arity");
+                    return Err(InterpretError::IncorrectCallArity);
                 }
 
-                Some(function.label)
+                function.label
             }
             Exit::Return => {
                 let return_value = self.pop();
@@ -151,9 +166,11 @@ impl<'a> Interpreter<'a> {
                     .expect("return stack should not be empty");
 
                 self.frame = return_data.frame;
-                Some(return_data.label)
+                return_data.label
             }
-        }
+        };
+
+        Ok(Some(label))
     }
 
     /// Pushes a [`Value`] to the stack.
@@ -167,11 +184,12 @@ impl<'a> Interpreter<'a> {
     }
 
     /// Pops a number [`Value`] from the stack and returns its underlying
-    /// [`f64`].
-    fn pop_number(&mut self) -> f64 {
+    /// [`f64`]. This function returns an [`InterpretError`] if the [`Value`] is
+    /// not a number.
+    fn pop_number(&mut self) -> Result<f64, InterpretError> {
         match self.pop() {
-            Value::Number(value) => value,
-            Value::Function(_) => todo!("add error handling for non-number values"),
+            Value::Number(value) => Ok(value),
+            Value::Function(_) => Err(InterpretError::InvalidType),
         }
     }
 }
