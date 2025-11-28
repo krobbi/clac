@@ -65,9 +65,6 @@ pub enum Instruction {
     /// Loads a value from a local variable and pushes it to the stack.
     PushLocal(usize),
 
-    /// Loads an upvalue and pushes it to the stack.
-    PushUpvalue(UpvalueId),
-
     /// Loads a value from a global variable and pushes it to the stack.
     PushGlobal(String),
 
@@ -76,9 +73,6 @@ pub enum Instruction {
 
     /// Pops a value from the stack and prints it.
     Print,
-
-    /// Pops a value from the stack and defines it as an upvalue.
-    DefineUpvalue(UpvalueId),
 
     /// Pops a value from the stack and stores it in a local variable.
     StoreLocal(usize),
@@ -93,11 +87,16 @@ pub enum Instruction {
     /// Pops two values from the stack, applies a binary operator to them, and
     /// pushes the result to the stack.
     Binary(BinOp),
-}
 
-/// A unique identifier for an upvalue.
-#[derive(Clone, Copy)]
-pub struct UpvalueId(pub usize);
+    /// Pops a value from the stack and pushes it to the upvalue stack.
+    DefineUpvalue,
+
+    /// Loads an upvalue and pushes it to the stack.
+    LoadUpvalue(usize),
+
+    /// Drops a number of upvalues from the top of the upvalue stack.
+    DropUpvalues(usize),
+}
 
 /// A [`Block`]'s exit point.
 #[derive(Clone)]

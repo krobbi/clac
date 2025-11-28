@@ -35,7 +35,7 @@ impl DeclTable {
 }
 
 /// A unique identifier for a [`Decl`].
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct DeclId(usize);
 
 /// A local variable declaration.

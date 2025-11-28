@@ -1,5 +1,5 @@
 mod body;
-mod upvalue_table;
+mod upvalue_stack;
 
 use std::mem;
 
@@ -10,7 +10,7 @@ use crate::{
     hir::{Expr, Hir, Stmt},
 };
 
-use self::{body::Body, upvalue_table::UpvalueTable};
+use self::{body::Body, upvalue_stack::UpvalueStack};
 
 /// Compiles [`Hir`] to a [`Cfg`] with a [`DeclTable`].
 pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Cfg {
@@ -25,8 +25,8 @@ struct Compiler<'a, 'b> {
     /// The [`DeclTable`].
     decls: &'a DeclTable,
 
-    /// The [`UpvalueTable`].
-    upvalues: UpvalueTable,
+    /// The [`UpvalueStack`].
+    upvalues: UpvalueStack,
 
     /// The current call depth.
     call_depth: usize,
@@ -46,7 +46,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn new(decls: &'a DeclTable, cfg: &'b mut Cfg) -> Self {
         Self {
             decls,
-            upvalues: UpvalueTable::new(),
+            upvalues: UpvalueStack::new(),
             call_depth: 0,
             body: Body::new(0),
             label: Label::default(),
@@ -80,10 +80,15 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles a block [`Stmt`].
     fn compile_stmt_block(&mut self, stmts: &[Stmt]) {
+        self.upvalues.begin_scope();
+
         self.body.stack.begin_scope();
         self.compile_stmts(stmts);
         let local_count = self.body.stack.end_scope();
         self.compile_drop(local_count);
+
+        let upvalue_count = self.upvalues.end_scope();
+        self.compile_drop_upvalues(upvalue_count);
     }
 
     /// Compiles a global variable assignment [`Stmt`].
@@ -97,7 +102,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_expr(value);
 
         if self.decls.get(id).is_upvalue {
-            self.compile_define_upvalue(id);
+            self.compile(Instruction::DefineUpvalue);
+            self.upvalues.declare(id);
         } else {
             self.body.stack.declare_local(id);
         }
@@ -143,8 +149,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
         let decl = self.decls.get(id);
 
         if decl.is_upvalue {
-            let id = self.upvalues.get(id);
-            self.compile(Instruction::PushUpvalue(id));
+            let offset = self.upvalues.offset(id);
+            self.compile(Instruction::LoadUpvalue(offset));
             self.body.access_upvalue(decl.call_depth);
         } else {
             let offset = self.body.stack.local_offset(id);
@@ -154,6 +160,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles a block [`Expr`].
     fn compile_expr_block(&mut self, stmts: &[Stmt], expr: &Expr) {
+        self.upvalues.begin_scope();
+
         self.body.stack.begin_scope();
         self.compile_stmts(stmts);
         self.compile_expr(expr);
@@ -168,6 +176,9 @@ impl<'a, 'b> Compiler<'a, 'b> {
             self.compile(Instruction::StoreLocal(offset));
             self.compile_drop(local_count - 1);
         }
+
+        let upvalue_count = self.upvalues.end_scope();
+        self.compile_drop_upvalues(upvalue_count);
     }
 
     /// Compiles a function [`Expr`].
@@ -178,6 +189,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
         let function_label = self.cfg.insert_block();
         let outer_label = self.label;
         self.label = function_label;
+
+        self.upvalues.begin_scope();
 
         // The function's arguments are already on the stack, but need to be
         // declared.
@@ -191,13 +204,18 @@ impl<'a, 'b> Compiler<'a, 'b> {
                 // arguments on the stack, so the top of the stack may not be
                 // the upvalue that is expected.
                 self.compile(Instruction::PushLocal(offset));
-                self.compile_define_upvalue(id);
+                self.compile(Instruction::DefineUpvalue);
+                self.upvalues.declare(id);
             } else {
                 self.body.stack.declare_local(id);
             }
         }
 
         self.compile_expr(body);
+
+        let upvalue_count = self.upvalues.end_scope();
+        self.compile_drop_upvalues(upvalue_count);
+
         self.block_mut().exit = Exit::Return;
         self.label = outer_label;
 
@@ -249,16 +267,17 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.block_mut().instructions.push(instruction);
     }
 
-    /// Appends an upvalue definition instruction to the current [`Block`].
-    fn compile_define_upvalue(&mut self, id: DeclId) {
-        let id = self.upvalues.declare(id);
-        self.compile(Instruction::DefineUpvalue(id));
-    }
-
     /// Appends multiple drop [`Instruction`]s to the current [`Block`].
     fn compile_drop(&mut self, count: usize) {
         for _ in 0..count {
             self.compile(Instruction::Drop);
+        }
+    }
+
+    /// Appends [`Instruction`]s to drop multiple upvalues to the current block.
+    fn compile_drop_upvalues(&mut self, count: usize) {
+        if count > 0 {
+            self.compile(Instruction::DropUpvalues(count));
         }
     }
 
