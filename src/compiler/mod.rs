@@ -126,7 +126,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles an [`Expr`].
     fn compile_expr(&mut self, expr: &Expr) {
-        // TODO: Compile call expressions to CFG and remove old backend.
+        // TODO: Remove old backend.
         match expr {
             Expr::Literal(literal) => self.compile_expr_literal(literal),
             Expr::Global(name) => self.compile_expr_global(name),
@@ -254,7 +254,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
         }
 
         let arity = args.len();
+        let return_label = self.compile_branch_target();
+        self.block_mut().exit = Exit::Call(arity, return_label);
         self.compile_ir(ir::Instruction::Call(arity));
+        self.label = return_label;
         self.body.stack.drop_intermediates(arity + 1);
     }
 
@@ -294,6 +297,14 @@ impl<'a, 'b> Compiler<'a, 'b> {
             self.compile(Instruction::Drop);
             self.compile_ir(ir::Instruction::Drop);
         }
+    }
+
+    /// Creates a new [`Block`] with the current [`Block`]'s [`Exit`] and
+    /// returns its [`Label`].
+    fn compile_branch_target(&mut self) -> Label {
+        let branch_label = self.cfg.insert_block();
+        self.cfg.block_mut(branch_label).exit = self.cfg.block(self.label).exit.clone();
+        branch_label
     }
 
     /// Returns a mutable reference to the current [`Block`].

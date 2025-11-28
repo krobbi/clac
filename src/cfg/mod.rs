@@ -30,6 +30,11 @@ impl Cfg {
         Label(index)
     }
 
+    /// Returns a reference to a [`Block`] from its label.
+    pub fn block(&self, label: Label) -> &Block {
+        &self.blocks[label.0]
+    }
+
     /// Returns a mutable reference to a [`Block`] from its [`Label`].
     pub fn block_mut(&mut self, label: Label) -> &mut Block {
         &mut self.blocks[label.0]
@@ -95,9 +100,13 @@ pub enum Instruction {
 pub struct UpvalueId(pub usize);
 
 /// A [`Block`]'s exit point.
+#[derive(Clone)]
 pub enum Exit {
     /// Halts execution.
     Halt,
+
+    /// Performs a call with an arity and returns to a [`Label`].
+    Call(usize, Label),
 
     /// Pops a value from the top of the stack and returns it.
     Return,
