@@ -126,6 +126,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles an [`Expr`].
     fn compile_expr(&mut self, expr: &Expr) {
+        // TODO: Compile call expressions to CFG and remove old backend.
         match expr {
             Expr::Literal(literal) => self.compile_expr_literal(literal),
             Expr::Global(name) => self.compile_expr_global(name),
