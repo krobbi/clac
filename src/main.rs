@@ -4,8 +4,6 @@ mod clac_error;
 mod compiler;
 mod decl_table;
 mod hir;
-mod interpreter;
-mod ir;
 mod parser;
 mod resolver;
 
@@ -14,28 +12,27 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
+use self::{clac_error::ClacError, decl_table::DeclTable};
 
 /// Runs Clac.
 fn main() {
-    let mut globals = Globals::new();
     let mut args = env::args().skip(1);
 
     match args.next() {
-        None => run_repl(&mut globals),
+        None => run_repl(),
         Some(mut source) => {
             for arg in args {
                 source.push(' ');
                 source.push_str(&arg);
             }
 
-            execute_source(&source, &mut globals);
+            execute_source(&source);
         }
     }
 }
 
-/// Runs Clac in REPL mode with [`Globals`].
-fn run_repl(globals: &mut Globals) {
+/// Runs Clac in REPL mode.
+fn run_repl() {
     #[cfg(target_os = "windows")]
     const EXIT_SHORTCUT: &str = "Ctrl+Z";
 
@@ -62,27 +59,26 @@ fn run_repl(globals: &mut Globals) {
             break;
         }
 
-        execute_source(&source, globals);
+        execute_source(&source);
     }
 
     println!("\nReceived [{EXIT_SHORTCUT}], exiting...");
 }
 
-/// Executes source code with [`Globals`].
-fn execute_source(source: &str, globals: &mut Globals) {
-    if let Err(error) = try_execute_source(source, globals) {
+/// Executes source code.
+fn execute_source(source: &str) {
+    if let Err(error) = try_execute_source(source) {
         eprintln!("Error: {error}");
     }
 }
 
-/// Executes source code with [`Globals`]. This function returns a [`ClacError`]
-/// if the source code could not be executed.
-fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
+/// Executes source code. This function returns a [`ClacError`] if the source
+/// code could not be executed.
+fn try_execute_source(source: &str) -> Result<(), ClacError> {
     let ast = parser::parse_source(source)?;
     let mut decls = DeclTable::new();
-    let hir = resolver::resolve_ast(&ast, globals, &mut decls)?;
-    let (ir, cfg) = compiler::compile_hir(&hir, &decls);
+    let hir = resolver::resolve_ast(&ast, &mut decls)?;
+    let cfg = compiler::compile_hir(&hir, &decls);
     println!("{cfg}");
-    interpreter::interpret_ir(&ir, globals)?;
     Ok(())
 }

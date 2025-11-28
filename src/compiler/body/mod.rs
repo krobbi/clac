@@ -1,7 +1,5 @@
 mod stack;
 
-use crate::ir::{self, Instruction};
-
 use self::stack::Stack;
 
 /// Context for compiling a program or function's body.
@@ -12,9 +10,6 @@ pub struct Body {
 
     /// The shallowest call depth where an accessed upvalue was defined.
     pub upvalue_call_depth: usize,
-
-    /// The compiled [`Instruction`]s.
-    pub instructions: Vec<Instruction>,
 }
 
 impl Body {
@@ -23,13 +18,7 @@ impl Body {
         Self {
             stack: Stack::new(),
             upvalue_call_depth: call_depth,
-            instructions: Vec::new(),
         }
-    }
-
-    /// Consumes the `Body` and converts it to an [`ir::Body`].
-    pub fn into_body(self) -> ir::Body {
-        ir::Body(self.instructions.into())
     }
 
     /// Declares the access of an upvalue declared at a call depth.

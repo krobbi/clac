@@ -10,7 +10,6 @@ use crate::{
     ast::{Ast, BinOp, Expr, Literal, Stmt, UnOp},
     decl_table::DeclTable,
     hir::{self, Hir},
-    interpreter::Globals,
 };
 
 use self::{locals::Locals, resolve_error::ExprArea, voidable::Voidable};
@@ -18,31 +17,27 @@ use self::{locals::Locals, resolve_error::ExprArea, voidable::Voidable};
 /// A [`Result`][result::Result] that may contain a [`ResolveError`].
 type Result<T> = result::Result<T, ResolveError>;
 
-/// Resolves an [`Ast`] to [`Hir`] with [`Globals`] and a [`DeclTable`]. This
-/// function returns a [`ResolveError`] if the [`Ast`] could not be resolved.
-pub fn resolve_ast(ast: &Ast, globals: &Globals, decls: &mut DeclTable) -> Result<Hir> {
-    let mut resolver = Resolver::new(globals, decls);
+/// Resolves an [`Ast`] to [`Hir`] with a [`DeclTable`]. This function returns a
+/// [`ResolveError`] if the [`Ast`] could not be resolved.
+pub fn resolve_ast(ast: &Ast, decls: &mut DeclTable) -> Result<Hir> {
+    let mut resolver = Resolver::new(decls);
     resolver.resolve_ast(ast)
 }
 
 /// A structure that resolves an [`Ast`] to [`Hir`].
-struct Resolver<'a: 'b, 'b> {
-    /// The current [`Globals`].
-    globals: &'a Globals,
-
-    /// The set of newly-declared global variable names.
-    new_globals: HashSet<String>,
+struct Resolver<'a> {
+    /// The set of global variable names.
+    globals: HashSet<String>,
 
     /// The [`Locals`].
-    locals: Locals<'b>,
+    locals: Locals<'a>,
 }
 
-impl<'a, 'b> Resolver<'a, 'b> {
-    /// Creates a new `Resolver` from [`Globals`] and a [`DeclTable`].
-    fn new(globals: &'a Globals, decls: &'b mut DeclTable) -> Self {
+impl<'a> Resolver<'a> {
+    /// Creates a new `Resolver` from a [`DeclTable`].
+    fn new(decls: &'a mut DeclTable) -> Self {
         Self {
-            globals,
-            new_globals: HashSet::new(),
+            globals: HashSet::new(),
             locals: Locals::new(decls),
         }
     }
@@ -248,7 +243,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
 
     /// Returns `true` if a global variable is defined.
     fn is_global_defined(&self, name: &str) -> bool {
-        self.new_globals.contains(name) || self.globals.contains(name)
+        self.globals.contains(name)
     }
 
     /// Returns an [`hir::Stmt`] defining a global variable with a name and a
@@ -259,7 +254,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
             return Err(ResolveError::AlreadyDefinedVariable(name.to_owned()));
         }
 
-        self.new_globals.insert(name.to_owned());
+        self.globals.insert(name.to_owned());
         Ok(hir::Stmt::AssignGlobal(name.to_owned(), value.into()))
     }
 
