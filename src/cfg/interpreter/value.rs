@@ -1,5 +1,3 @@
-#![expect(dead_code, reason = "function values are not yet fully implemented")]
-
 use std::fmt::{self, Display, Formatter};
 
 use crate::ast::Literal;

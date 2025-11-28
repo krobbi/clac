@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::ast::BinOp;
 
-use super::{Cfg, Instruction, Label};
+use super::{Cfg, Exit, Instruction, Label};
 
 use self::value::{Function, Value};
 
@@ -17,7 +17,7 @@ use self::value::{Function, Value};
 /// is also being considered, but this is less likely to be implemented.
 pub fn interpret_cfg(cfg: &Cfg) {
     let mut interpreter = Interpreter::new(cfg);
-    interpreter.interpret_label(Label::default());
+    interpreter.interpret();
 }
 
 /// A structure that interprets a [`Cfg`].
@@ -28,8 +28,14 @@ struct Interpreter<'a> {
     /// The stack of [`Value`]s.
     stack: Vec<Value>,
 
+    /// The stack offset to the current stack frame.
+    frame: usize,
+
     /// The map of global variable names to [`Value`]s.
     globals: HashMap<String, Value>,
+
+    /// The stack of [`Return`]s.
+    returns: Vec<Return>,
 }
 
 impl<'a> Interpreter<'a> {
@@ -38,17 +44,31 @@ impl<'a> Interpreter<'a> {
         Self {
             cfg,
             stack: Vec::new(),
+            frame: 0,
             globals: HashMap::new(),
+            returns: Vec::new(),
         }
     }
 
-    /// Interprets a [`Label`].
-    fn interpret_label(&mut self, label: Label) {
+    /// Interprets the [`Cfg`] until execution halts.
+    fn interpret(&mut self) {
+        let mut label = Label::default();
+
+        while let Some(next_label) = self.interpret_label(label) {
+            label = next_label;
+        }
+    }
+
+    /// Interprets a [`Label`] and returns the next [`Label`] to branch to. This
+    /// function returns [`None`] if execution should halt.
+    fn interpret_label(&mut self, label: Label) -> Option<Label> {
         let block = self.cfg.block(label);
 
         for instruction in &block.instructions {
             self.interpret_instruction(instruction);
         }
+
+        self.interpret_exit(&block.exit)
     }
 
     /// Interprets an [`Instruction`].
@@ -68,18 +88,23 @@ impl<'a> Interpreter<'a> {
                 let rhs = self.pop_number();
                 let lhs = self.pop_number();
 
-                // TODO: Add error handling for division by zero.
                 let result = match op {
                     BinOp::Add => lhs + rhs,
                     BinOp::Subtract => lhs - rhs,
                     BinOp::Multiply => lhs * rhs,
-                    BinOp::Divide => lhs / rhs,
+                    BinOp::Divide => {
+                        if !rhs.is_normal() {
+                            todo!("error handling for division by zero");
+                        }
+
+                        lhs / rhs
+                    }
                 };
 
                 self.push(Value::Number(result));
             }
-            Instruction::LoadLocal(offset) => self.push(self.stack[*offset].clone()),
-            Instruction::StoreLocal(offset) => self.stack[*offset] = self.pop(),
+            Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
+            Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
             Instruction::LoadGlobal(name) => self.push(self.globals[name].clone()),
             Instruction::StoreGlobal(name) => {
                 let value = self.pop();
@@ -89,6 +114,45 @@ impl<'a> Interpreter<'a> {
             Instruction::LoadUpvalue(_offset) => todo!("interpret instruction"),
             Instruction::DropUpvalues(_count) => todo!("interpret instruction"),
             Instruction::IntoClosure => todo!("interpret instruction"),
+        }
+    }
+
+    /// Interprets an [`Exit`] and returns the next [`Label`] to branch to. This
+    /// function returns [`None`] if execution should halt.
+    fn interpret_exit(&mut self, exit: &Exit) -> Option<Label> {
+        match exit {
+            Exit::Halt => None,
+            Exit::Call(arity, return_label) => {
+                self.returns.push(Return {
+                    label: *return_label,
+                    frame: self.frame,
+                });
+
+                let arity = *arity;
+                self.frame = self.stack.len() - arity;
+
+                let Value::Function(function) = &self.stack[self.frame - 1] else {
+                    todo!("error handling for non-function calls");
+                };
+
+                if arity != function.arity {
+                    todo!("error handling for incorrect call arity");
+                }
+
+                Some(function.label)
+            }
+            Exit::Return => {
+                let return_value = self.pop();
+                self.stack.truncate(self.frame);
+                *self.stack.last_mut().expect("stack should not be empty") = return_value;
+                let return_data = self
+                    .returns
+                    .pop()
+                    .expect("return stack should not be empty");
+
+                self.frame = return_data.frame;
+                Some(return_data.label)
+            }
         }
     }
 
@@ -110,4 +174,13 @@ impl<'a> Interpreter<'a> {
             Value::Function(_) => todo!("add error handling for non-number values"),
         }
     }
+}
+
+/// Data for returning from a function.
+struct Return {
+    /// The [`Label`] to return to.
+    label: Label,
+
+    /// The stack offset of the return stack frame.
+    frame: usize,
 }
