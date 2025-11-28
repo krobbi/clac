@@ -62,31 +62,27 @@ pub enum Instruction {
     /// Pushes a function value to the stack from its [`Label`] and arity.
     PushFunction(Label, usize),
 
-    /// Loads a value from a local variable and pushes it to the stack.
-    PushLocal(usize),
-
-    /// Loads a value from a global variable and pushes it to the stack.
-    PushGlobal(String),
-
     /// Pops a value from the stack and discards it.
     Drop,
 
     /// Pops a value from the stack and prints it.
     Print,
 
-    /// Pops a value from the stack and stores it in a local variable.
-    StoreLocal(usize),
-
-    /// Pops a value from the stack and stores it in a global variable.
-    StoreGlobal(String),
-
-    /// Pops a function value from the stack, converts it to a closure, and
-    /// pushes the result to the stack.
-    IntoClosure,
-
     /// Pops two values from the stack, applies a binary operator to them, and
     /// pushes the result to the stack.
     Binary(BinOp),
+
+    /// Loads a value from a local variable and pushes it to the stack.
+    LoadLocal(usize),
+
+    /// Pops a value from the stack and stores it in a local variable.
+    StoreLocal(usize),
+
+    /// Loads a value from a global variable and pushes it to the stack.
+    LoadGlobal(String),
+
+    /// Pops a value from the stack and stores it in a global variable.
+    StoreGlobal(String),
 
     /// Pops a value from the stack and pushes it to the upvalue stack.
     DefineUpvalue,
@@ -96,6 +92,10 @@ pub enum Instruction {
 
     /// Drops a number of upvalues from the top of the upvalue stack.
     DropUpvalues(usize),
+
+    /// Pops a function value from the stack, converts it to a closure, and
+    /// pushes the result to the stack.
+    IntoClosure,
 }
 
 /// A [`Block`]'s exit point.

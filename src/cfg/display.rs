@@ -47,17 +47,17 @@ impl Display for Instruction {
         match self {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
             Self::PushFunction(label, arity) => write!(f, "{:16}{label}({arity})", "push_function"),
-            Self::PushLocal(offset) => write!(f, "{:16}[{offset}]", "push_local"),
-            Self::PushGlobal(name) => write!(f, "{:16}{name}", "push_global"),
             Self::Drop => f.write_str("drop"),
             Self::Print => f.write_str("print"),
-            Self::StoreLocal(offset) => write!(f, "{:16}[{offset}]", "store_local"),
-            Self::StoreGlobal(name) => write!(f, "{:16}{name}", "store_global"),
-            Self::IntoClosure => f.write_str("into_closure"),
             Self::Binary(op) => write!(f, "{:16}{op}", "binary"),
+            Self::LoadLocal(offset) => write!(f, "{:16}[{offset}]", "load_local"),
+            Self::StoreLocal(offset) => write!(f, "{:16}[{offset}]", "store_local"),
+            Self::LoadGlobal(name) => write!(f, "{:16}{name}", "load_global"),
+            Self::StoreGlobal(name) => write!(f, "{:16}{name}", "store_global"),
             Self::DefineUpvalue => f.write_str("define_upvalue"),
             Self::LoadUpvalue(offset) => write!(f, "{:16}[{offset}]", "load_upvalue"),
             Self::DropUpvalues(count) => write!(f, "{:16}{count}", "drop_upvalues"),
+            Self::IntoClosure => f.write_str("into_closure"),
         }
     }
 }

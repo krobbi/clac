@@ -141,7 +141,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     /// Compiles a global variable [`Expr`].
     fn compile_expr_global(&mut self, name: &str) {
-        self.compile(Instruction::PushGlobal(name.to_owned()));
+        self.compile(Instruction::LoadGlobal(name.to_owned()));
     }
 
     /// Compiles a local variable [`Expr`].
@@ -154,7 +154,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             self.body.access_upvalue(decl.call_depth);
         } else {
             let offset = self.body.stack.local_offset(id);
-            self.compile(Instruction::PushLocal(offset));
+            self.compile(Instruction::LoadLocal(offset));
         }
     }
 
@@ -203,7 +203,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                 // defined as upvalues. The caller has already placed all of the
                 // arguments on the stack, so the top of the stack may not be
                 // the upvalue that is expected.
-                self.compile(Instruction::PushLocal(offset));
+                self.compile(Instruction::LoadLocal(offset));
                 self.compile(Instruction::DefineUpvalue);
                 self.upvalues.declare(id);
             } else {
