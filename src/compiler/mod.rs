@@ -191,7 +191,9 @@ impl<'a, 'b> Compiler<'a, 'b> {
     fn compile_expr_function(&mut self, params: &[DeclId], body: &Expr) {
         self.call_depth += 1;
         let outer_body = mem::replace(&mut self.body, Body::new(self.call_depth));
-        let outer_label = mem::replace(&mut self.label, self.cfg.insert_block());
+        let function_label = self.cfg.insert_block();
+        let outer_label = self.label;
+        self.label = function_label;
 
         // The function's arguments are already on the stack, but need to be
         // declared.
@@ -206,6 +208,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
                 // the upvalue that is expected. This load instruction could
                 // possibly be eliminated for upvalues at the end of the
                 // arguments list.
+                self.compile(Instruction::PushLocal(offset));
                 self.compile_ir(ir::Instruction::LoadLocal(offset));
                 self.compile_define_upvalue(id);
             } else {
@@ -224,6 +227,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         };
 
         self.call_depth -= 1;
+        self.compile(Instruction::PushFunction(function_label, params.len()));
         self.compile_ir(ir::Instruction::Push(Value::Function(function.into())));
 
         if upvalue_call_depth <= self.call_depth {
@@ -233,6 +237,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
             // The inner function is outlived by an upvalue that it accesses, so
             // it must be converted to a closure.
+            self.compile(Instruction::IntoClosure);
             self.compile_ir(ir::Instruction::IntoClosure);
         }
     }

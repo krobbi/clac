@@ -54,6 +54,9 @@ pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
     PushLiteral(Literal),
 
+    /// Pushes a function value to the stack from its [`Label`] and arity.
+    PushFunction(Label, usize),
+
     /// Loads a value from a local variable and pushes it to the stack.
     PushLocal(usize),
 
@@ -77,6 +80,10 @@ pub enum Instruction {
 
     /// Pops a value from the stack and stores it in a global variable.
     StoreGlobal(String),
+
+    /// Pops a function value from the stack, converts it to a closure, and
+    /// pushes the result to the stack.
+    IntoClosure,
 }
 
 /// A unique identifier for an upvalue.
