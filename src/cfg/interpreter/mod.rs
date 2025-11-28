@@ -6,7 +6,7 @@ use crate::ast::BinOp;
 
 use super::{Cfg, Instruction, Label};
 
-use self::value::Value;
+use self::value::{Function, Value};
 
 // TODO: Preserve global variables between REPL lines. Consider grouping this
 // global context with some other data - maybe implement a symbol table? Storing
@@ -55,7 +55,13 @@ impl<'a> Interpreter<'a> {
     fn interpret_instruction(&mut self, instruction: &Instruction) {
         match instruction {
             Instruction::PushLiteral(literal) => self.push(literal.into()),
-            Instruction::PushFunction(_label, _arity) => todo!("interpret instruction"),
+            Instruction::PushFunction(label, arity) => self.push(Value::Function(
+                Function {
+                    label: *label,
+                    arity: *arity,
+                }
+                .into(),
+            )),
             Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
             Instruction::Binary(op) => {
@@ -101,6 +107,7 @@ impl<'a> Interpreter<'a> {
     fn pop_number(&mut self) -> f64 {
         match self.pop() {
             Value::Number(value) => value,
+            Value::Function(_) => todo!("add error handling for non-number values"),
         }
     }
 }
