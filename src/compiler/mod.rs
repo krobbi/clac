@@ -158,9 +158,13 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
         if decl.is_upvalue {
             self.compile_ir(ir::Instruction::LoadUpvalue(id));
+            let id = self.upvalues.get(id);
+            self.compile(Instruction::PushUpvalue(id));
             self.body.access_upvalue(decl.call_depth);
         } else {
-            self.compile_ir(ir::Instruction::LoadLocal(self.body.stack.local_offset(id)));
+            let offset = self.body.stack.local_offset(id);
+            self.compile(Instruction::PushLocal(offset));
+            self.compile_ir(ir::Instruction::LoadLocal(offset));
         }
     }
 
@@ -176,7 +180,9 @@ impl<'a, 'b> Compiler<'a, 'b> {
             // there are local variables below it that need to be dropped. Move
             // the result into the first local variable and drop any local
             // variables above it.
-            self.compile_ir(ir::Instruction::StoreLocal(self.body.stack.len()));
+            let offset = self.body.stack.len();
+            self.compile(Instruction::StoreLocal(offset));
+            self.compile_ir(ir::Instruction::StoreLocal(offset));
             self.compile_drop(local_count - 1);
         }
     }

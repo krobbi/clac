@@ -54,6 +54,12 @@ pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
     PushLiteral(Literal),
 
+    /// Loads a value from a local variable and pushes it to the stack.
+    PushLocal(usize),
+
+    /// Loads an upvalue and pushes it to the stack.
+    PushUpvalue(UpvalueId),
+
     /// Loads a value from a global variable and pushes it to the stack.
     PushGlobal(String),
 
@@ -65,6 +71,9 @@ pub enum Instruction {
 
     /// Pops a value from the stack and defines it as an upvalue.
     DefineUpvalue(UpvalueId),
+
+    /// Pops a value from the stack and stores it in a local variable.
+    StoreLocal(usize),
 
     /// Pops a value from the stack and stores it in a global variable.
     StoreGlobal(String),

@@ -19,4 +19,15 @@ impl UpvalueTable {
         self.decl_ids.push(id);
         UpvalueId(index)
     }
+
+    /// Returns an [`UpvalueId`] from its [`DeclId`].
+    pub fn get(&self, id: DeclId) -> UpvalueId {
+        let index = self
+            .decl_ids
+            .iter()
+            .position(|d| *d == id)
+            .expect("upvalue should exist");
+
+        UpvalueId(index)
+    }
 }
