@@ -1,7 +1,7 @@
 mod interpret_error;
 mod value;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, mem, rc::Rc};
 
 use crate::ast::BinOp;
 
@@ -9,7 +9,7 @@ use super::{Cfg, Exit, Instruction, Label};
 
 use self::{
     interpret_error::InterpretError,
-    value::{Function, Value},
+    value::{Closure, Function, Value},
 };
 
 // TODO: Preserve global variables between REPL lines. Consider grouping this
@@ -41,6 +41,9 @@ struct Interpreter<'a> {
     /// The map of global variable names to [`Value`]s.
     globals: HashMap<String, Value>,
 
+    /// The stack of upvalues.
+    upvalues: Vec<Rc<Value>>,
+
     /// The stack of [`Return`]s.
     returns: Vec<Return>,
 }
@@ -53,6 +56,7 @@ impl<'a> Interpreter<'a> {
             stack: Vec::new(),
             frame: 0,
             globals: HashMap::new(),
+            upvalues: Vec::new(),
             returns: Vec::new(),
         }
     }
@@ -122,10 +126,24 @@ impl<'a> Interpreter<'a> {
                 let value = self.pop();
                 self.globals.insert(name.to_owned(), value);
             }
-            Instruction::DefineUpvalue => todo!("interpret instruction"),
-            Instruction::LoadUpvalue(_offset) => todo!("interpret instruction"),
-            Instruction::DropUpvalues(_count) => todo!("interpret instruction"),
-            Instruction::IntoClosure => todo!("interpret instruction"),
+            Instruction::DefineUpvalue => {
+                let value = self.pop();
+                self.upvalues.push(value.into());
+            }
+            Instruction::LoadUpvalue(offset) => self.stack.push((*self.upvalues[*offset]).clone()),
+            Instruction::DropUpvalues(count) => self.upvalues.truncate(self.upvalues.len() - count),
+            Instruction::IntoClosure => {
+                let Value::Function(function) = self.pop() else {
+                    panic!("value should be a function");
+                };
+
+                let closure = Closure {
+                    function: *function,
+                    upvalues: self.upvalues.clone(),
+                };
+
+                self.push(Value::Closure(closure.into()));
+            }
         }
 
         Ok(())
@@ -138,22 +156,32 @@ impl<'a> Interpreter<'a> {
         let label = match exit {
             Exit::Halt => return Ok(None),
             Exit::Call(arity, return_label) => {
-                self.returns.push(Return {
+                let mut return_data = Return {
                     label: *return_label,
                     frame: self.frame,
-                });
+                    upvalues: None,
+                };
 
                 let arity = *arity;
                 self.frame = self.stack.len() - arity;
 
-                let Value::Function(function) = &self.stack[self.frame - 1] else {
-                    return Err(InterpretError::CalledNonFunction);
+                let function = match &self.stack[self.frame - 1] {
+                    Value::Number(_) => return Err(InterpretError::CalledNonFunction),
+                    Value::Function(function) => function,
+                    Value::Closure(closure) => {
+                        let outer_upvalues =
+                            mem::replace(&mut self.upvalues, closure.upvalues.clone());
+
+                        return_data.upvalues = Some(outer_upvalues);
+                        &closure.function
+                    }
                 };
 
                 if arity != function.arity {
                     return Err(InterpretError::IncorrectCallArity);
                 }
 
+                self.returns.push(return_data);
                 function.label
             }
             Exit::Return => {
@@ -166,6 +194,11 @@ impl<'a> Interpreter<'a> {
                     .expect("return stack should not be empty");
 
                 self.frame = return_data.frame;
+
+                if let Some(upvalues) = return_data.upvalues {
+                    self.upvalues = upvalues;
+                }
+
                 return_data.label
             }
         };
@@ -189,7 +222,7 @@ impl<'a> Interpreter<'a> {
     fn pop_number(&mut self) -> Result<f64, InterpretError> {
         match self.pop() {
             Value::Number(value) => Ok(value),
-            Value::Function(_) => Err(InterpretError::InvalidType),
+            _ => Err(InterpretError::InvalidType),
         }
     }
 }
@@ -201,4 +234,7 @@ struct Return {
 
     /// The stack offset of the return stack frame.
     frame: usize,
+
+    /// The optional stack of upvalues to return to.
+    upvalues: Option<Vec<Rc<Value>>>,
 }

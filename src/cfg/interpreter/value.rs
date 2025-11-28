@@ -1,4 +1,7 @@
-use std::fmt::{self, Display, Formatter};
+use std::{
+    fmt::{self, Display, Formatter},
+    rc::Rc,
+};
 
 use crate::ast::Literal;
 
@@ -10,8 +13,11 @@ pub enum Value {
     /// A number.
     Number(f64),
 
-    /// A function.
+    /// A [`Function`].
     Function(Box<Function>),
+
+    /// A [`Closure`].
+    Closure(Rc<Closure>),
 }
 
 /// A function.
@@ -22,6 +28,15 @@ pub struct Function {
 
     /// The number of parameters.
     pub arity: usize,
+}
+
+/// A [`Function`] with captured upvalues.
+pub struct Closure {
+    /// The [`Function`].
+    pub function: Function,
+
+    /// The upvalues.
+    pub upvalues: Vec<Rc<Value>>,
 }
 
 impl From<&Literal> for Value {
@@ -36,7 +51,7 @@ impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Number(value) => value.fmt(f),
-            Self::Function(_) => f.write_str("function"),
+            Self::Function(_) | Self::Closure(_) => f.write_str("function"),
         }
     }
 }
