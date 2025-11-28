@@ -118,7 +118,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
     /// Compiles an expression [`Stmt`].
     fn compile_stmt_expr(&mut self, expr: &Expr) {
         self.compile_expr(expr);
-        self.compile(Instruction::Drop);
+        self.compile(Instruction::Drop(1));
     }
 
     /// Compiles an [`Expr`].
@@ -267,14 +267,16 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.block_mut().instructions.push(instruction);
     }
 
-    /// Appends multiple drop [`Instruction`]s to the current [`Block`].
+    /// Appends [`Instruction`]s to drop multiple values to the current
+    /// [`Block`].
     fn compile_drop(&mut self, count: usize) {
-        for _ in 0..count {
-            self.compile(Instruction::Drop);
+        if count > 0 {
+            self.compile(Instruction::Drop(count));
         }
     }
 
-    /// Appends [`Instruction`]s to drop multiple upvalues to the current block.
+    /// Appends [`Instruction`]s to drop multiple upvalues to the current
+    /// [`Block`].
     fn compile_drop_upvalues(&mut self, count: usize) {
         if count > 0 {
             self.compile(Instruction::DropUpvalues(count));

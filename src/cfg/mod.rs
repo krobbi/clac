@@ -62,8 +62,8 @@ pub enum Instruction {
     /// Pushes a function value to the stack from its [`Label`] and arity.
     PushFunction(Label, usize),
 
-    /// Pops a value from the stack and discards it.
-    Drop,
+    /// Drops a number of values from the top of the stack.
+    Drop(usize),
 
     /// Pops a value from the stack and prints it.
     Print,

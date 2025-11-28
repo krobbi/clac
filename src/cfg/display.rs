@@ -47,7 +47,7 @@ impl Display for Instruction {
         match self {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
             Self::PushFunction(label, arity) => write!(f, "{:16}{label}({arity})", "push_function"),
-            Self::Drop => f.write_str("drop"),
+            Self::Drop(count) => write!(f, "{:16}{count}", "drop"),
             Self::Print => f.write_str("print"),
             Self::Binary(op) => write!(f, "{:16}{op}", "binary"),
             Self::LoadLocal(offset) => write!(f, "{:16}[{offset}]", "load_local"),
