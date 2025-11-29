@@ -1,5 +1,3 @@
-pub mod interpreter;
-
 mod display;
 
 use crate::ast::{BinOp, Literal};

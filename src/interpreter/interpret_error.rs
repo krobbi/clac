@@ -3,16 +3,17 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-/// An [`Error`] encountered while interpreting a [`Cfg`][super::Cfg].
+/// An [`Error`] encountered while interpreting a [`Cfg`][crate::cfg::Cfg].
 #[derive(Debug)]
 pub enum InterpretError {
-    /// An invalid type of [`Value`][super::Value] was used for an operation.
+    /// An invalid type of [`Value`][super::value::Value] was used for an
+    /// operation.
     InvalidType,
 
     /// A division by zero was attempted.
     DivideByZero,
 
-    /// A non-function [`Value`][super::Value] was called.
+    /// A non-function [`Value`][super::value::Value] was called.
     CalledNonFunction,
 
     /// A function was called with the incorrect number of arguments.

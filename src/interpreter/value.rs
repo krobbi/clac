@@ -3,9 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::ast::Literal;
-
-use super::Label;
+use crate::{ast::Literal, cfg::Label};
 
 /// A runtime value.
 #[derive(Clone)]

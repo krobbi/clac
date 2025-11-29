@@ -3,22 +3,18 @@ mod value;
 
 use std::{collections::HashMap, mem, rc::Rc};
 
-use crate::ast::BinOp;
-
-use super::{Cfg, Exit, Instruction, Label};
+use crate::{
+    ast::BinOp,
+    cfg::{Cfg, Exit, Instruction, Label},
+};
 
 use self::{
     interpret_error::InterpretError,
     value::{Closure, Function, Value},
 };
 
-// TODO: Preserve global variables between REPL lines. Consider grouping this
-// global context with some other data - maybe implement a symbol table? Storing
-// the output from Clac would also make it easier to implement some integration
-// tests.
-/// Interprets a [`Cfg`]. This module is isolated from the rest of Clac because
-/// a lower-level bytecode representation is being considered. Register-based IR
-/// is also being considered, but this is less likely to be implemented.
+// TODO: Preserve global variables between REPL lines.
+/// Interprets a [`Cfg`].
 pub fn interpret_cfg(cfg: &Cfg) {
     let mut interpreter = Interpreter::new(cfg);
 
