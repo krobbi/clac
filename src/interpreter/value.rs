@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{ast::Literal, cfg::Label};
+use crate::{ast::Literal, cfg::Function};
 
 /// A runtime value.
 #[derive(Clone)]
@@ -12,26 +12,16 @@ pub enum Value {
     Number(f64),
 
     /// A [`Function`].
-    Function(Box<Function>),
+    Function(Rc<Function>),
 
     /// A [`Closure`].
     Closure(Rc<Closure>),
 }
 
-/// A function.
-#[derive(Clone)]
-pub struct Function {
-    /// The [`Label`].
-    pub label: Label,
-
-    /// The number of parameters.
-    pub arity: usize,
-}
-
 /// A [`Function`] with captured upvalues.
 pub struct Closure {
     /// The [`Function`].
-    pub function: Function,
+    pub function: Rc<Function>,
 
     /// The upvalues.
     pub upvalues: Vec<Rc<Value>>,

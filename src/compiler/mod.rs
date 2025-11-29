@@ -5,7 +5,7 @@ use std::mem;
 
 use crate::{
     ast::{BinOp, Literal},
-    cfg::{Block, Cfg, Exit, Instruction, Label},
+    cfg::{Block, Cfg, Exit, Function, Instruction, Label},
     decl_table::{DeclId, DeclTable},
     hir::{Expr, Hir, Stmt},
 };
@@ -14,14 +14,13 @@ use self::{local_stack::LocalStack, upvalue_stack::UpvalueStack};
 
 /// Compiles [`Hir`] to a [`Cfg`] with a [`DeclTable`].
 pub fn compile_hir(hir: &Hir, decls: &DeclTable) -> Cfg {
-    let mut cfg = Cfg::new();
-    let mut compiler = Compiler::new(decls, &mut cfg);
+    let mut compiler = Compiler::new(decls);
     compiler.compile_hir(hir);
-    cfg
+    compiler.into_cfg()
 }
 
 /// A structure that compiles [`Hir`] to a [`Cfg`].
-struct Compiler<'a, 'b> {
+struct Compiler<'a> {
     /// The [`DeclTable`].
     decls: &'a DeclTable,
 
@@ -38,20 +37,25 @@ struct Compiler<'a, 'b> {
     label: Label,
 
     /// The [`Cfg`].
-    cfg: &'b mut Cfg,
+    cfg: Cfg,
 }
 
-impl<'a, 'b> Compiler<'a, 'b> {
-    /// Creates a new `Compiler` from a [`DeclTable`] and a [`Cfg`].
-    fn new(decls: &'a DeclTable, cfg: &'b mut Cfg) -> Self {
+impl<'a> Compiler<'a> {
+    /// Creates a new `Compiler` from a [`DeclTable`].
+    fn new(decls: &'a DeclTable) -> Self {
         Self {
             decls,
             call_depth: 0,
             locals: LocalStack::new(0),
             upvalues: UpvalueStack::new(),
             label: Label::default(),
-            cfg,
+            cfg: Cfg::new(),
         }
+    }
+
+    /// Consumes the `Compiler` and converts it to a [`Cfg`].
+    fn into_cfg(self) -> Cfg {
+        self.cfg
     }
 
     /// Compiles [`Hir`].
@@ -186,9 +190,9 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.call_depth += 1;
         let outer_locals = mem::replace(&mut self.locals, LocalStack::new(self.call_depth));
 
-        let function_label = self.cfg.insert_block();
         let outer_label = self.label;
-        self.label = function_label;
+        let outer_cfg = mem::replace(&mut self.cfg, Cfg::new());
+        self.label = Label::default();
 
         self.upvalues.begin_scope();
 
@@ -217,13 +221,21 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self.compile_drop_upvalues(upvalue_count);
 
         self.block_mut().exit = Exit::Return;
+
         self.label = outer_label;
+        let function_cfg = mem::replace(&mut self.cfg, outer_cfg);
 
         let upvalue_call_depth = self.locals.upvalue_call_depth();
         self.locals = outer_locals;
         self.call_depth -= 1;
 
-        self.compile(Instruction::PushFunction(function_label, params.len()));
+        self.compile(Instruction::PushFunction(
+            Function {
+                cfg: function_cfg,
+                arity: params.len(),
+            }
+            .into(),
+        ));
 
         if upvalue_call_depth <= self.call_depth {
             // The outer function could outlive an upvalue accessed by the inner

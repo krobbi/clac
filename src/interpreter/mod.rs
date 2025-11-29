@@ -7,32 +7,39 @@ use std::{collections::HashMap, mem, rc::Rc};
 
 use crate::{
     ast::BinOp,
-    cfg::{Cfg, Exit, Instruction, Label},
+    cfg::{Cfg, Exit, Function, Instruction, Label},
 };
 
-use self::value::{Closure, Function, Value};
+use self::value::{Closure, Value};
 
 // TODO: Preserve global variables between REPL lines.
-// FIXME: There is a horrible bug awaiting if the above is implemented naïvely.
-// Functions and closures store their body as a CFG label, but a new CFG is
-// compiled for every REPL line. If a function is defined in the global scope,
-// then it will point to unrelated or out of bounds code in the next REPL line.
-// Either the CFG should also be preserved between REPL lines, or functions
-// should each have their own CFG.
 /// Interprets a [`Cfg`]. This function returns an [`InterpretError`] if an
 /// error occurred.
 pub fn interpret_cfg(cfg: &Cfg) -> Result<(), InterpretError> {
     let mut interpreter = Interpreter::new();
-    let mut block = cfg.block(Label::default());
+    let mut called_functions: Vec<Rc<Function>> = Vec::new();
+    let mut label = Label::default();
 
     loop {
+        let block = match called_functions.last() {
+            None => cfg.block(label),
+            Some(function) => function.cfg.block(label),
+        };
+
         for instruction in &block.instructions {
             interpreter.interpret_instruction(instruction)?;
         }
 
         match interpreter.interpret_exit(&block.exit)? {
-            None => break,
-            Some(label) => block = cfg.block(label),
+            Branch::Halt => break,
+            Branch::Call(function) => {
+                called_functions.push(function);
+                label = Label::default();
+            }
+            Branch::Return(return_label) => {
+                called_functions.truncate(called_functions.len() - 1);
+                label = return_label;
+            }
         }
     }
 
@@ -69,13 +76,7 @@ impl Interpreter {
     fn interpret_instruction(&mut self, instruction: &Instruction) -> Result<(), InterpretError> {
         match instruction {
             Instruction::PushLiteral(literal) => self.push(literal.into()),
-            Instruction::PushFunction(label, arity) => self.push(Value::Function(
-                Function {
-                    label: *label,
-                    arity: *arity,
-                }
-                .into(),
-            )),
+            Instruction::PushFunction(function) => self.push(Value::Function(function.clone())),
             Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
             Instruction::Binary(op) => {
@@ -116,7 +117,7 @@ impl Interpreter {
                 };
 
                 let closure = Closure {
-                    function: *function,
+                    function,
                     upvalues: self.upvalues.clone(),
                 };
 
@@ -127,12 +128,11 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Interprets an [`Exit`] and returns the next [`Label`] to branch to. This
-    /// function returns [`None`] if execution should halt. This function also
+    /// Interprets an [`Exit`] and returns the next [`Branch`]. This function
     /// returns an [`InterpretError`] if an error occurred.
-    fn interpret_exit(&mut self, exit: &Exit) -> Result<Option<Label>, InterpretError> {
-        let label = match exit {
-            Exit::Halt => return Ok(None),
+    fn interpret_exit(&mut self, exit: &Exit) -> Result<Branch, InterpretError> {
+        let branch = match exit {
+            Exit::Halt => Branch::Halt,
             Exit::Call(arity, return_label) => {
                 let mut return_data = Return {
                     label: *return_label,
@@ -145,13 +145,13 @@ impl Interpreter {
 
                 let function = match &self.stack[self.frame - 1] {
                     Value::Number(_) => return Err(InterpretError::CalledNonFunction),
-                    Value::Function(function) => function,
+                    Value::Function(function) => function.clone(),
                     Value::Closure(closure) => {
                         let outer_upvalues =
                             mem::replace(&mut self.upvalues, closure.upvalues.clone());
 
                         return_data.upvalues = Some(outer_upvalues);
-                        &closure.function
+                        closure.function.clone()
                     }
                 };
 
@@ -160,7 +160,7 @@ impl Interpreter {
                 }
 
                 self.returns.push(return_data);
-                function.label
+                Branch::Call(function)
             }
             Exit::Return => {
                 let return_value = self.pop();
@@ -177,11 +177,11 @@ impl Interpreter {
                     self.upvalues = upvalues;
                 }
 
-                return_data.label
+                Branch::Return(return_data.label)
             }
         };
 
-        Ok(Some(label))
+        Ok(branch)
     }
 
     /// Pushes a [`Value`] to the stack.
@@ -215,4 +215,16 @@ struct Return {
 
     /// The optional stack of upvalues to restore.
     upvalues: Option<Vec<Rc<Value>>>,
+}
+
+/// A branch to take after interpreting an [`Exit`].
+enum Branch {
+    /// Halts execution.
+    Halt,
+
+    /// Calls a [`Function`].
+    Call(Rc<Function>),
+
+    /// Returns to a [`Label`] from a [`Function`].
+    Return(Label),
 }

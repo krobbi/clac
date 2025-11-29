@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter, Write as _};
 
 use super::{Block, Cfg, Exit, Instruction, Label};
 
+// TODO: Add support for functions to CFG dumping.
 impl Display for Cfg {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buffer = String::new();
@@ -46,7 +47,7 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
-            Self::PushFunction(label, arity) => write!(f, "{:16}{label}({arity})", "push_function"),
+            Self::PushFunction(_) => write!(f, "{:16}...", "push_function"),
             Self::Drop(count) => write!(f, "{:16}{count}", "drop"),
             Self::Print => f.write_str("print"),
             Self::Binary(op) => write!(f, "{:16}{op}", "binary"),

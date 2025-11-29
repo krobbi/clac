@@ -1,5 +1,7 @@
 mod display;
 
+use std::rc::Rc;
+
 use crate::ast::{BinOp, Literal};
 
 /// A control flow graph.
@@ -22,15 +24,11 @@ impl Cfg {
     /// Inserts a new [`Block`] into the `Cfg` and returns its [`Label`].
     pub fn insert_block(&mut self) -> Label {
         let index = self.blocks.len();
-        self.blocks.push(Block {
-            instructions: Vec::new(),
-            exit: Exit::Halt,
-        });
-
+        self.blocks.push(Block::default());
         Label(index)
     }
 
-    /// Returns a reference to a [`Block`] from its label.
+    /// Returns a reference to a [`Block`] from its [`Label`].
     pub fn block(&self, label: Label) -> &Block {
         &self.blocks[label.0]
     }
@@ -46,6 +44,7 @@ impl Cfg {
 pub struct Label(usize);
 
 /// A basic block.
+#[derive(Default)]
 pub struct Block {
     /// The [`Instruction`]s.
     pub instructions: Vec<Instruction>,
@@ -59,8 +58,8 @@ pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
     PushLiteral(Literal),
 
-    /// Pushes a function value to the stack from its [`Label`] and arity.
-    PushFunction(Label, usize),
+    /// Pushes a [`Function`] value to the stack.
+    PushFunction(Rc<Function>),
 
     /// Drops a number of values from the top of the stack.
     Drop(usize),
@@ -98,10 +97,20 @@ pub enum Instruction {
     IntoClosure,
 }
 
+/// A function.
+pub struct Function {
+    /// The [`Cfg`].
+    pub cfg: Cfg,
+
+    /// The number of parameters.
+    pub arity: usize,
+}
+
 /// A [`Block`]'s exit point.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Exit {
     /// Halts execution.
+    #[default]
     Halt,
 
     /// Performs a call with an arity and returns to a [`Label`].
