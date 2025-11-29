@@ -13,6 +13,12 @@ use crate::{
 use self::value::{Closure, Function, Value};
 
 // TODO: Preserve global variables between REPL lines.
+// FIXME: There is a horrible bug awaiting if the above is implemented naïvely.
+// Functions and closures store their body as a CFG label, but a new CFG is
+// compiled for every REPL line. If a function is defined in the global scope,
+// then it will point to unrelated or out of bounds code in the next REPL line.
+// Either the CFG should also be preserved between REPL lines, or functions
+// should each have their own CFG.
 /// Interprets a [`Cfg`]. This function returns an [`InterpretError`] if an
 /// error occurred.
 pub fn interpret_cfg(cfg: &Cfg) -> Result<(), InterpretError> {
