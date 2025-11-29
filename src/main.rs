@@ -80,6 +80,5 @@ fn try_execute_source(source: &str) -> Result<(), ClacError> {
     let mut decls = DeclTable::new();
     let hir = resolver::resolve_ast(&ast, &mut decls)?;
     let cfg = compiler::compile_hir(&hir, &decls);
-    interpreter::interpret_cfg(&cfg);
-    Ok(())
+    interpreter::interpret_cfg(&cfg).map_err(ClacError::Interpret)
 }

@@ -1,6 +1,8 @@
 mod interpret_error;
 mod value;
 
+pub use self::interpret_error::InterpretError;
+
 use std::{collections::HashMap, mem, rc::Rc};
 
 use crate::{
@@ -8,26 +10,32 @@ use crate::{
     cfg::{Cfg, Exit, Instruction, Label},
 };
 
-use self::{
-    interpret_error::InterpretError,
-    value::{Closure, Function, Value},
-};
+use self::value::{Closure, Function, Value};
 
 // TODO: Preserve global variables between REPL lines.
-/// Interprets a [`Cfg`].
-pub fn interpret_cfg(cfg: &Cfg) {
-    let mut interpreter = Interpreter::new(cfg);
+/// Interprets a [`Cfg`]. This function returns an [`InterpretError`] if an
+/// error occurred.
+pub fn interpret_cfg(cfg: &Cfg) -> Result<(), InterpretError> {
+    let mut interpreter = Interpreter::new();
+    let mut block = cfg.block(Label::default());
 
-    if let Err(error) = interpreter.interpret() {
-        eprintln!("Error: {error}");
+    loop {
+        for instruction in &block.instructions {
+            interpreter.interpret_instruction(instruction)?;
+        }
+
+        match interpreter.interpret_exit(&block.exit)? {
+            None => break,
+            Some(label) => block = cfg.block(label),
+        }
     }
+
+    Ok(())
 }
 
 /// A structure that interprets a [`Cfg`].
-struct Interpreter<'a> {
-    /// The [`Cfg`].
-    cfg: &'a Cfg,
-
+#[derive(Default)]
+struct Interpreter {
     /// The stack of [`Value`]s.
     stack: Vec<Value>,
 
@@ -44,42 +52,10 @@ struct Interpreter<'a> {
     returns: Vec<Return>,
 }
 
-impl<'a> Interpreter<'a> {
+impl Interpreter {
     /// Creates a new `Interpreter`.
-    fn new(cfg: &'a Cfg) -> Self {
-        Self {
-            cfg,
-            stack: Vec::new(),
-            frame: 0,
-            globals: HashMap::new(),
-            upvalues: Vec::new(),
-            returns: Vec::new(),
-        }
-    }
-
-    /// Interprets the [`Cfg`] until execution halts. This function returns an
-    /// [`InterpretError`] if an error occurred.
-    fn interpret(&mut self) -> Result<(), InterpretError> {
-        let mut label = Label::default();
-
-        while let Some(next_label) = self.interpret_label(label)? {
-            label = next_label;
-        }
-
-        Ok(())
-    }
-
-    /// Interprets a [`Label`] and returns the next [`Label`] to branch to. This
-    /// function returns [`None`] if execution should halt. This function also
-    /// returns an [`InterpretError`] if an error occurred.
-    fn interpret_label(&mut self, label: Label) -> Result<Option<Label>, InterpretError> {
-        let block = self.cfg.block(label);
-
-        for instruction in &block.instructions {
-            self.interpret_instruction(instruction)?;
-        }
-
-        self.interpret_exit(&block.exit)
+    fn new() -> Self {
+        Self::default()
     }
 
     /// Interprets an [`Instruction`]. This function returns an
@@ -231,6 +207,6 @@ struct Return {
     /// The stack offset of the return stack frame.
     frame: usize,
 
-    /// The optional stack of upvalues to return to.
+    /// The optional stack of upvalues to restore.
     upvalues: Option<Vec<Rc<Value>>>,
 }

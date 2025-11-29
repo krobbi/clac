@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::{parser::ParseError, resolver::ResolveError};
+use crate::{interpreter::InterpretError, parser::ParseError, resolver::ResolveError};
 
 /// An [`Error`] caught while running Clac.
 #[derive(Debug)]
@@ -13,6 +13,9 @@ pub enum ClacError {
 
     /// A [`ResolveError`] was encountered.
     Resolve(ResolveError),
+
+    /// An [`InterpretError`] was encountered.
+    Interpret(InterpretError),
 }
 
 impl From<ParseError> for ClacError {
@@ -27,11 +30,18 @@ impl From<ResolveError> for ClacError {
     }
 }
 
+impl From<InterpretError> for ClacError {
+    fn from(value: InterpretError) -> Self {
+        Self::Interpret(value)
+    }
+}
+
 impl Error for ClacError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Parse(error) => Some(error),
             Self::Resolve(error) => Some(error),
+            Self::Interpret(error) => Some(error),
         }
     }
 }
@@ -41,6 +51,7 @@ impl Display for ClacError {
         match self {
             Self::Parse(error) => error.fmt(f),
             Self::Resolve(error) => error.fmt(f),
+            Self::Interpret(error) => error.fmt(f),
         }
     }
 }
