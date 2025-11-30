@@ -1,0 +1,21 @@
+[Go back](README.md)
+
+# Grammar
+All valid Clac programs should have the following grammar:
+```ebnf
+program  = sequence, Eof ;
+sequence = { stmt, [ "," ] } ;
+stmt     = expr, [ "=", expr ] ;
+expr     = expr_function ;
+
+expr_function = expr_sum, [ "->", expr_function ] ;
+expr_sum      = expr_term, { ( "+" | "-" ), expr_term } ;
+expr_term     = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
+expr_prefix   = "-", expr_prefix | expr_call ;
+expr_call     = expr_primary, { expr_paren } ;
+expr_primary  = expr_paren | "{", sequence, "}" | Literal | Ident ;
+expr_paren    = "(", [ expr, { ",", expr }, [ "," ] ], ")" ;
+```
+
+Programs that follow this grammar will be parsed successfully, but may fail
+during semantic analysis or at runtime.
