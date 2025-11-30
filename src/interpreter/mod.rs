@@ -32,6 +32,7 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
 
         match interpreter.interpret_exit(&block.exit)? {
             Branch::Halt => break,
+            Branch::Jump(target_label) => label = target_label,
             Branch::Call(function) => {
                 called_functions.push(function);
                 label = Label::default();
@@ -151,6 +152,13 @@ impl Interpreter {
                         return_data.upvalues = Some(outer_upvalues);
                         closure.function.clone()
                     }
+                    Value::Native(function) => {
+                        let return_value = function(&self.stack[self.frame..])?;
+                        self.stack.truncate(self.frame);
+                        self.frame = return_data.frame;
+                        *self.stack.last_mut().expect("stack should not be empty") = return_value;
+                        return Ok(Branch::Jump(*return_label));
+                    }
                 };
 
                 if arity != function.arity {
@@ -219,6 +227,9 @@ struct Return {
 enum Branch {
     /// Halts execution.
     Halt,
+
+    /// Jumps to a [`Label`].
+    Jump(Label),
 
     /// Calls a [`Function`].
     Call(Rc<Function>),
