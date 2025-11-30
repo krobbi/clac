@@ -1,9 +1,10 @@
+mod globals;
 mod interpret_error;
 mod value;
 
-pub use self::interpret_error::InterpretError;
+pub use self::{globals::Globals, interpret_error::InterpretError};
 
-use std::{collections::HashMap, mem, rc::Rc};
+use std::{mem, rc::Rc};
 
 use crate::{
     ast::BinOp,
@@ -12,10 +13,9 @@ use crate::{
 
 use self::value::{Closure, Value};
 
-// TODO: Preserve global variables between REPL lines.
-/// Interprets a [`Cfg`]. This function returns an [`InterpretError`] if an
-/// error occurred.
-pub fn interpret_cfg(cfg: &Cfg) -> Result<(), InterpretError> {
+/// Interprets a [`Cfg`] with [`Globals`]. This function returns an
+/// [`InterpretError`] if an error occurred.
+pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretError> {
     let mut interpreter = Interpreter::new();
     let mut called_functions: Vec<Rc<Function>> = Vec::new();
     let mut label = Label::default();
@@ -27,7 +27,7 @@ pub fn interpret_cfg(cfg: &Cfg) -> Result<(), InterpretError> {
         };
 
         for instruction in &block.instructions {
-            interpreter.interpret_instruction(instruction)?;
+            interpreter.interpret_instruction(instruction, globals)?;
         }
 
         match interpreter.interpret_exit(&block.exit)? {
@@ -55,9 +55,6 @@ struct Interpreter {
     /// The stack offset to the current stack frame.
     frame: usize,
 
-    /// The map of global variable names to [`Value`]s.
-    globals: HashMap<String, Value>,
-
     /// The stack of upvalues.
     upvalues: Vec<Rc<Value>>,
 
@@ -71,9 +68,13 @@ impl Interpreter {
         Self::default()
     }
 
-    /// Interprets an [`Instruction`]. This function returns an
+    /// Interprets an [`Instruction`] with [`Globals`]. This function returns an
     /// [`InterpretError`] if an error occurred.
-    fn interpret_instruction(&mut self, instruction: &Instruction) -> Result<(), InterpretError> {
+    fn interpret_instruction(
+        &mut self,
+        instruction: &Instruction,
+        globals: &mut Globals,
+    ) -> Result<(), InterpretError> {
         match instruction {
             Instruction::PushLiteral(literal) => self.push(literal.into()),
             Instruction::PushFunction(function) => self.push(Value::Function(function.clone())),
@@ -100,11 +101,8 @@ impl Interpreter {
             }
             Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
             Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
-            Instruction::LoadGlobal(name) => self.push(self.globals[name].clone()),
-            Instruction::StoreGlobal(name) => {
-                let value = self.pop();
-                self.globals.insert(name.to_owned(), value);
-            }
+            Instruction::LoadGlobal(name) => self.push(globals.read(name).clone()),
+            Instruction::StoreGlobal(name) => globals.assign(name, self.pop()),
             Instruction::DefineUpvalue => {
                 let value = self.pop();
                 self.upvalues.push(value.into());

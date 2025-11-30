@@ -13,27 +13,28 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::{clac_error::ClacError, decl_table::DeclTable};
+use self::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
 
 /// Runs Clac.
 fn main() {
+    let mut globals = Globals::new();
     let mut args = env::args().skip(1);
 
     match args.next() {
-        None => run_repl(),
+        None => run_repl(&mut globals),
         Some(mut source) => {
             for arg in args {
                 source.push(' ');
                 source.push_str(&arg);
             }
 
-            execute_source(&source);
+            execute_source(&source, &mut globals);
         }
     }
 }
 
-/// Runs Clac in REPL mode.
-fn run_repl() {
+/// Runs Clac in REPL mode with [`Globals`].
+fn run_repl(globals: &mut Globals) {
     #[cfg(target_os = "windows")]
     const EXIT_SHORTCUT: &str = "Ctrl+Z";
 
@@ -60,25 +61,25 @@ fn run_repl() {
             break;
         }
 
-        execute_source(&source);
+        execute_source(&source, globals);
     }
 
     println!("\nReceived [{EXIT_SHORTCUT}], exiting...");
 }
 
-/// Executes source code.
-fn execute_source(source: &str) {
-    if let Err(error) = try_execute_source(source) {
+/// Executes source code with [`Globals`].
+fn execute_source(source: &str, globals: &mut Globals) {
+    if let Err(error) = try_execute_source(source, globals) {
         eprintln!("Error: {error}");
     }
 }
 
-/// Executes source code. This function returns a [`ClacError`] if the source
-/// code could not be executed.
-fn try_execute_source(source: &str) -> Result<(), ClacError> {
+/// Executes source code with [`Globals`]. This function returns a [`ClacError`]
+/// if the source code could not be executed.
+fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
     let ast = parser::parse_source(source)?;
     let mut decls = DeclTable::new();
-    let hir = resolver::resolve_ast(&ast, &mut decls)?;
+    let hir = resolver::resolve_ast(&ast, globals, &mut decls)?;
     let cfg = compiler::compile_hir(&hir, &decls);
-    interpreter::interpret_cfg(&cfg).map_err(ClacError::Interpret)
+    interpreter::interpret_cfg(&cfg, globals).map_err(ClacError::Interpret)
 }
