@@ -76,6 +76,7 @@ impl Display for Token {
         match self {
             Self::Literal(literal) => match literal {
                 Literal::Number(value) => write!(f, "number '{value}'"),
+                Literal::Bool(value) => write!(f, "bool '{value}'"),
             },
             Self::Ident(name) => write!(f, "identifier '{name}'"),
             _ => self.as_type().fmt(f),

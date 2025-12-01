@@ -39,7 +39,7 @@ impl<'a> Lexer<'a> {
 
         let token = match char {
             c if is_char_digit(c) => self.read_number(),
-            c if is_char_ident_start(c) => self.read_ident(),
+            c if is_char_word_start(c) => self.read_word(),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             '{' => Token::OpenBrace,
@@ -75,11 +75,16 @@ impl<'a> Lexer<'a> {
         Token::Literal(Literal::Number(value))
     }
 
-    /// Reads the next identifier [`Token`] after consuming its first [`char`].
-    fn read_ident(&mut self) -> Token {
-        self.scanner.eat_while(is_char_ident_continue);
-        let name = self.scanner.lexeme().to_owned();
-        Token::Ident(name)
+    /// Reads the next identifier or keyword [`Token`] after consuming its first
+    /// [`char`].
+    fn read_word(&mut self) -> Token {
+        self.scanner.eat_while(is_char_word_continue);
+
+        match self.scanner.lexeme() {
+            "false" => Token::Literal(Literal::Bool(false)),
+            "true" => Token::Literal(Literal::Bool(true)),
+            name => Token::Ident(name.to_owned()),
+        }
     }
 }
 
@@ -88,12 +93,12 @@ fn is_char_digit(char: char) -> bool {
     char.is_ascii_digit()
 }
 
-/// Returns `true` if a [`char`] is an identifier start.
-fn is_char_ident_start(char: char) -> bool {
+/// Returns `true` if a [`char`] is an identifier or keyword start.
+fn is_char_word_start(char: char) -> bool {
     char.is_ascii_alphabetic() || char == '_'
 }
 
-/// Return `true` if a [`char`] is an identifier continuation.
-fn is_char_ident_continue(char: char) -> bool {
-    is_char_ident_start(char) || is_char_digit(char)
+/// Return `true` if a [`char`] is an identifier or keyword continuation.
+fn is_char_word_continue(char: char) -> bool {
+    is_char_word_start(char) || is_char_digit(char)
 }

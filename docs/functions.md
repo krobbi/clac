@@ -53,9 +53,9 @@ clac> sqdist(10, 20,)
 100
 ```
 
-The function's name and parameters must be defined as plain identifiers
-([variable](variables.md) names that are not surrounded by parentheses). Each
-parameter must also have a different name to every other parameter:
+The function's name and parameters must be defined with identifiers that are
+not surrounded by parentheses. Each parameter must also have a different name
+to every other parameter:
 ```
 clac> 1(x) = x + 1
 Error: function names must be identifiers
@@ -74,8 +74,8 @@ Error: function parameter 'x' is duplicated
 ```
 
 ## Functions are Values
-Functions are values that can be stored in variables, and passed to and
-returned from functions:
+Functions are values that can be stored in [variables](variables.md), and
+passed to and returned from functions:
 ```
 clac> sqrt
 function

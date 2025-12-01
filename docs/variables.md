@@ -1,8 +1,8 @@
 [Go back](README.md)
 
 # Variables
-Variables are defined with the `=` operator, with a variable name on the
-left-hand side of the operator and a value on the right:
+Variables are defined with the `=` operator, with an identifier (variable name)
+on the left-hand side of the operator and a value on the right:
 ```
 clac> x = 5, x * x
 25
@@ -11,16 +11,20 @@ clac> x
 5
 ```
 
-## Variable Names
-Variable names must consist of one or more ASCII letters or underscores. After
-the first character, digits are also allowed in variable names.
+## Identifiers
+Identifiers must consist of one or more ASCII letters or underscores. After
+the first character, digits are also allowed in identifiers.
 
-Plain variable names must be used in variable definitions. They cannot be
-surrounded by parentheses:
+Identifiers cannot be surrounded by parentheses in variable definitions:
 ```
 clac> (x) = 20
 Error: can only assign to variables and function signatures
 ```
+
+### Keywords
+These keywords are reserved and cannot be used as identifiers:
+* `false`
+* `true`
 
 ## Mutability
 Currently, all variables are immutable and cannot be reassigned:

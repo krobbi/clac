@@ -41,6 +41,13 @@ fn non_identifier_bindings_are_unchecked() {
     assert_ast("(7, 8) -> 9", "(a: (-> 7 8 9))");
 }
 
+/// Tests that mismatched types are not checked by the [`Parser`].
+#[test]
+fn mismatched_types_are_unchecked() {
+    assert_ast("false + 1", "(a: (+ false 1))");
+    assert_ast("-true", "(a: (- true))");
+}
+
 /// Tests that empty blocks are parsed.
 #[test]
 fn empty_blocks_are_parsed() {

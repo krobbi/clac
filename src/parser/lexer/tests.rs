@@ -91,7 +91,7 @@ fn trailing_eof_tokens_are_produced() {
 #[test]
 fn all_tokens_are_produced() {
     assert_tokens!(
-        "-(1 + 2.5) * 3. / 4, 123.0, {life -> 42, _F00 == life()},",
+        "-(1 + 2.5) * 3. / 4, 123.0, {foo -> _B4R, true == false},",
         Ok[
             Token::Minus,
             Token::OpenParen,
@@ -109,17 +109,15 @@ fn all_tokens_are_produced() {
             Token::Comma,
 
             Token::OpenBrace,
-            Token::Ident(n) if n == "life",
+            Token::Ident(n) if n == "foo",
             Token::RightArrow,
-            Token::Literal(Literal::Number(42.0)),
+            Token::Ident(n) if n == "_B4R",
             Token::Comma,
 
-            Token::Ident(n) if n == "_F00",
+            Token::Literal(Literal::Bool(true)),
             Token::Eq,
             Token::Eq,
-            Token::Ident(n) if n == "life",
-            Token::OpenParen,
-            Token::CloseParen,
+            Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,
             Token::Comma,
         ],
@@ -210,5 +208,77 @@ fn decimal_tokens_are_accurate() {
     assert_tokens!(
         "3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628035",
         Ok[Token::Literal(Literal::Number(PI))],
+    );
+}
+
+/// Tests that keyword [`Token`]s are length-sensitive.
+#[test]
+fn keywords_are_length_sensitive() {
+    assert_tokens!(
+        "f, fals, false, false_, falsetto,",
+        Ok[
+            Token::Ident(n) if n == "f",
+            Token::Comma,
+            Token::Ident(n) if n == "fals",
+            Token::Comma,
+            Token::Literal(Literal::Bool(false)),
+            Token::Comma,
+            Token::Ident(n) if n == "false_",
+            Token::Comma,
+            Token::Ident(n) if n == "falsetto",
+            Token::Comma,
+        ],
+    );
+
+    assert_tokens!(
+        "t, tru, true, true_, truest,",
+        Ok[
+            Token::Ident(n) if n == "t",
+            Token::Comma,
+            Token::Ident(n) if n == "tru",
+            Token::Comma,
+            Token::Literal(Literal::Bool(true)),
+            Token::Comma,
+            Token::Ident(n) if n == "true_",
+            Token::Comma,
+            Token::Ident(n) if n == "truest",
+            Token::Comma,
+        ],
+    );
+}
+
+/// Tests that keyword [`Token`]s are case-sensitive.
+#[test]
+fn keywords_are_case_sensitive() {
+    assert_tokens!(
+        "false, False, FALSE, fálse,",
+        [
+            Ok(Token::Literal(Literal::Bool(false))),
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "False",
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "FALSE",
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "f",
+            Err(LexError::UnexpectedChar('á')),
+            Ok(Token::Ident(n)) if n == "lse",
+            Ok(Token::Comma),
+        ],
+    );
+
+    assert_tokens!(
+        "true, True, TRUE, trüe,",
+        [
+            Ok(Token::Literal(Literal::Bool(true))),
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "True",
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "TRUE",
+            Ok(Token::Comma),
+            Ok(Token::Ident(n)) if n == "tr",
+            Err(LexError::UnexpectedChar('ü')),
+            Ok(Token::Ident(n)) if n == "e",
+            Ok(Token::Comma),
+        ],
     );
 }

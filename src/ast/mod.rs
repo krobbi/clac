@@ -45,13 +45,14 @@ pub enum Expr {
     Binary(BinOp, Box<Expr>, Box<Expr>),
 }
 
-// NOTE: 'Token' cannot be linked in the documentation because it is
-// encapsulated in the parser module.
 /// A value that can be represented with a single token.
 #[derive(Clone, Debug)]
 pub enum Literal {
     /// A number.
     Number(f64),
+
+    /// A Boolean value.
+    Bool(bool),
 }
 
 /// A unary operator.

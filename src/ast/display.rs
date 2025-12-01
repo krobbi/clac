@@ -41,6 +41,7 @@ impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Number(value) => value.fmt(f),
+            Self::Bool(value) => value.fmt(f),
         }
     }
 }

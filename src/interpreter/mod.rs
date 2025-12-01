@@ -143,7 +143,6 @@ impl Interpreter {
                 self.frame = self.stack.len() - arity;
 
                 let function = match &self.stack[self.frame - 1] {
-                    Value::Number(_) => return Err(InterpretError::CalledNonFunction),
                     Value::Function(function) => function.clone(),
                     Value::Closure(closure) => {
                         let outer_upvalues =
@@ -159,6 +158,7 @@ impl Interpreter {
                         *self.stack.last_mut().expect("stack should not be empty") = return_value;
                         return Ok(Branch::Jump(*return_label));
                     }
+                    _ => return Err(InterpretError::CalledNonFunction),
                 };
 
                 if arity != function.arity {
