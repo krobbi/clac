@@ -4,7 +4,7 @@ mod upvalue_stack;
 use std::mem;
 
 use crate::{
-    ast::{BinOp, Literal},
+    ast::{BinOp, Literal, UnOp},
     cfg::{Block, Cfg, Exit, Function, Instruction, Label},
     decl_table::{DeclId, DeclTable},
     hir::{Expr, Hir, Stmt},
@@ -134,6 +134,7 @@ impl<'a> Compiler<'a> {
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
+            Expr::Unary(op, rhs) => self.compile_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
         }
     }
@@ -265,12 +266,31 @@ impl<'a> Compiler<'a> {
         self.locals.drop_temps(arity + 1);
     }
 
+    /// Compiles a unary [`Expr`].
+    fn compile_expr_unary(&mut self, op: UnOp, rhs: &Expr) {
+        self.compile_expr(rhs);
+
+        let instruction = match op {
+            UnOp::Negate => Instruction::Negate,
+        };
+
+        self.compile(instruction);
+    }
+
     /// Compiles a binary [`Expr`].
     fn compile_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) {
         self.compile_expr(lhs);
         self.locals.push_temp();
         self.compile_expr(rhs);
-        self.compile(Instruction::Binary(op));
+
+        let instruction = match op {
+            BinOp::Add => Instruction::Add,
+            BinOp::Subtract => Instruction::Subtract,
+            BinOp::Multiply => Instruction::Multiply,
+            BinOp::Divide => Instruction::Divide,
+        };
+
+        self.compile(instruction);
         self.locals.drop_temps(1);
     }
 

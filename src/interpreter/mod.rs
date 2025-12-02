@@ -6,10 +6,7 @@ pub use self::{globals::Globals, interpret_error::InterpretError};
 
 use std::{mem, rc::Rc};
 
-use crate::{
-    ast::BinOp,
-    cfg::{Cfg, Exit, Function, Instruction, Label},
-};
+use crate::cfg::{Cfg, Exit, Function, Instruction, Label};
 
 use self::value::{Closure, Value};
 
@@ -81,24 +78,34 @@ impl Interpreter {
             Instruction::PushFunction(function) => self.push(Value::Function(function.clone())),
             Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
-            Instruction::Binary(op) => {
+            Instruction::Negate => {
+                let rhs = self.pop_number()?;
+                self.push(Value::Number(-rhs));
+            }
+            Instruction::Add => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Number(lhs + rhs));
+            }
+            Instruction::Subtract => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Number(lhs - rhs));
+            }
+            Instruction::Multiply => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Number(lhs * rhs));
+            }
+            Instruction::Divide => {
                 let rhs = self.pop_number()?;
                 let lhs = self.pop_number()?;
 
-                let result = match op {
-                    BinOp::Add => lhs + rhs,
-                    BinOp::Subtract => lhs - rhs,
-                    BinOp::Multiply => lhs * rhs,
-                    BinOp::Divide => {
-                        if !rhs.is_normal() {
-                            return Err(InterpretError::DivideByZero);
-                        }
+                if !rhs.is_normal() {
+                    return Err(InterpretError::DivideByZero);
+                }
 
-                        lhs / rhs
-                    }
-                };
-
-                self.push(Value::Number(result));
+                self.push(Value::Number(lhs / rhs));
             }
             Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
             Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),

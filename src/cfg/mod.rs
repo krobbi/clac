@@ -2,7 +2,7 @@ mod display;
 
 use std::rc::Rc;
 
-use crate::ast::{BinOp, Literal};
+use crate::ast::Literal;
 
 /// A control flow graph.
 pub struct Cfg {
@@ -67,9 +67,25 @@ pub enum Instruction {
     /// Pops a value from the stack and prints it.
     Print,
 
-    /// Pops two values from the stack, applies a binary operator to them, and
-    /// pushes the result to the stack.
-    Binary(BinOp),
+    /// Pops a number value from the stack, negates it, and pushes the result to
+    /// the stack.
+    Negate,
+
+    /// Pops two number values from the stack, adds them, and pushes the result
+    /// to the stack.
+    Add,
+
+    /// Pops two number values from the stack, subtracts them, and pushes the
+    /// result to the stack.
+    Subtract,
+
+    /// Pops two number values from the stack, multiplies them, and pushes the
+    /// result to the stack.
+    Multiply,
+
+    /// Pops two number values from the stack, divides them, and pushes the
+    /// result to the stack.
+    Divide,
 
     /// Loads a value from a local variable and pushes it to the stack.
     LoadLocal(usize),

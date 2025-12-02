@@ -7,7 +7,7 @@ pub use self::resolve_error::ResolveError;
 use std::{collections::HashSet, result};
 
 use crate::{
-    ast::{Ast, BinOp, Expr, Literal, Stmt, UnOp},
+    ast::{Ast, BinOp, Expr, Stmt, UnOp},
     decl_table::DeclTable,
     hir::{self, Hir},
     interpreter::Globals,
@@ -225,16 +225,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// [`ResolveError`] if the operand is a statement or could not be resolved.
     fn resolve_expr_unary(&mut self, op: UnOp, rhs: &Expr) -> Result<hir::Expr> {
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
-
-        let op = match op {
-            UnOp::Negate => BinOp::Subtract,
-        };
-
-        Ok(hir::Expr::Binary(
-            op,
-            hir::Expr::Literal(Literal::Number(0.0)).into(),
-            rhs.into(),
-        ))
+        Ok(hir::Expr::Unary(op, rhs.into()))
     }
 
     /// Resolves a binary [`Expr`] to an [`hir::Expr`]. This function returns a

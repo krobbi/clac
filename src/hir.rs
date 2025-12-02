@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BinOp, Literal},
+    ast::{BinOp, Literal, UnOp},
     decl_table::DeclId,
 };
 
@@ -46,6 +46,9 @@ pub enum Expr {
 
     /// A function call.
     Call(Box<Expr>, Vec<Expr>),
+
+    /// A unary operation.
+    Unary(UnOp, Box<Expr>),
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),
