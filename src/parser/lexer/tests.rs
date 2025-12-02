@@ -91,7 +91,7 @@ fn trailing_eof_tokens_are_produced() {
 #[test]
 fn all_tokens_are_produced() {
     assert_tokens!(
-        "-(1 + 2.5) * 3. / 4, 123.0, {foo -> _B4R, true != false},",
+        "-(1 + 2.5) * 3. / 4 == !{foo -> _B4R = baz, true != false}",
         Ok[
             Token::Minus,
             Token::OpenParen,
@@ -103,23 +103,19 @@ fn all_tokens_are_produced() {
             Token::Literal(Literal::Number(3.0)),
             Token::Slash,
             Token::Literal(Literal::Number(4.0)),
-            Token::Comma,
-
-            Token::Literal(Literal::Number(123.0)),
-            Token::Comma,
-
+            Token::EqEq,
+            Token::Bang,
             Token::OpenBrace,
             Token::Ident(n) if n == "foo",
             Token::RightArrow,
             Token::Ident(n) if n == "_B4R",
-            Token::Comma,
-
-            Token::Literal(Literal::Bool(true)),
-            Token::Bang,
             Token::Eq,
+            Token::Ident(n) if n == "baz",
+            Token::Comma,
+            Token::Literal(Literal::Bool(true)),
+            Token::Ne,
             Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,
-            Token::Comma,
         ],
     );
 }

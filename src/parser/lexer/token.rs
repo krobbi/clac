@@ -67,7 +67,9 @@ define_tokens! {
     (Star, "An asterisk (`*`).", "'*'"),
     (Slash, "A forward slash (`/`).", "'/'"),
     (Eq, "An equals sign (`=`).", "'='"),
+    (EqEq, "An equality comparison (`==`).", "'=='"),
     (Bang, "An exclamation mark (`!`).", "'!'"),
+    (Ne, "An inequality comparison (`!=`).", "'!='"),
     (RightArrow, "A right arrow (`->`).", "'->'"),
     (Eof, "An end of source code marker.", "end of file"),
 }

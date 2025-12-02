@@ -55,8 +55,20 @@ impl<'a> Lexer<'a> {
             }
             '*' => Token::Star,
             '/' => Token::Slash,
-            '=' => Token::Eq,
-            '!' => Token::Bang,
+            '=' => {
+                if self.scanner.eat('=') {
+                    Token::EqEq
+                } else {
+                    Token::Eq
+                }
+            }
+            '!' => {
+                if self.scanner.eat('=') {
+                    Token::Ne
+                } else {
+                    Token::Bang
+                }
+            }
             _ => return Err(LexError::UnexpectedChar(char)),
         };
 
