@@ -82,6 +82,10 @@ impl Interpreter {
                 let rhs = self.pop_number()?;
                 self.push(Value::Number(-rhs));
             }
+            Instruction::Not => {
+                let rhs = self.pop_bool()?;
+                self.push(Value::Bool(!rhs));
+            }
             Instruction::Add => {
                 let rhs = self.pop_number()?;
                 let lhs = self.pop_number()?;
@@ -213,6 +217,16 @@ impl Interpreter {
     fn pop_number(&mut self) -> Result<f64, InterpretError> {
         match self.pop() {
             Value::Number(value) => Ok(value),
+            _ => Err(InterpretError::InvalidType),
+        }
+    }
+
+    /// Pops a boolean [`Value`] from the stack and returns its underlying
+    /// [`bool`]. This function returns an [`InterpretError`] if the [`Value`]
+    /// is not a Boolean value.
+    fn pop_bool(&mut self) -> Result<bool, InterpretError> {
+        match self.pop() {
+            Value::Bool(value) => Ok(value),
             _ => Err(InterpretError::InvalidType),
         }
     }

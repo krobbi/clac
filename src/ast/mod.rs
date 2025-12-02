@@ -60,6 +60,9 @@ pub enum Literal {
 pub enum UnOp {
     /// A negation.
     Negate,
+
+    /// A logical negation.
+    Not,
 }
 
 /// A binary operator.

@@ -62,11 +62,12 @@ define_tokens! {
     (OpenBrace, "An opening brace (`{`).", "an opening '{'"),
     (CloseBrace, "A closing brace (`}`).", "a closing '}'"),
     (Comma, "A comma (`,`).", "','"),
-    (Eq, "An equals sign (`=`).", "'='"),
     (Plus, "A plus sign (`+`).", "'+'"),
     (Minus, "A minus sign (`-`).", "'-'"),
     (Star, "An asterisk (`*`).", "'*'"),
     (Slash, "A forward slash (`/`).", "'/'"),
+    (Eq, "An equals sign (`=`).", "'='"),
+    (Bang, "An exclamation mark (`!`).", "'!'"),
     (RightArrow, "A right arrow (`->`).", "'->'"),
     (Eof, "An end of source code marker.", "end of file"),
 }

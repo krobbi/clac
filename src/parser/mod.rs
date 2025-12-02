@@ -117,6 +117,10 @@ impl<'a> Parser<'a> {
                 let rhs = self.parse_expr_call()?;
                 Expr::Unary(UnOp::Negate, rhs.into())
             }
+            Token::Bang => {
+                let rhs = self.parse_expr_call()?;
+                Expr::Unary(UnOp::Not, rhs.into())
+            }
             token => return Err(ParseError::ExpectedExpr(token)),
         };
 

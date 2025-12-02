@@ -71,6 +71,10 @@ pub enum Instruction {
     /// the stack.
     Negate,
 
+    /// Pops a Boolean value from the stack, logically negates it, and pushes
+    /// the result to the stack.
+    Not,
+
     /// Pops two number values from the stack, adds them, and pushes the result
     /// to the stack.
     Add,

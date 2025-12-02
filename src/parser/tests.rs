@@ -169,6 +169,7 @@ fn leading_plus_signs_are_not_parsed() {
 #[test]
 fn operators_have_expected_associativity() {
     assert_ast("---1", "(a: (- (- (- 1))))");
+    assert_ast("!!!true", "(a: (! (! (! true))))");
     assert_ast("1 + 2 + 3", "(a: (+ (+ 1 2) 3))");
     assert_ast("4 - 5 - 6", "(a: (- (- 4 5) 6))");
     assert_ast("7 * 8 * 9", "(a: (* (* 7 8) 9))");
@@ -177,9 +178,30 @@ fn operators_have_expected_associativity() {
     assert_ast("x -> y -> z", "(a: (-> x (-> y z)))");
 }
 
-/// Tests that operators have the expected precedence levels.
+/// Tests that unary operators have the expected precedence.
 #[test]
-fn operators_have_expected_precedence_levels() {
+fn unary_operators_have_expected_precedence() {
+    // The precedence levels of all unary operators are equal.
+    assert_ast("-!true", "(a: (- (! true)))");
+    assert_ast("!-1", "(a: (! (- 1)))");
+
+    // The `-` operator is both unary and binary.
+    assert_ast("1 -1", "(a: (- 1 1))");
+    assert_ast("1, -1", "(a: 1 (- 1))");
+    assert_ast("-1 - 1", "(a: (- (- 1) 1))");
+
+    // Unary operators have a high precedence, but have a lower precedence than
+    // function calls.
+    assert_ast("-1 * x", "(a: (* (- 1) x))");
+    assert_ast("-f(x)", "(a: (- (f x)))");
+    assert_ast("-f(x)(y)", "(a: (- ((f x) y)))");
+    assert_ast("-x -> y", "(a: (-> (- x) y))");
+    assert_ast("-(x) -> y", "(a: (-> (- (p: x)) y))");
+}
+
+/// Tests that binary operators have the expected precedence levels.
+#[test]
+fn binary_operators_have_expected_precedence_levels() {
     // Functions have the lowest precedence.
     assert_ast("1 + x -> x - 2(10)", "(a: (-> (+ 1 x) (- x (2 10))))");
 
@@ -201,18 +223,6 @@ fn operators_have_expected_precedence_levels() {
         "1 + (x -> x - 2)(10)",
         "(a: (+ 1 ((p: (-> x (- x 2))) 10)))",
     );
-}
-
-/// Tests that the unary negation operator has the expected precedence.
-#[test]
-fn unary_negation_has_expected_precedence() {
-    assert_ast("-1 * x", "(a: (* (- 1) x))");
-    assert_ast("1 -1", "(a: (- 1 1))");
-    assert_ast("1, -1", "(a: 1 (- 1))");
-    assert_ast("-f(x)", "(a: (- (f x)))");
-    assert_ast("-f(x)(y)", "(a: (- ((f x) y)))");
-    assert_ast("-x -> y", "(a: (-> (- x) y))");
-    assert_ast("-(x) -> y", "(a: (-> (- (p: x)) y))");
 }
 
 /// Tests that [`LexError`]s are caught and encapsulated as [`ParseError`]s.

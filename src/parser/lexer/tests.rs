@@ -52,7 +52,7 @@ fn non_ascii_chars_are_scanned() {
             Ok(Token::Ident(n)) if n == "Caf",
             Err(LexError::UnexpectedChar('é')),
             Err(LexError::UnexpectedChar('☕')),
-            Err(LexError::UnexpectedChar('!')),
+            Ok(Token::Bang),
             Ok(Token::CloseParen),
             Ok(Token::OpenParen),
             Err(LexError::UnexpectedChar('🦀')),
@@ -91,7 +91,7 @@ fn trailing_eof_tokens_are_produced() {
 #[test]
 fn all_tokens_are_produced() {
     assert_tokens!(
-        "-(1 + 2.5) * 3. / 4, 123.0, {foo -> _B4R, true == false},",
+        "-(1 + 2.5) * 3. / 4, 123.0, {foo -> _B4R, true != false},",
         Ok[
             Token::Minus,
             Token::OpenParen,
@@ -115,7 +115,7 @@ fn all_tokens_are_produced() {
             Token::Comma,
 
             Token::Literal(Literal::Bool(true)),
-            Token::Eq,
+            Token::Bang,
             Token::Eq,
             Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,

@@ -50,6 +50,7 @@ impl Display for UnOp {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let symbol = match self {
             Self::Negate => "-",
+            Self::Not => "!",
         };
 
         f.write_str(symbol)

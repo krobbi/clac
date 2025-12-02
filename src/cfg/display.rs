@@ -51,6 +51,7 @@ impl Display for Instruction {
             Self::Drop(count) => write!(f, "{:16}{count}", "drop"),
             Self::Print => f.write_str("print"),
             Self::Negate => f.write_str("negate"),
+            Self::Not => f.write_str("not"),
             Self::Add => f.write_str("add"),
             Self::Subtract => f.write_str("subtract"),
             Self::Multiply => f.write_str("multiply"),

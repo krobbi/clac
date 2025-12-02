@@ -272,6 +272,7 @@ impl<'a> Compiler<'a> {
 
         let instruction = match op {
             UnOp::Negate => Instruction::Negate,
+            UnOp::Not => Instruction::Not,
         };
 
         self.compile(instruction);

@@ -10,3 +10,19 @@ clac> true, false
 true
 false
 ```
+
+## Logical Operators
+Logical operators take one or more Boolean values and apply logic to them.
+
+The `!` operator produces the logical negation (NOT) of a Boolean value:
+```
+clac> !true, !false
+false
+true
+```
+
+Only Boolean values may be passed to logical operators:
+```
+clac> !0
+Error: type error
+```
