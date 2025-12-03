@@ -64,7 +64,7 @@ impl<'a> Lexer<'a> {
             }
             '!' => {
                 if self.scanner.eat('=') {
-                    Token::Ne
+                    Token::BangEq
                 } else {
                     Token::Bang
                 }

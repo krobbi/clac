@@ -79,4 +79,10 @@ pub enum BinOp {
 
     /// A division.
     Divide,
+
+    /// A logical equality comparison.
+    Equal,
+
+    /// A logical inequality comparison.
+    NotEqual,
 }

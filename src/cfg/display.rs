@@ -56,6 +56,8 @@ impl Display for Instruction {
             Self::Subtract => f.write_str("subtract"),
             Self::Multiply => f.write_str("multiply"),
             Self::Divide => f.write_str("divide"),
+            Self::Equal => f.write_str("equal"),
+            Self::NotEqual => f.write_str("not_equal"),
             Self::LoadLocal(offset) => write!(f, "{:16}[{offset}]", "load_local"),
             Self::StoreLocal(offset) => write!(f, "{:16}[{offset}]", "store_local"),
             Self::LoadGlobal(name) => write!(f, "{:16}{name}", "load_global"),

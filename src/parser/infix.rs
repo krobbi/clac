@@ -3,12 +3,18 @@ use crate::ast::{BinOp, Expr};
 use super::{ParseError, Parser, lexer::TokenType};
 
 impl Parser<'_> {
+    /// Parses an infix [`Expr`]. This function returns a [`ParseError`] if an
+    /// infix [`Expr`] could not be parsed.
+    pub fn parse_expr_infix(&mut self) -> Result<Expr, ParseError> {
+        self.parse_expr_infix_level(0)
+    }
+
     /// Parses an infix [`Expr`] with a minimum precedence level. This function
     /// returns a [`ParseError`] if an infix [`Expr`] could not be parsed.
-    pub fn parse_expr_infix(&mut self, min_precedence: u8) -> Result<Expr, ParseError> {
+    fn parse_expr_infix_level(&mut self, min_precedence: u8) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_expr_call()?;
 
-        while let Some(op) = BinOp::from_token_type(self.peek()) {
+        while let Some(op) = BinOp::associative_from_token_type(self.peek()) {
             let precedence = op.precedence();
 
             if precedence < min_precedence {
@@ -21,7 +27,7 @@ impl Parser<'_> {
             };
 
             self.bump()?; // Consume the operator token.
-            let rhs = self.parse_expr_infix(min_precedence)?;
+            let rhs = self.parse_expr_infix_level(min_precedence)?;
             lhs = Expr::Binary(op, lhs.into(), rhs.into());
         }
 
@@ -30,9 +36,10 @@ impl Parser<'_> {
 }
 
 impl BinOp {
-    /// Creates a new `BinOp` from a [`TokenType`]. This function returns
-    /// [`None`] if the [`TokenType`] does not correspond to a `BinOp`.
-    fn from_token_type(token_type: TokenType) -> Option<Self> {
+    /// Creates a new associative `BinOp` from a [`TokenType`]. This function
+    /// returns [`None`] if the [`TokenType`] does not correspond to an
+    /// associative `BinOp`.
+    fn associative_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::Plus => Self::Add,
             TokenType::Minus => Self::Subtract,
@@ -47,8 +54,9 @@ impl BinOp {
     /// Returns the `BinOp`'s precedence level.
     fn precedence(self) -> u8 {
         match self {
-            Self::Add | Self::Subtract => 0,
-            Self::Multiply | Self::Divide => 1,
+            Self::Equal | Self::NotEqual => 0,
+            Self::Add | Self::Subtract => 1,
+            Self::Multiply | Self::Divide => 2,
         }
     }
 

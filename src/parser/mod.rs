@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+mod comparison;
 mod infix;
 mod lexer;
 mod parse_error;
@@ -89,7 +90,7 @@ impl<'a> Parser<'a> {
     /// Parses a function [`Expr`]. This function returns a [`ParseError`] if a
     /// function [`Expr`] could not be parsed.
     fn parse_expr_function(&mut self) -> Result<Expr, ParseError> {
-        let params = self.parse_expr_infix(0)?;
+        let params = self.parse_expr_comparison()?;
 
         let function = if self.eat(TokenType::RightArrow)? {
             let body = self.parse_expr_function()?;

@@ -27,6 +27,32 @@ pub enum Value {
     Native(Native),
 }
 
+impl Value {
+    /// Returns `true` if the `Value` has the same [`ValueType`] as another
+    /// `Value`.
+    pub fn matches_type(&self, other: &Self) -> bool {
+        self.as_type() == other.as_type()
+    }
+
+    /// Converts the `Value` to its [`ValueType`].
+    fn as_type(&self) -> ValueType {
+        match self {
+            Self::Number(_) => ValueType::Number,
+            Self::Bool(_) => ValueType::Bool,
+            Self::Function(_) | Self::Closure(_) | Self::Native(_) => ValueType::Function,
+        }
+    }
+}
+
+impl From<&Literal> for Value {
+    fn from(value: &Literal) -> Self {
+        match value {
+            Literal::Number(value) => Self::Number(*value),
+            Literal::Bool(value) => Self::Bool(*value),
+        }
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -78,15 +104,6 @@ impl PartialOrd for Value {
     }
 }
 
-impl From<&Literal> for Value {
-    fn from(value: &Literal) -> Self {
-        match value {
-            Literal::Number(value) => Self::Number(*value),
-            Literal::Bool(value) => Self::Bool(*value),
-        }
-    }
-}
-
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -104,4 +121,17 @@ pub struct Closure {
 
     /// The upvalues.
     pub upvalues: Vec<Rc<Value>>,
+}
+
+/// A type of [`Value`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ValueType {
+    /// A number.
+    Number,
+
+    /// A Boolean value.
+    Bool,
+
+    /// A [`Function`], [`Closure`], or [`Native`].
+    Function,
 }

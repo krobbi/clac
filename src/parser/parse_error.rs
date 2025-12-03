@@ -21,6 +21,9 @@ pub enum ParseError {
 
     /// A chained assignment was attempted.
     ChainedAssignment,
+
+    /// A chained comparison was attempted.
+    ChainedComparison,
 }
 
 impl From<LexError> for ParseError {
@@ -47,6 +50,7 @@ impl Display for ParseError {
             }
             Self::ExpectedExpr(token) => write!(f, "expected an expression, got {token}"),
             Self::ChainedAssignment => f.write_str("assignments cannot be chained"),
+            Self::ChainedComparison => f.write_str("comparisons cannot be chained"),
         }
     }
 }

@@ -91,6 +91,14 @@ pub enum Instruction {
     /// result to the stack.
     Divide,
 
+    /// Pops two values from the stack, compares them as equal, and pushes the
+    /// result to the stack.
+    Equal,
+
+    /// Pops two values from the stack, compares them as not equal, and pushes
+    /// the result to the stack.
+    NotEqual,
+
     /// Loads a value from a local variable and pushes it to the stack.
     LoadLocal(usize),
 

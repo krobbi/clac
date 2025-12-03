@@ -64,6 +64,8 @@ impl Display for BinOp {
             Self::Subtract => "-",
             Self::Multiply => "*",
             Self::Divide => "/",
+            Self::Equal => "==",
+            Self::NotEqual => "!=",
         };
 
         f.write_str(symbol)

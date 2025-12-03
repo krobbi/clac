@@ -113,7 +113,7 @@ fn all_tokens_are_produced() {
             Token::Ident(n) if n == "baz",
             Token::Comma,
             Token::Literal(Literal::Bool(true)),
-            Token::Ne,
+            Token::BangEq,
             Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,
         ],

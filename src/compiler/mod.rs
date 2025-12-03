@@ -289,6 +289,8 @@ impl<'a> Compiler<'a> {
             BinOp::Subtract => Instruction::Subtract,
             BinOp::Multiply => Instruction::Multiply,
             BinOp::Divide => Instruction::Divide,
+            BinOp::Equal => Instruction::Equal,
+            BinOp::NotEqual => Instruction::NotEqual,
         };
 
         self.compile(instruction);
