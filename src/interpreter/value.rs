@@ -5,7 +5,7 @@ use std::{
 
 use crate::{ast::Literal, cfg::Function};
 
-use super::InterpretError;
+use super::native::Native;
 
 /// A runtime value.
 #[derive(Clone)]
@@ -22,8 +22,8 @@ pub enum Value {
     /// A [`Closure`].
     Closure(Rc<Closure>),
 
-    /// A native function.
-    Native(fn(&[Value]) -> Result<Value, InterpretError>),
+    /// A [`Native`].
+    Native(Native),
 }
 
 /// A [`Function`] with captured upvalues.

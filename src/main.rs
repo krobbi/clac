@@ -13,11 +13,13 @@ use std::{
     io::{self, Write as _},
 };
 
-use self::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
+use crate::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
 
 /// Runs Clac.
 fn main() {
     let mut globals = Globals::new();
+    interpreter::install_natives(&mut globals);
+
     let mut args = env::args().skip(1);
 
     match args.next() {

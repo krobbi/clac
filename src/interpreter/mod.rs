@@ -1,8 +1,9 @@
 mod globals;
 mod interpret_error;
+mod native;
 mod value;
 
-pub use self::{globals::Globals, interpret_error::InterpretError};
+pub use self::{globals::Globals, interpret_error::InterpretError, native::install_natives};
 
 use std::{mem, rc::Rc};
 
@@ -162,8 +163,8 @@ impl Interpreter {
                         return_data.upvalues = Some(outer_upvalues);
                         closure.function.clone()
                     }
-                    Value::Native(function) => {
-                        let return_value = function(&self.stack[self.frame..])?;
+                    Value::Native(native) => {
+                        let return_value = native.call(&self.stack[self.frame..])?;
                         self.stack.truncate(self.frame);
                         self.frame = return_data.frame;
                         *self.stack.last_mut().expect("stack should not be empty") = return_value;
