@@ -136,6 +136,7 @@ impl<'a> Compiler<'a> {
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.compile_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
+            Expr::Cond(_cond, _then, _or) => todo!("compiling conditional expressions"),
         }
     }
 

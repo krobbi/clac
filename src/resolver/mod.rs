@@ -132,7 +132,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
             Expr::Call(callee, args) => self.resolve_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
-            Expr::Cond(_cond, _then, _or) => todo!("resolving conditional expressions"),
+            Expr::Cond(cond, then, or) => self.resolve_expr_cond(cond, then, or),
         };
 
         expr.map(Voidable::Expr)
@@ -237,6 +237,16 @@ impl<'a, 'b> Resolver<'a, 'b> {
         let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
         Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
+    }
+
+    /// Resolves a ternary conditional [`Expr`] to an [`hir::Expr`]. This
+    /// function returns a [`ResolveError`] if any operand is a statement or
+    /// could not be resolved.
+    fn resolve_expr_cond(&mut self, cond: &Expr, then: &Expr, or: &Expr) -> Result<hir::Expr> {
+        let cond = self.resolve_expr(cond, ExprArea::Condition)?;
+        let then = self.resolve_expr(then, ExprArea::Operand)?;
+        let or = self.resolve_expr(or, ExprArea::Operand)?;
+        Ok(hir::Expr::Cond(cond.into(), then.into(), or.into()))
     }
 
     /// Returns `true` if a global variable is defined.

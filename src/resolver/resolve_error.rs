@@ -39,12 +39,13 @@ impl Display for ResolveError {
         match self {
             Self::UsedStmt(area) => {
                 let message = match area {
-                    ExprArea::Paren => "statements cannot be used inside parentheses",
-                    ExprArea::Operand => "statements cannot be used as operands",
                     ExprArea::AssignSource => "statements cannot be assigned to variables",
+                    ExprArea::Paren => "statements cannot be used inside parentheses",
                     ExprArea::FunctionBody => "functions must return a value",
                     ExprArea::Callee => "statements cannot be called",
                     ExprArea::Arg => "statements cannot be used as call arguments",
+                    ExprArea::Operand => "statements cannot be used as operands",
+                    ExprArea::Condition => "statements cannot be used as conditions",
                 };
 
                 f.write_str(message)
@@ -65,14 +66,11 @@ impl Display for ResolveError {
 /// An area where an expression must be used instead of a statement.
 #[derive(Clone, Copy, Debug)]
 pub enum ExprArea {
-    /// Inside parentheses.
-    Paren,
-
-    /// An operand.
-    Operand,
-
     /// An assignment source.
     AssignSource,
+
+    /// Inside parentheses.
+    Paren,
 
     /// A function body.
     FunctionBody,
@@ -82,4 +80,10 @@ pub enum ExprArea {
 
     /// An argument.
     Arg,
+
+    /// An operand.
+    Operand,
+
+    /// A condition.
+    Condition,
 }
