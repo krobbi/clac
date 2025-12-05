@@ -83,6 +83,8 @@ impl<'a> Lexer<'a> {
                     Token::Gt
                 }
             }
+            '?' => Token::Question,
+            ':' => Token::Colon,
             _ => return Err(LexError::UnexpectedChar(char)),
         };
 

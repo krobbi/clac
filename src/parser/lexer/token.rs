@@ -74,6 +74,8 @@ define_tokens! {
     (LtEq, "A less than symbol and equals sign (`<=`).", "'<='"),
     (Gt, "A greater than symbol (`>`).", "'>'"),
     (GtEq, "A greater than symbol and equals sign (`>=`).", "'>='"),
+    (Question, "A question mark (`?`).", "'?'"),
+    (Colon, "A colon (`:`).", "':'"),
     (RightArrow, "A right arrow (`->`).", "'->'"),
     (Eof, "An end of source code marker.", "end of file"),
 }

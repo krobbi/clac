@@ -147,6 +147,25 @@ fn all_tokens_are_produced() {
             Token::Literal(Literal::Number(1.0)),
         ],
     );
+
+    assert_tokens!(
+        "abs(n) = n < 0 ? -n : n",
+        Ok[
+            Token::Ident(n) if n == "abs",
+            Token::OpenParen,
+            Token::Ident(n) if n == "n",
+            Token::CloseParen,
+            Token::Eq,
+            Token::Ident(n) if n == "n",
+            Token::Lt,
+            Token::Literal(Literal::Number(0.0)),
+            Token::Question,
+            Token::Minus,
+            Token::Ident(n) if n == "n",
+            Token::Colon,
+            Token::Ident(n) if n == "n",
+        ],
+    );
 }
 
 /// Tests that integer number [`Token`]s are produced.
