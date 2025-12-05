@@ -33,6 +33,7 @@ impl Display for Expr {
             Self::Call(callee, args) => write_s_expr(f, callee, args),
             Self::Unary(op, expr) => write_s_expr(f, op, &[expr]),
             Self::Binary(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
+            Self::Cond(cond, then, or) => write_s_expr(f, "?", &[cond, then, or]),
         }
     }
 }

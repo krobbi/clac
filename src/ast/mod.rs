@@ -43,6 +43,9 @@ pub enum Expr {
 
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),
+
+    /// A ternary conditional.
+    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 /// A value that can be represented with a single token.

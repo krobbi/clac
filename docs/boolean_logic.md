@@ -113,3 +113,33 @@ Only Boolean values may be passed to logical operators:
 clac> !0
 Error: type error
 ```
+
+## Conditional Expressions
+Conditional logic can be implemented with a ternary conditional expression. A
+Boolean condition is used before the `?` operator, followed by an expression to
+evaluate if the condition is `true`. After this, the `:` operator is used,
+followed by an expression to evaluate if the condition is `false`:
+```
+clac> absolute(n) = n < 0 ? -n : n
+
+clac> absolute(123)
+123
+
+clac> absolute(-456)
+456
+```
+
+The conditional expression is short-circuiting and only evaluates the branch
+that was taken.
+
+The right-hand side of conditional expressions can be chained. For example,
+`c1 ? b1 : c2 ? b2 : b3` is equivalent to:
+```rust
+if c1 {
+    b1
+} else if c2 {
+    b2
+} else {
+    b3
+}
+```

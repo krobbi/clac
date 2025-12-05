@@ -84,22 +84,32 @@ impl<'a> Parser<'a> {
     /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
     /// [`Expr`] could not be parsed.
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expr_function()
+        self.parse_expr_mapping()
     }
 
-    /// Parses a function [`Expr`]. This function returns a [`ParseError`] if a
-    /// function [`Expr`] could not be parsed.
-    fn parse_expr_function(&mut self) -> Result<Expr, ParseError> {
-        let params = self.parse_expr_comparison()?;
+    /// Parses a function [`Expr`] or a ternary conditional [`Expr`]. This
+    /// function returns a [`ParseError`] if a function [`Expr`] or a ternary
+    /// conditional [`Expr`] could not be parsed.
+    fn parse_expr_mapping(&mut self) -> Result<Expr, ParseError> {
+        let lhs = self.parse_expr_comparison()?;
 
-        let function = if self.eat(TokenType::RightArrow)? {
-            let body = self.parse_expr_function()?;
-            Expr::Function(unwrap_list(params), body.into())
-        } else {
-            params
+        let expr = match self.peek() {
+            TokenType::RightArrow => {
+                self.bump()?; // Consume the operator token.
+                let body = self.parse_expr_mapping()?;
+                Expr::Function(unwrap_list(lhs), body.into())
+            }
+            TokenType::Question => {
+                self.bump()?; // Consume the operator token.
+                let then = self.parse_expr()?;
+                self.expect(TokenType::Colon)?;
+                let or = self.parse_expr_mapping()?;
+                Expr::Cond(lhs.into(), then.into(), or.into())
+            }
+            _ => lhs,
         };
 
-        Ok(function)
+        Ok(expr)
     }
 
     /// Parses a call [`Expr`]. This function returns a [`ParseError`] if a call

@@ -6,9 +6,9 @@ All valid Clac programs should have the following grammar:
 program  = sequence, Eof ;
 sequence = { stmt, [ "," ] } ;
 stmt     = expr, [ "=", expr ] ;
-expr     = expr_function ;
+expr     = expr_mapping ;
 
-expr_function   = expr_comparison, [ "->", expr_function ] ;
+expr_mapping    = expr_comparison, [ ( "->" | "?", expr, ":" ), expr_mapping ] ;
 expr_comparison = expr_sum, [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ), expr_sum ] ;
 expr_sum        = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term       = expr_prefix, { ( "*" | "/" ), expr_prefix } ;

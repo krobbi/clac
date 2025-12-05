@@ -234,6 +234,7 @@ fn operators_have_expected_associativity() {
     assert_ast("a / b / c", "(a: (/ (/ a b) c))");
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
     assert_ast("x -> y -> z", "(a: (-> x (-> y z)))");
+    assert_ast("c ? t : c2 ? t2 : e2", "(a: (? c t (? c2 t2 e2)))");
 }
 
 /// Tests that unary operators have the expected precedence levels.
@@ -296,6 +297,19 @@ fn binary_operators_have_expected_precedence_levels() {
         "1 + (x -> x - 2)(10)",
         "(a: (+ 1 ((p: (-> x (- x 2))) 10)))",
     );
+}
+
+/// Tests that the ternary conditional [`Expr`] has the expected precedence
+/// level.
+#[test]
+fn ternary_conditional_has_expected_precedence_level() {
+    // The middle of ternary conditionals has minimum precedence.
+    assert_ast("c ? x -> 2 * x : e", "(a: (? c (-> x (* 2 x)) e))");
+    assert_ast("c ? c2 ? t2 : e2 : e", "(a: (? c (? c2 t2 e2) e))");
+
+    // The precedence of ternary conditionals is equal to functions.
+    assert_ast("x -> x ? 1 : 0", "(a: (-> x (? x 1 0)))");
+    assert_ast("x ? 1 : y -> z", "(a: (? x 1 (-> y z)))");
 }
 
 /// Tests that [`LexError`]s are caught and encapsulated as [`ParseError`]s.
