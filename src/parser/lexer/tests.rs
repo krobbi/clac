@@ -32,12 +32,32 @@ fn whitespace_produces_no_tokens() {
 #[test]
 fn whitespace_separates_digraph_tokens() {
     assert_tokens!(
-        "- >, ->",
-        [
-            Ok(Token::Minus),
-            Err(LexError::UnexpectedChar('>')),
-            Ok(Token::Comma),
-            Ok(Token::RightArrow),
+        "- >, ->, = =, ==, ! =, !=, < =, <=, > =, >=",
+        Ok[
+            Token::Minus,
+            Token::Gt,
+            Token::Comma,
+            Token::RightArrow,
+            Token::Comma,
+            Token::Eq,
+            Token::Eq,
+            Token::Comma,
+            Token::EqEq,
+            Token::Comma,
+            Token::Bang,
+            Token::Eq,
+            Token::Comma,
+            Token::BangEq,
+            Token::Comma,
+            Token::Lt,
+            Token::Eq,
+            Token::Comma,
+            Token::LtEq,
+            Token::Comma,
+            Token::Gt,
+            Token::Eq,
+            Token::Comma,
+            Token::GtEq,
         ],
     );
 }
@@ -91,7 +111,7 @@ fn trailing_eof_tokens_are_produced() {
 #[test]
 fn all_tokens_are_produced() {
     assert_tokens!(
-        "-(1 + 2.5) * 3. / 4 == !{foo -> _B4R = baz, true != false}",
+        "-(1 + 2.5) * 3. / 4 == !{foo -> _B4R = baz, true != false} min <= mid < max > 2 >= 1",
         Ok[
             Token::Minus,
             Token::OpenParen,
@@ -116,6 +136,15 @@ fn all_tokens_are_produced() {
             Token::BangEq,
             Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,
+            Token::Ident(n) if n == "min",
+            Token::LtEq,
+            Token::Ident(n) if n == "mid",
+            Token::Lt,
+            Token::Ident(n) if n == "max",
+            Token::Gt,
+            Token::Literal(Literal::Number(2.0)),
+            Token::GtEq,
+            Token::Literal(Literal::Number(1.0)),
         ],
     );
 }
@@ -128,32 +157,24 @@ fn integers_tokens_are_produced() {
         Ok[
             Token::Literal(Literal::Number(0.0)),
             Token::Comma,
-
             Token::Minus,
             Token::Literal(Literal::Number(1.0)),
             Token::Comma,
-
             Token::Literal(Literal::Number(2.0)),
             Token::Comma,
-
             Token::Literal(Literal::Number(300.0)),
             Token::Comma,
-
             Token::Literal(Literal::Number(400.0)),
             Token::Comma,
-
             Token::Literal(Literal::Number(5.0)),
             Token::Ident(n) if n == "_000",
             Token::Comma,
-
             Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "b1010",
             Token::Comma,
-
             Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "o10",
             Token::Comma,
-
             Token::Literal(Literal::Number(0.0)),
             Token::Ident(n) if n == "xff",
             Token::Comma,

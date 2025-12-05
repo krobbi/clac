@@ -69,6 +69,20 @@ impl<'a> Lexer<'a> {
                     Token::Bang
                 }
             }
+            '<' => {
+                if self.scanner.eat('=') {
+                    Token::LtEq
+                } else {
+                    Token::Lt
+                }
+            }
+            '>' => {
+                if self.scanner.eat('=') {
+                    Token::GtEq
+                } else {
+                    Token::Gt
+                }
+            }
             _ => return Err(LexError::UnexpectedChar(char)),
         };
 

@@ -70,6 +70,10 @@ define_tokens! {
     (EqEq, "A double equals sign (`==`).", "'=='"),
     (Bang, "An exclamation mark (`!`).", "'!'"),
     (BangEq, "An exclamation mark and equals sign (`!=`).", "'!='"),
+    (Lt, "A less than symbol (`<`).", "'<'"),
+    (LtEq, "A less than symbol and equals sign (`<=`).", "'<='"),
+    (Gt, "A greater than symbol (`>`).", "'>'"),
+    (GtEq, "A greater than symbol and equals sign (`>=`).", "'>='"),
     (RightArrow, "A right arrow (`->`).", "'->'"),
     (Eof, "An end of source code marker.", "end of file"),
 }
