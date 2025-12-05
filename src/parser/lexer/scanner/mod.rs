@@ -55,7 +55,7 @@ impl<'a> Scanner<'a> {
 
     /// Repeatedly consumes the next [`char`] from source code while it matches
     /// a predicate function.
-    pub fn eat_while(&mut self, predicate: impl Fn(char) -> bool) {
+    pub fn eat_while<F: Fn(char) -> bool>(&mut self, predicate: F) {
         while let Some(char) = self.peek()
             && predicate(char)
         {

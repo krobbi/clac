@@ -25,12 +25,12 @@ impl DeclTable {
 
     /// Returns a reference to a [`Decl`] from its [`DeclId`].
     pub fn get(&self, id: DeclId) -> &Decl {
-        self.decls.get(id.0).expect("declaration should exist")
+        &self.decls[id.0]
     }
 
     /// Returns a mutable reference to a [`Decl`] from its [`DeclId`].
     pub fn get_mut(&mut self, id: DeclId) -> &mut Decl {
-        self.decls.get_mut(id.0).expect("declaration should exist")
+        &mut self.decls[id.0]
     }
 }
 

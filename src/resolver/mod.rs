@@ -140,6 +140,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
     fn resolve_expr_ident(&mut self, name: &str) -> Result<hir::Expr> {
+        #[expect(clippy::option_if_let_else, reason = "better readability")]
         if let Some(id) = self.locals.read(name) {
             Ok(hir::Expr::Local(id))
         } else if self.is_global_defined(name) {

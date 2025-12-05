@@ -19,10 +19,7 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
     let mut label = Label::default();
 
     loop {
-        let block = match called_functions.last() {
-            None => cfg.block(label),
-            Some(function) => function.cfg.block(label),
-        };
+        let block = called_functions.last().map_or(cfg, |f| &f.cfg).block(label);
 
         for instruction in &block.instructions {
             interpreter.interpret_instruction(instruction, globals)?;
@@ -76,7 +73,7 @@ impl Interpreter {
     ) -> Result<(), InterpretError> {
         match instruction {
             Instruction::PushLiteral(literal) => self.push(literal.into()),
-            Instruction::PushFunction(function) => self.push(Value::Function(function.clone())),
+            Instruction::PushFunction(function) => self.push(Value::Function(Rc::clone(function))),
             Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
             Instruction::Negate => {
@@ -164,7 +161,7 @@ impl Interpreter {
             Instruction::DropUpvalues(count) => self.upvalues.truncate(self.upvalues.len() - count),
             Instruction::IntoClosure => {
                 let Value::Function(function) = self.pop() else {
-                    panic!("value should be a function");
+                    unreachable!("value should be a function");
                 };
 
                 let closure = Closure {
@@ -195,13 +192,13 @@ impl Interpreter {
                 self.frame = self.stack.len() - arity;
 
                 let function = match &self.stack[self.frame - 1] {
-                    Value::Function(function) => function.clone(),
+                    Value::Function(function) => Rc::clone(function),
                     Value::Closure(closure) => {
                         let outer_upvalues =
                             mem::replace(&mut self.upvalues, closure.upvalues.clone());
 
                         return_data.upvalues = Some(outer_upvalues);
-                        closure.function.clone()
+                        Rc::clone(&closure.function)
                     }
                     Value::Native(native) => {
                         let return_value = native.call(&self.stack[self.frame..])?;

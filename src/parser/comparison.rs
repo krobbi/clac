@@ -37,12 +37,12 @@ impl BinOp {
     /// comparison `BinOp`.
     fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
-            TokenType::EqEq => BinOp::Equal,
-            TokenType::BangEq => BinOp::NotEqual,
-            TokenType::Lt => BinOp::Less,
-            TokenType::LtEq => BinOp::LessEqual,
-            TokenType::Gt => BinOp::Greater,
-            TokenType::GtEq => BinOp::GreaterEqual,
+            TokenType::EqEq => Self::Equal,
+            TokenType::BangEq => Self::NotEqual,
+            TokenType::Lt => Self::Less,
+            TokenType::LtEq => Self::LessEqual,
+            TokenType::Gt => Self::Greater,
+            TokenType::GtEq => Self::GreaterEqual,
             _ => return None,
         };
 
