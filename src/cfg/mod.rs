@@ -79,16 +79,18 @@ pub enum Instruction {
     /// to the stack.
     Add,
 
-    /// Pops two number values from the stack, subtracts them, and pushes the
-    /// result to the stack.
+    /// Pops a right number value from the stack, then a left number value. The
+    /// right number is subtracted from the left number and the result is pushed
+    /// to the stack.
     Subtract,
 
     /// Pops two number values from the stack, multiplies them, and pushes the
     /// result to the stack.
     Multiply,
 
-    /// Pops two number values from the stack, divides them, and pushes the
-    /// result to the stack.
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is divided by the right number and the result is pushed to
+    /// the stack.
     Divide,
 
     /// Pops two values from the stack, compares them as equal, and pushes the
@@ -98,6 +100,26 @@ pub enum Instruction {
     /// Pops two values from the stack, compares them as not equal, and pushes
     /// the result to the stack.
     NotEqual,
+
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is compared as less than the right number and the result is
+    /// pushed to the stack.
+    Less,
+
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is compared as less than or equal to the right number and
+    /// the result is pushed to the stack.
+    LessEqual,
+
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is compared as greater than the right number and the result
+    /// is pushed to the stack.
+    Greater,
+
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is compared as greater than or equal to the right number and
+    /// the result is pushed to the stack.
+    GreaterEqual,
 
     /// Loads a value from a local variable and pushes it to the stack.
     LoadLocal(usize),

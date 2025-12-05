@@ -9,7 +9,7 @@ stmt     = expr, [ "=", expr ] ;
 expr     = expr_function ;
 
 expr_function   = expr_comparison, [ "->", expr_function ] ;
-expr_comparison = expr_sum, [ ( "==" | "!=" ), expr_sum ] ;
+expr_comparison = expr_sum, [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ), expr_sum ] ;
 expr_sum        = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term       = expr_prefix, { ( "*" | "/" ), expr_prefix } ;
 expr_prefix     = ( "-" | "!" ), expr_prefix | expr_call ;

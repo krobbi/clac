@@ -80,9 +80,21 @@ pub enum BinOp {
     /// A division.
     Divide,
 
-    /// A logical equality comparison.
+    /// An equality comparison.
     Equal,
 
-    /// A logical inequality comparison.
+    /// An inequality comparison.
     NotEqual,
+
+    /// A less than comparison.
+    Less,
+
+    /// A less than or equal to comparison.
+    LessEqual,
+
+    /// A greater than comparison.
+    Greater,
+
+    /// A greater than or equal to comparison.
+    GreaterEqual,
 }

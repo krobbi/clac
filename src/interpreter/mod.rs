@@ -132,6 +132,26 @@ impl Interpreter {
 
                 self.push(Value::Bool(lhs != rhs));
             }
+            Instruction::Less => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Bool(lhs < rhs));
+            }
+            Instruction::LessEqual => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Bool(lhs <= rhs));
+            }
+            Instruction::Greater => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Bool(lhs > rhs));
+            }
+            Instruction::GreaterEqual => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Bool(lhs >= rhs));
+            }
             Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
             Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
             Instruction::LoadGlobal(name) => self.push(globals.read(name).clone()),

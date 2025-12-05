@@ -39,6 +39,10 @@ impl BinOp {
         let op = match token_type {
             TokenType::EqEq => BinOp::Equal,
             TokenType::BangEq => BinOp::NotEqual,
+            TokenType::Lt => BinOp::Less,
+            TokenType::LtEq => BinOp::LessEqual,
+            TokenType::Gt => BinOp::Greater,
+            TokenType::GtEq => BinOp::GreaterEqual,
             _ => return None,
         };
 

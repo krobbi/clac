@@ -291,6 +291,10 @@ impl<'a> Compiler<'a> {
             BinOp::Divide => Instruction::Divide,
             BinOp::Equal => Instruction::Equal,
             BinOp::NotEqual => Instruction::NotEqual,
+            BinOp::Less => Instruction::Less,
+            BinOp::LessEqual => Instruction::LessEqual,
+            BinOp::Greater => Instruction::Greater,
+            BinOp::GreaterEqual => Instruction::GreaterEqual,
         };
 
         self.compile(instruction);

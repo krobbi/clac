@@ -54,7 +54,12 @@ impl BinOp {
     /// Returns the `BinOp`'s precedence level.
     fn precedence(self) -> u8 {
         match self {
-            Self::Equal | Self::NotEqual => 0,
+            Self::Equal
+            | Self::NotEqual
+            | Self::Less
+            | Self::LessEqual
+            | Self::Greater
+            | Self::GreaterEqual => 0,
             Self::Add | Self::Subtract => 1,
             Self::Multiply | Self::Divide => 2,
         }

@@ -168,10 +168,21 @@ fn comparisons_cannot_be_chained() {
     assert_error!("x == y != z", ParseError::ChainedComparison);
     assert_error!("1 != 2 == y", ParseError::ChainedComparison);
     assert_error!("1 != 2 != 3", ParseError::ChainedComparison);
+    assert_error!("1 < 2 < 3", ParseError::ChainedComparison);
+    assert_error!("1 < 2 <= 3", ParseError::ChainedComparison);
+    assert_error!("1 <= 2 < 3", ParseError::ChainedComparison);
+    assert_error!("1 <= 2 <= 3", ParseError::ChainedComparison);
+    assert_error!("1 > 2 > 3", ParseError::ChainedComparison);
+    assert_error!("1 > 2 >= 3", ParseError::ChainedComparison);
+    assert_error!("1 >= 2 > 3", ParseError::ChainedComparison);
+    assert_error!("1 >= 2 >= 3", ParseError::ChainedComparison);
+    assert_error!("x == y < 10", ParseError::ChainedComparison);
 
     // Comparisons cannot be chained by mixing precedence levels.
     assert_error!("1 + 2 == 3 - 0 == 4", ParseError::ChainedComparison);
     assert_error!("1 * 2 != 0 / 3 == 4 * 0", ParseError::ChainedComparison);
+    assert_error!("1 + 2 >= 3 * 0 < 4", ParseError::ChainedComparison);
+    assert_error!("1 + 2 <= 3 / 1 > 0.5", ParseError::ChainedComparison);
     assert_error!(
         "!!true == !false == !!!false",
         ParseError::ChainedComparison
@@ -184,6 +195,11 @@ fn comparisons_cannot_be_chained() {
 #[test]
 fn comparisons_can_be_chained_with_groupings() {
     assert_ast("(a == b) == c", "(a: (== (p: (== a b)) c))");
+    assert_ast("(1 < 2) == true", "(a: (== (p: (< 1 2)) true))");
+    assert_ast("(1 <= 2) == true", "(a: (== (p: (<= 1 2)) true))");
+    assert_ast("(1 > 2) != true", "(a: (!= (p: (> 1 2)) true))");
+    assert_ast("(1 >= 2) != true", "(a: (!= (p: (>= 1 2)) true))");
+
     assert_ast(
         "(a == b, c == d) == e",
         "(a: (== (t: (== a b) (== c d)) e))",
@@ -213,6 +229,7 @@ fn operators_have_expected_associativity() {
     assert_ast("!!!true", "(a: (! (! (! true))))");
     assert_ast("1 + 2 + 3", "(a: (+ (+ 1 2) 3))");
     assert_ast("4 - 5 - 6", "(a: (- (- 4 5) 6))");
+    assert_ast("x - y + 1", "(a: (+ (- x y) 1))");
     assert_ast("7 * 8 * 9", "(a: (* (* 7 8) 9))");
     assert_ast("a / b / c", "(a: (/ (/ a b) c))");
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
@@ -246,10 +263,20 @@ fn binary_operators_have_expected_precedence_levels() {
     // Functions have the lowest precedence.
     assert_ast("1 == x -> x != 2(10)", "(a: (-> (== 1 x) (!= x (2 10))))");
     assert_ast("1 != x -> x == 2(10)", "(a: (-> (!= 1 x) (== x (2 10))))");
+    assert_ast("1 == x -> x < 2(10)", "(a: (-> (== 1 x) (< x (2 10))))");
+    assert_ast("1 < x -> x <= 2(10)", "(a: (-> (< 1 x) (<= x (2 10))))");
+    assert_ast("1 <= x -> x > 2(10)", "(a: (-> (<= 1 x) (> x (2 10))))");
+    assert_ast("1 > x -> x >= 2(10)", "(a: (-> (> 1 x) (>= x (2 10))))");
+    assert_ast("1 >= x -> x == 2(10)", "(a: (-> (>= 1 x) (== x (2 10))))");
 
-    // The precedence of `==` is equal to `!=` and less than `+` and `-`.
+    // The precedence of comparison operators are equal and less than `+` and
+    // `-`.
     assert_ast("1 + 2 == 3 - 4", "(a: (== (+ 1 2) (- 3 4)))");
     assert_ast("1 + 2 != 3 - 4", "(a: (!= (+ 1 2) (- 3 4)))");
+    assert_ast("1 + 2 < 3 - 4", "(a: (< (+ 1 2) (- 3 4)))");
+    assert_ast("1 + 2 <= 3 - 4", "(a: (<= (+ 1 2) (- 3 4)))");
+    assert_ast("1 + 2 > 3 - 4", "(a: (> (+ 1 2) (- 3 4)))");
+    assert_ast("1 + 2 >= 3 - 4", "(a: (>= (+ 1 2) (- 3 4)))");
 
     // The precedence of `+` is equal to `-`.
     assert_ast("1 + 2 - 3", "(a: (- (+ 1 2) 3))");

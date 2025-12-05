@@ -66,13 +66,36 @@ clac> adder == (c -> n -> n + c)(1)
 false
 ```
 
-Functions, closures, and [standard library](standard_library.md) functions are
-considered to have matching types and can be compared with each other.
-Comparisons between different subtypes of functions will always produce
+Functions, closures, and built-in [standard library](standard_library.md)
+functions are considered to have matching types and can be compared with each
+other. Comparisons between different subtypes of functions will always produce
 `false`:
 ```
 clac> sqrt_wrapper(n) = sqrt(n), sqrt_wrapper == sqrt
 false
+```
+
+## Relational Comparisons
+Numbers can be compared as less than (`<`), less than or equal to (`<=`),
+greater than (`>`), or greater than or equal to (`>=`) another number:
+```
+clac> 1 < 2
+true
+
+clac> 5 * 5 * 4 <= 100
+true
+
+clac> sqrt(2) < 1.5
+true
+
+clac> 0.1 + 0.2 >= 0.3
+true
+```
+
+Only numbers can be used with relational comparisons:
+```
+clac> true > false
+Error: type error
 ```
 
 ## Logical Operators
