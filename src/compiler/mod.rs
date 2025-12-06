@@ -136,7 +136,7 @@ impl<'a> Compiler<'a> {
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.compile_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
-            Expr::Cond(_cond, _then, _or) => todo!("compiling conditional expressions"),
+            Expr::Cond(cond, then, or) => self.compile_expr_cond(cond, then, or),
         }
     }
 
@@ -261,7 +261,7 @@ impl<'a> Compiler<'a> {
         }
 
         let arity = args.len();
-        let return_label = self.compile_branch_target();
+        let return_label = self.compile_split_block();
         self.block_mut().exit = Exit::Call(arity, return_label);
         self.label = return_label;
         self.locals.drop_temps(arity + 1);
@@ -302,6 +302,23 @@ impl<'a> Compiler<'a> {
         self.locals.drop_temps(1);
     }
 
+    /// Compiles a ternary conditional [`Expr`].
+    fn compile_expr_cond(&mut self, cond: &Expr, then: &Expr, or: &Expr) {
+        self.compile_expr(cond);
+        let final_label = self.compile_split_block();
+        let then_label = self.compile_source_block(final_label);
+        let else_label = self.compile_source_block(final_label);
+        self.block_mut().exit = Exit::Branch(then_label, else_label);
+
+        self.label = then_label;
+        self.compile_expr(then);
+
+        self.label = else_label;
+        self.compile_expr(or);
+
+        self.label = final_label;
+    }
+
     /// Appends an [`Instruction`] to the current [`Block`].
     fn compile(&mut self, instruction: Instruction) {
         self.block_mut().instructions.push(instruction);
@@ -323,9 +340,17 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    /// Creates a new [`Block`] that jumps to a target [`Label`] and returns its
+    /// [`Label`].
+    fn compile_source_block(&mut self, target: Label) -> Label {
+        let source_label = self.cfg.insert_block();
+        self.cfg.block_mut(source_label).exit = Exit::Jump(target);
+        source_label
+    }
+
     /// Creates a new [`Block`] with the current [`Block`]'s [`Exit`] and
     /// returns its [`Label`].
-    fn compile_branch_target(&mut self) -> Label {
+    fn compile_split_block(&mut self) -> Label {
         let branch_label = self.cfg.insert_block();
         self.cfg.block_mut(branch_label).exit = self.cfg.block(self.label).exit.clone();
         branch_label

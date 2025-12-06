@@ -181,6 +181,16 @@ impl Interpreter {
     fn interpret_exit(&mut self, exit: &Exit) -> Result<Branch, InterpretError> {
         let branch = match exit {
             Exit::Halt => Branch::Halt,
+            Exit::Jump(label) => Branch::Jump(*label),
+            Exit::Branch(then_label, else_label) => {
+                let label = if self.pop_bool()? {
+                    *then_label
+                } else {
+                    *else_label
+                };
+
+                Branch::Jump(label)
+            }
             Exit::Call(arity, return_label) => {
                 let mut return_data = Return {
                     label: *return_label,

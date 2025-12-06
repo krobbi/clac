@@ -129,6 +129,12 @@ clac> absolute(-456)
 456
 ```
 
+Only Boolean values may be used as conditions:
+```
+clac> 1 ? 2 : 3
+Error: type error
+```
+
 The conditional expression is short-circuiting and only evaluates the branch
 that was taken.
 

@@ -78,6 +78,10 @@ impl Display for Exit {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Halt => f.write_str("halt"),
+            Self::Jump(label) => write!(f, "{:16}{label}", "jump"),
+            Self::Branch(then_label, else_label) => {
+                write!(f, "{:16}{then_label} else {else_label}", "branch")
+            }
             Self::Call(arity, label) => write!(f, "{:16}({arity}) return {label}", "call"),
             Self::Return => f.write_str("return"),
         }

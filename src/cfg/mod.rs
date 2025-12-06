@@ -163,6 +163,13 @@ pub enum Exit {
     #[default]
     Halt,
 
+    /// Jumps to a [`Label`].
+    Jump(Label),
+
+    /// Pops a Boolean value from the stack and jumps to a [`Label`] if it is
+    /// `true`, or jumps to another [`Label`] if it is `false`.
+    Branch(Label, Label),
+
     /// Performs a call with an arity and returns to a [`Label`].
     Call(usize, Label),
 
