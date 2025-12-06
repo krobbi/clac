@@ -7,7 +7,7 @@ pub use self::resolve_error::ResolveError;
 use std::{collections::HashSet, result};
 
 use crate::{
-    ast::{Ast, BinOp, Expr, Stmt, UnOp},
+    ast::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp},
     decl_table::DeclTable,
     hir::{self, Hir},
     interpreter::Globals,
@@ -132,7 +132,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
             Expr::Call(callee, args) => self.resolve_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
-            Expr::Logic(_op, _lhs, _rhs) => todo!("resolving logical expressions"),
+            Expr::Logic(op, lhs, rhs) => self.resolve_expr_logic(*op, lhs, rhs),
             Expr::Cond(cond, then, or) => self.resolve_expr_cond(cond, then, or),
         };
 
@@ -238,6 +238,29 @@ impl<'a, 'b> Resolver<'a, 'b> {
         let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
         Ok(hir::Expr::Binary(op, lhs.into(), rhs.into()))
+    }
+
+    /// Resolves a logical [`Expr`] to an [`hir::Expr`]. This function returns a
+    /// [`ResolveError`] if either operand is a statement or could not be
+    /// resolved.
+    fn resolve_expr_logic(&mut self, op: LogicOp, lhs: &Expr, rhs: &Expr) -> Result<hir::Expr> {
+        // TODO: Document logical expressions.
+        let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
+        let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
+
+        // Compare the right-hand side with `true` for dynamic type checking.
+        let rhs = hir::Expr::Binary(
+            BinOp::Equal,
+            rhs.into(),
+            hir::Expr::Literal(Literal::Bool(true)).into(),
+        );
+
+        let (then, or) = match op {
+            LogicOp::And => (rhs, hir::Expr::Literal(Literal::Bool(false))),
+            LogicOp::Or => (hir::Expr::Literal(Literal::Bool(true)), rhs),
+        };
+
+        Ok(hir::Expr::Cond(lhs.into(), then.into(), or.into()))
     }
 
     /// Resolves a ternary conditional [`Expr`] to an [`hir::Expr`]. This
