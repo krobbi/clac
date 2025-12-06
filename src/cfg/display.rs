@@ -13,8 +13,6 @@ impl Display for Cfg {
             for line in block.to_string().lines() {
                 let _ = writeln!(buffer, "{:8}{line}", "");
             }
-
-            let _ = writeln!(buffer);
         }
 
         f.write_str(buffer.trim_end())
