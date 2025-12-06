@@ -8,7 +8,9 @@ sequence = { stmt, [ "," ] } ;
 stmt     = expr, [ "=", expr ] ;
 expr     = expr_mapping ;
 
-expr_mapping    = expr_comparison, [ ( "->" | "?", expr, ":" ), expr_mapping ] ;
+expr_mapping    = expr_or, [ ( "->" | "?", expr, ":" ), expr_mapping ] ;
+expr_or         = expr_and, { "||", expr_and } ;
+expr_and        = expr_comparison, { "&&", expr_comparison } ;
 expr_comparison = expr_sum, [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ), expr_sum ] ;
 expr_sum        = expr_term, { ( "+" | "-" ), expr_term } ;
 expr_term       = expr_prefix, { ( "*" | "/" ), expr_prefix } ;

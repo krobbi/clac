@@ -44,6 +44,9 @@ pub enum Expr {
     /// A binary operation.
     Binary(BinOp, Box<Expr>, Box<Expr>),
 
+    /// A short-circuiting logical operation.
+    Logic(LogicOp, Box<Expr>, Box<Expr>),
+
     /// A ternary conditional.
     Cond(Box<Expr>, Box<Expr>, Box<Expr>),
 }
@@ -100,4 +103,14 @@ pub enum BinOp {
 
     /// A greater than or equal to comparison.
     GreaterEqual,
+}
+
+/// A short-circuiting logical operator.
+#[derive(Clone, Copy, Debug)]
+pub enum LogicOp {
+    /// A logical and.
+    And,
+
+    /// A logical or.
+    Or,
 }

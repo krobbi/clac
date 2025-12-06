@@ -10,7 +10,7 @@ pub use self::parse_error::ParseError;
 
 use std::mem;
 
-use crate::ast::{Ast, Expr, Stmt, UnOp};
+use crate::ast::{Ast, Expr, LogicOp, Stmt, UnOp};
 
 use self::lexer::{LexError, Lexer, Token, TokenType};
 
@@ -91,7 +91,7 @@ impl<'a> Parser<'a> {
     /// function returns a [`ParseError`] if a function [`Expr`] or a ternary
     /// conditional [`Expr`] could not be parsed.
     fn parse_expr_mapping(&mut self) -> Result<Expr, ParseError> {
-        let lhs = self.parse_expr_comparison()?;
+        let lhs = self.parse_expr_or()?;
 
         let expr = match self.peek() {
             TokenType::RightArrow => {
@@ -110,6 +110,32 @@ impl<'a> Parser<'a> {
         };
 
         Ok(expr)
+    }
+
+    /// Parses a logical or [`Expr`]. This function returns a [`ParseError`] if
+    /// a logical or [`Expr`] could not be parsed.
+    fn parse_expr_or(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_and()?;
+
+        while self.eat(TokenType::PipePipe)? {
+            let rhs = self.parse_expr_and()?;
+            lhs = Expr::Logic(LogicOp::Or, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
+    }
+
+    /// Parses a logical and [`Expr`]. This function returns a [`ParseError`] if
+    /// a logical and [`Expr`] could not be parsed.
+    fn parse_expr_and(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_comparison()?;
+
+        while self.eat(TokenType::AndAnd)? {
+            let rhs = self.parse_expr_comparison()?;
+            lhs = Expr::Logic(LogicOp::And, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
     }
 
     /// Parses a call [`Expr`]. This function returns a [`ParseError`] if a call

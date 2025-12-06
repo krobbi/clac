@@ -232,6 +232,8 @@ fn operators_have_expected_associativity() {
     assert_ast("x - y + 1", "(a: (+ (- x y) 1))");
     assert_ast("7 * 8 * 9", "(a: (* (* 7 8) 9))");
     assert_ast("a / b / c", "(a: (/ (/ a b) c))");
+    assert_ast("a && b && c", "(a: (&& (&& a b) c))");
+    assert_ast("a || b || c", "(a: (|| (|| a b) c))");
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
     assert_ast("x -> y -> z", "(a: (-> x (-> y z)))");
     assert_ast("c ? t : c2 ? t2 : e2", "(a: (? c t (? c2 t2 e2)))");
@@ -262,15 +264,20 @@ fn unary_operators_have_expected_precedence_levels() {
 #[test]
 fn binary_operators_have_expected_precedence_levels() {
     // Functions have the lowest precedence.
-    assert_ast("1 == x -> x != 2(10)", "(a: (-> (== 1 x) (!= x (2 10))))");
-    assert_ast("1 != x -> x == 2(10)", "(a: (-> (!= 1 x) (== x (2 10))))");
-    assert_ast("1 == x -> x < 2(10)", "(a: (-> (== 1 x) (< x (2 10))))");
-    assert_ast("1 < x -> x <= 2(10)", "(a: (-> (< 1 x) (<= x (2 10))))");
-    assert_ast("1 <= x -> x > 2(10)", "(a: (-> (<= 1 x) (> x (2 10))))");
-    assert_ast("1 > x -> x >= 2(10)", "(a: (-> (> 1 x) (>= x (2 10))))");
-    assert_ast("1 >= x -> x == 2(10)", "(a: (-> (>= 1 x) (== x (2 10))))");
+    assert_ast(
+        "true || x -> x || false",
+        "(a: (-> (|| true x) (|| x false)))",
+    );
 
-    // The precedence of comparison operators are equal and less than `+` and
+    // The precedence of `||` is lower than `&&`.
+    assert_ast("a || b && c || d", "(a: (|| (|| a (&& b c)) d))");
+    assert_ast("a && b || c && d", "(a: (|| (&& a b) (&& c d)))");
+
+    // The precedence of `&&` is lower than comparison operators.
+    assert_ast("a && b == c && d", "(a: (&& (&& a (== b c)) d))");
+    assert_ast("a == b && c == d", "(a: (&& (== a b) (== c d)))");
+
+    // The precedence of comparison operators are equal and lower than `+` and
     // `-`.
     assert_ast("1 + 2 == 3 - 4", "(a: (== (+ 1 2) (- 3 4)))");
     assert_ast("1 + 2 != 3 - 4", "(a: (!= (+ 1 2) (- 3 4)))");

@@ -132,6 +132,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
             Expr::Call(callee, args) => self.resolve_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.resolve_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.resolve_expr_binary(*op, lhs, rhs),
+            Expr::Logic(_op, _lhs, _rhs) => todo!("resolving logical expressions"),
             Expr::Cond(cond, then, or) => self.resolve_expr_cond(cond, then, or),
         };
 

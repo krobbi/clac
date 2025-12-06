@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use super::{Ast, BinOp, Expr, Literal, Stmt, UnOp};
+use super::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp};
 
 impl Display for Ast {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -33,6 +33,7 @@ impl Display for Expr {
             Self::Call(callee, args) => write_s_expr(f, callee, args),
             Self::Unary(op, expr) => write_s_expr(f, op, &[expr]),
             Self::Binary(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
+            Self::Logic(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
             Self::Cond(cond, then, or) => write_s_expr(f, "?", &[cond, then, or]),
         }
     }
@@ -71,6 +72,17 @@ impl Display for BinOp {
             Self::LessEqual => "<=",
             Self::Greater => ">",
             Self::GreaterEqual => ">=",
+        };
+
+        f.write_str(symbol)
+    }
+}
+
+impl Display for LogicOp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let symbol = match self {
+            Self::And => "&&",
+            Self::Or => "||",
         };
 
         f.write_str(symbol)
