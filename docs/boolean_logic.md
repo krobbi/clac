@@ -108,9 +108,46 @@ false
 true
 ```
 
+The `&&` operator produces the logical and (AND) of two Boolean values. If both
+values are `true`, then the result is `true`, otherwise it is `false`. If the
+left-hand side value is `false`, then the right-hand side value will not be
+evaluated:
+```
+clac> infinite_loop(f) = {f(f), 1}
+
+clac> false && infinite_loop(infinite_loop) < 2
+false
+```
+
+The `||` operator produces the logical or (OR) of two Boolean values. If either
+value is `true`, then the result is `true`, otherwise it is `false`. If the
+left-hand side value is `true`, then the right-hand side value will not be
+evaluated:
+```
+clac> infinite_loop(f) = {f(f), 1}
+
+clac> true || infinite_loop(infinite_loop) < 2
+true
+```
+
+The `&&` and `||` operators can be chained:
+```
+clac> 1 > 2 || 3 > 4 || 5 < 6
+true
+
+clac> 7 < 8 && 9 < 10 && 11 > 12
+false
+```
+
 Only Boolean values may be passed to logical operators:
 ```
 clac> !0
+Error: type error
+
+clac> 1 && 2
+Error: type error
+
+clac> 3 || 4
 Error: type error
 ```
 
@@ -135,8 +172,8 @@ clac> 1 ? 2 : 3
 Error: type error
 ```
 
-The conditional expression is short-circuiting and only evaluates the branch
-that was taken.
+The conditional expression is short-circuited. Only the branch that was taken
+will be evaluated.
 
 The right-hand side of conditional expressions can be chained. For example,
 `c1 ? b1 : c2 ? b2 : b3` is equivalent to:

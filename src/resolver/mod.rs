@@ -244,7 +244,6 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// [`ResolveError`] if either operand is a statement or could not be
     /// resolved.
     fn resolve_expr_logic(&mut self, op: LogicOp, lhs: &Expr, rhs: &Expr) -> Result<hir::Expr> {
-        // TODO: Document logical expressions.
         let lhs = self.resolve_expr(lhs, ExprArea::Operand)?;
         let rhs = self.resolve_expr(rhs, ExprArea::Operand)?;
 
