@@ -83,6 +83,20 @@ impl<'a> Lexer<'a> {
                     Token::Gt
                 }
             }
+            '&' => {
+                if self.scanner.eat('&') {
+                    Token::AndAnd
+                } else {
+                    return Err(LexError::BitwiseAnd);
+                }
+            }
+            '|' => {
+                if self.scanner.eat('|') {
+                    Token::PipePipe
+                } else {
+                    return Err(LexError::BitwiseOr);
+                }
+            }
             '?' => Token::Question,
             ':' => Token::Colon,
             _ => return Err(LexError::UnexpectedChar(char)),

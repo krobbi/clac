@@ -9,6 +9,12 @@ pub enum LexError {
     /// A [`char`] that does not begin a [`Token`][super::Token] was
     /// encountered.
     UnexpectedChar(char),
+
+    /// A bitwise and (`&`) operator was used.
+    BitwiseAnd,
+
+    /// A bitwise or (`|`) operator was used.
+    BitwiseOr,
 }
 
 impl Error for LexError {}
@@ -19,6 +25,10 @@ impl Display for LexError {
             Self::UnexpectedChar(char) => {
                 write!(f, "unexpected character '{}'", char.escape_default())
             }
+            Self::BitwiseAnd => {
+                f.write_str("the '&' operator is not supported, did you mean '&&'?")
+            }
+            Self::BitwiseOr => f.write_str("the '|' operator is not supported, did you mean '||'?"),
         }
     }
 }

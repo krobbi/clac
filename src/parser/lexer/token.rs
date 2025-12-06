@@ -74,6 +74,8 @@ define_tokens! {
     (LtEq, "A less than symbol and equals sign (`<=`).", "'<='"),
     (Gt, "A greater than symbol (`>`).", "'>'"),
     (GtEq, "A greater than symbol and equals sign (`>=`).", "'>='"),
+    (AndAnd, "A double ampersand (`&&`).", "'&&'"),
+    (PipePipe, "A double pipe (`||`).", "'||'"),
     (Question, "A question mark (`?`).", "'?'"),
     (Colon, "A colon (`:`).", "':'"),
     (RightArrow, "A right arrow (`->`).", "'->'"),

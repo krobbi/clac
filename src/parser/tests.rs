@@ -316,6 +316,8 @@ fn ternary_conditional_has_expected_precedence_level() {
 #[test]
 fn lex_errors_are_caught() {
     assert_error!("foo + $bar", ParseError::Lex(LexError::UnexpectedChar('$')));
+    assert_error!("foo & bar", ParseError::Lex(LexError::BitwiseAnd));
+    assert_error!("foo | bar", ParseError::Lex(LexError::BitwiseOr));
 }
 
 /// Asserts that an expected [`Ast`] is parsed from source code.
