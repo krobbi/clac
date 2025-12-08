@@ -160,7 +160,7 @@ fn all_tokens_are_produced() {
     );
 
     assert_tokens!(
-        "x^2",
+        "x ^ 2",
         Ok[
             Token::Ident(n) if n == "x",
             Token::Caret,

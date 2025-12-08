@@ -232,6 +232,7 @@ fn operators_have_expected_associativity() {
     assert_ast("x - y + 1", "(a: (+ (- x y) 1))");
     assert_ast("7 * 8 * 9", "(a: (* (* 7 8) 9))");
     assert_ast("a / b / c", "(a: (/ (/ a b) c))");
+    assert_ast("1 ^ 2 ^ 3", "(a: (^ 1 (^ 2 3)))");
     assert_ast("a && b && c", "(a: (&& (&& a b) c))");
     assert_ast("a || b || c", "(a: (|| (|| a b) c))");
     assert_ast("f(1)(2)(3)", "(a: (((f 1) 2) 3))");
@@ -258,6 +259,12 @@ fn unary_operators_have_expected_precedence_levels() {
     assert_ast("-f(x)(y)", "(a: (- ((f x) y)))");
     assert_ast("-x -> y", "(a: (-> (- x) y))");
     assert_ast("-(x) -> y", "(a: (-> (- (p: x)) y))");
+
+    // Unary operators have a lower precedence than exponentiation.
+    assert_ast("-x^2", "(a: (- (^ x 2)))");
+
+    // Unary operators are allowed in exponents.
+    assert_ast("-1 ^ -2 ^ -3", "(a: (- (^ 1 (- (^ 2 (- 3))))))");
 }
 
 /// Tests that binary operators have the expected precedence levels.
@@ -294,9 +301,17 @@ fn binary_operators_have_expected_precedence_levels() {
     assert_ast("1 * 2 / 3", "(a: (/ (* 1 2) 3))");
     assert_ast("1 / 2 * 3", "(a: (* (/ 1 2) 3))");
 
-    // The precedence of `*` and `-` is higher than `+` and `-`.
+    // The precedence of `*` and `/` is higher than `+` and `-`.
     assert_ast("1 + 2 * 3", "(a: (+ 1 (* 2 3)))");
     assert_ast("1 + 2 * 3 + 4", "(a: (+ (+ 1 (* 2 3)) 4))");
+
+    // The precedence of `^` is higher than `*` and `/`.
+    assert_ast("1 * 2 ^ 3", "(a: (* 1 (^ 2 3)))");
+    assert_ast("1 * 2 ^ 3 * 4", "(a: (* (* 1 (^ 2 3)) 4))");
+
+    // The precedence of `^` is lower than function calls.
+    assert_ast("f() ^ 2", "(a: (^ (f) 2))");
+    assert_ast("n ^ f()", "(a: (^ n (f)))");
 
     // Precedence can be overridden with parentheses.
     assert_ast("(1 + 2) * 3", "(a: (* (p: (+ 1 2)) 3))");

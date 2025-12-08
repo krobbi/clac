@@ -10,7 +10,7 @@ pub use self::parse_error::ParseError;
 
 use std::mem;
 
-use crate::ast::{Ast, Expr, LogicOp, Stmt, UnOp};
+use crate::ast::{Ast, BinOp, Expr, LogicOp, Stmt, UnOp};
 
 use self::lexer::{LexError, Lexer, Token, TokenType};
 
@@ -138,10 +138,10 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    /// Parses a call [`Expr`]. This function returns a [`ParseError`] if a call
-    /// [`Expr`] could not be parsed.
-    fn parse_expr_call(&mut self) -> Result<Expr, ParseError> {
-        let mut callee = match self.bump()? {
+    /// Parses a prefix [`Expr`]. This function returns a [`ParseError`] if a
+    /// prefix [`Expr`] could not be parsed.
+    fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = match self.bump()? {
             Token::Literal(literal) => Expr::Literal(literal),
             Token::Ident(name) => Expr::Ident(name),
             Token::OpenParen => self.parse_expr_paren()?,
@@ -151,11 +151,11 @@ impl<'a> Parser<'a> {
                 Expr::Block(stmts)
             }
             Token::Minus => {
-                let rhs = self.parse_expr_call()?;
+                let rhs = self.parse_expr_prefix()?;
                 Expr::Unary(UnOp::Negate, rhs.into())
             }
             Token::Bang => {
-                let rhs = self.parse_expr_call()?;
+                let rhs = self.parse_expr_prefix()?;
                 Expr::Unary(UnOp::Not, rhs.into())
             }
             token => return Err(ParseError::ExpectedExpr(token)),
@@ -163,10 +163,18 @@ impl<'a> Parser<'a> {
 
         while self.eat(TokenType::OpenParen)? {
             let args = self.parse_expr_paren()?;
-            callee = Expr::Call(callee.into(), unwrap_list(args));
+            lhs = Expr::Call(lhs.into(), unwrap_list(args));
         }
 
-        Ok(callee)
+        // TODO: The infix parser hasn't been very helpful because there are
+        // only 2 adjacent precedence levels of associative binary operators.
+        // Benchmark a recursive descent solution and use that if it is faster.
+        if self.eat(TokenType::Caret)? {
+            let rhs = self.parse_expr_prefix()?;
+            lhs = Expr::Binary(BinOp::Power, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
     }
 
     /// Parses a parenthesized [`Expr`] or tuple [`Expr`] after consuming its

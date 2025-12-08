@@ -86,6 +86,9 @@ pub enum BinOp {
     /// A division.
     Divide,
 
+    /// An exponentiation.
+    Power,
+
     /// An equality comparison.
     Equal,
 

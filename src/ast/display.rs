@@ -66,6 +66,7 @@ impl Display for BinOp {
             Self::Subtract => "-",
             Self::Multiply => "*",
             Self::Divide => "/",
+            Self::Power => "^",
             Self::Equal => "==",
             Self::NotEqual => "!=",
             Self::Less => "<",

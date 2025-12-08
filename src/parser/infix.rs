@@ -12,7 +12,7 @@ impl Parser<'_> {
     /// Parses an infix [`Expr`] with a minimum precedence level. This function
     /// returns a [`ParseError`] if an infix [`Expr`] could not be parsed.
     fn parse_expr_infix_level(&mut self, min_precedence: u8) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_call()?;
+        let mut lhs = self.parse_expr_prefix()?;
 
         while let Some(op) = BinOp::associative_from_token_type(self.peek()) {
             let precedence = op.precedence();
@@ -62,6 +62,7 @@ impl BinOp {
             | Self::GreaterEqual => 0,
             Self::Add | Self::Subtract => 1,
             Self::Multiply | Self::Divide => 2,
+            Self::Power => 3,
         }
     }
 
