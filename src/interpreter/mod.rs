@@ -109,6 +109,11 @@ impl Interpreter {
 
                 self.push(Value::Number(lhs / rhs));
             }
+            Instruction::Power => {
+                let rhs = self.pop_number()?;
+                let lhs = self.pop_number()?;
+                self.push(Value::Number(lhs.powf(rhs)));
+            }
             Instruction::Equal => {
                 let rhs = self.pop();
                 let lhs = self.pop();

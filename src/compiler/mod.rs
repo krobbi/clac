@@ -290,7 +290,7 @@ impl<'a> Compiler<'a> {
             BinOp::Subtract => Instruction::Subtract,
             BinOp::Multiply => Instruction::Multiply,
             BinOp::Divide => Instruction::Divide,
-            BinOp::Power => todo!("compiling exponentiation expressions"),
+            BinOp::Power => Instruction::Power,
             BinOp::Equal => Instruction::Equal,
             BinOp::NotEqual => Instruction::NotEqual,
             BinOp::Less => Instruction::Less,

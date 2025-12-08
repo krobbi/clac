@@ -54,6 +54,7 @@ impl Display for Instruction {
             Self::Subtract => f.write_str("subtract"),
             Self::Multiply => f.write_str("multiply"),
             Self::Divide => f.write_str("divide"),
+            Self::Power => f.write_str("power"),
             Self::Equal => f.write_str("equal"),
             Self::NotEqual => f.write_str("not_equal"),
             Self::Less => f.write_str("less"),

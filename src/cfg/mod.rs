@@ -93,6 +93,11 @@ pub enum Instruction {
     /// the stack.
     Divide,
 
+    /// Pops a right number value from the stack, then a left number value. The
+    /// left number is raised to the power of the right number and the result is
+    /// pushed to the stack.
+    Power,
+
     /// Pops two values from the stack, compares them as equal, and pushes the
     /// result to the stack.
     Equal,
