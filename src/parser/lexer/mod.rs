@@ -55,6 +55,7 @@ impl<'a> Lexer<'a> {
             }
             '*' => Token::Star,
             '/' => Token::Slash,
+            '^' => Token::Caret,
             '=' => {
                 if self.scanner.eat('=') {
                     Token::EqEq

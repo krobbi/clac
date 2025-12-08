@@ -66,6 +66,7 @@ define_tokens! {
     (Minus, "A minus sign (`-`).", "'-'"),
     (Star, "An asterisk (`*`).", "'*'"),
     (Slash, "A forward slash (`/`).", "'/'"),
+    (Caret, "A caret (`^`).", "'^'"),
     (Eq, "An equals sign (`=`).", "'='"),
     (EqEq, "A double equals sign (`==`).", "'=='"),
     (Bang, "An exclamation mark (`!`).", "'!'"),
