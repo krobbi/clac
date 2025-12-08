@@ -19,7 +19,6 @@ use crate::{clac_error::ClacError, decl_table::DeclTable, interpreter::Globals};
 fn main() {
     let mut globals = Globals::new();
     interpreter::install_natives(&mut globals);
-    parser::bench_parser();
 
     let mut args = env::args().skip(1);
 

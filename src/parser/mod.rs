@@ -6,10 +6,7 @@ mod parse_error;
 
 pub use self::parse_error::ParseError;
 
-use std::{
-    hint, mem,
-    time::{Duration, Instant},
-};
+use std::mem;
 
 use crate::ast::{Ast, BinOp, Expr, LogicOp, Stmt, UnOp};
 
@@ -20,52 +17,6 @@ use self::lexer::{LexError, Lexer, Token, TokenType};
 pub fn parse_source(source: &str) -> Result<Ast, ParseError> {
     let mut parser = Parser::try_new(source)?;
     parser.parse_ast()
-}
-
-/// Benchmarks the [`Parser`] and prints a report.
-pub fn bench_parser() {
-    let mut total_duration = Duration::ZERO;
-    let mut min_duration = Duration::MAX;
-    let mut max_duration = Duration::ZERO;
-
-    for _ in 0..1_000_000 {
-        let duration = bench_parser_once();
-        total_duration += duration;
-        min_duration = min_duration.min(duration);
-        max_duration = max_duration.max(duration);
-    }
-
-    println!(
-        "parser benchmark: {total_duration:?}, min = {min_duration:?}, max = {max_duration:?}"
-    );
-}
-
-/// Benchmarks the [`Parser`] once.
-fn bench_parser_once() -> Duration {
-    static BENCH_SOURCE: &str = "\
-        abs(n) = n < 0 ? -n : n,\
-        cube_root(n) = n ^ (1 / 3),\
-        \
-        distance_squared(x0, x1, y0, y1) = {\
-            dx = x1 - x0,\
-            dy = y1 - y0,\
-            dx * dx + dy * dy\
-        }\
-        \
-        distance(x0, x1, y0, y1) = sqrt(distance_squared(x0, x1, y0, y1)),\
-        foo = cube_root(distance(1, 2, 3, 4)),\
-        minus_foo_squared = -foo ^ 2,
-        all_binary_ops = 1 + 2 * 3 + 4 - 5 / 6 * 7 ^ 8 ^ 9 - 10 / 11 + 12,\
-        foo < 123 || all_binary_ops > 456 && abs(-10) == 10 * 1";
-
-    let mut parser = Parser::try_new(hint::black_box(BENCH_SOURCE))
-        .expect("first token of benchmark source should be valid");
-
-    let start = Instant::now();
-    let ast = parser.parse_ast();
-    let duration = start.elapsed();
-    let _ = hint::black_box(ast).expect("benchmark source should be valid");
-    duration
 }
 
 /// A structure that parses an [`Ast`] from source code.
