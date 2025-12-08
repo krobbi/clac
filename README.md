@@ -33,10 +33,6 @@ clac> 1 + 1
 > For more information about language features, see the
 > [language documentation](docs/README.md).
 
-## Credits
-* Infix parser based on
-[pseudocode by Eli Bendersky](https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing#precedence-climbing-how-it-actually-works).
-
 ## License
 Clac is released under the MIT License. See [LICENSE.txt](LICENSE.txt) for a
 full copy of the license text.

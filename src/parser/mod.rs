@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-mod comparison;
-mod infix;
 mod lexer;
 mod parse_error;
 
@@ -140,25 +138,25 @@ impl<'a> Parser<'a> {
     /// function returns a [`ParseError`] if a function [`Expr`] or a ternary
     /// conditional [`Expr`] could not be parsed.
     fn parse_expr_mapping(&mut self) -> Result<Expr, ParseError> {
-        let lhs = self.parse_expr_or()?;
+        let mut lhs = self.parse_expr_or()?;
 
-        let expr = match self.peek() {
+        match self.peek() {
             TokenType::RightArrow => {
                 self.bump()?; // Consume the operator token.
                 let body = self.parse_expr_mapping()?;
-                Expr::Function(unwrap_list(lhs), body.into())
+                lhs = Expr::Function(unwrap_list(lhs), body.into());
             }
             TokenType::Question => {
                 self.bump()?; // Consume the operator token.
                 let then = self.parse_expr()?;
                 self.expect(TokenType::Colon)?;
                 let or = self.parse_expr_mapping()?;
-                Expr::Cond(lhs.into(), then.into(), or.into())
+                lhs = Expr::Cond(lhs.into(), then.into(), or.into());
             }
-            _ => lhs,
-        };
+            _ => (),
+        }
 
-        Ok(expr)
+        Ok(lhs)
     }
 
     /// Parses a logical or [`Expr`]. This function returns a [`ParseError`] if
@@ -182,6 +180,53 @@ impl<'a> Parser<'a> {
         while self.eat(TokenType::AndAnd)? {
             let rhs = self.parse_expr_comparison()?;
             lhs = Expr::Logic(LogicOp::And, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
+    }
+
+    /// Parses a comparison [`Expr`]. This function returns a [`ParseError`] if
+    /// a comparison [`Expr`] could not be parsed.
+    pub fn parse_expr_comparison(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_sum()?;
+
+        if let Some(op) = BinOp::comparison_from_token_type(self.peek()) {
+            self.bump()?; // Consume the operator token.
+            let rhs = self.parse_expr_sum()?;
+
+            if BinOp::comparison_from_token_type(self.peek()).is_some() {
+                return Err(ParseError::ChainedComparison);
+            }
+
+            lhs = Expr::Binary(op, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
+    }
+
+    /// Parses a sum [`Expr`]. This function returns a [`ParseError`] if a sum
+    /// [`Expr`] could not be parsed.
+    pub fn parse_expr_sum(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_term()?;
+
+        while let Some(op) = BinOp::sum_from_token_type(self.peek()) {
+            self.bump()?; // Consume the operator token.
+            let rhs = self.parse_expr_term()?;
+            lhs = Expr::Binary(op, lhs.into(), rhs.into());
+        }
+
+        Ok(lhs)
+    }
+
+    /// Parses a term [`Expr`]. This function returns a [`ParseError`] if a term
+    /// [`Expr`] could not be parsed.
+    pub fn parse_expr_term(&mut self) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_prefix()?;
+
+        while let Some(op) = BinOp::term_from_token_type(self.peek()) {
+            self.bump()?; // Consume the operator token.
+            let rhs = self.parse_expr_prefix()?;
+            lhs = Expr::Binary(op, lhs.into(), rhs.into());
         }
 
         Ok(lhs)
@@ -215,9 +260,6 @@ impl<'a> Parser<'a> {
             lhs = Expr::Call(lhs.into(), unwrap_list(args));
         }
 
-        // TODO: The infix parser hasn't been very helpful because there are
-        // only 2 adjacent precedence levels of associative binary operators.
-        // Benchmark a recursive descent solution and use that if it is faster.
         if self.eat(TokenType::Caret)? {
             let rhs = self.parse_expr_prefix()?;
             lhs = Expr::Binary(BinOp::Power, lhs.into(), rhs.into());
@@ -299,6 +341,49 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParseError::UnexpectedToken(expected, actual))
         }
+    }
+}
+
+impl BinOp {
+    /// Creates a new comparison `BinOp` from a [`TokenType`]. This function
+    /// returns [`None`] if the [`TokenType`] does not correspond to a
+    /// comparison `BinOp`.
+    fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
+        let op = match token_type {
+            TokenType::EqEq => Self::Equal,
+            TokenType::BangEq => Self::NotEqual,
+            TokenType::Lt => Self::Less,
+            TokenType::LtEq => Self::LessEqual,
+            TokenType::Gt => Self::Greater,
+            TokenType::GtEq => Self::GreaterEqual,
+            _ => return None,
+        };
+
+        Some(op)
+    }
+
+    /// Creates a new sum `BinOp` from a [`TokenType`]. This function returns
+    /// [`None`] if the [`TokenType`] does not correspond to a sum `BinOp`.
+    fn sum_from_token_type(token_type: TokenType) -> Option<Self> {
+        let op = match token_type {
+            TokenType::Plus => Self::Add,
+            TokenType::Minus => Self::Subtract,
+            _ => return None,
+        };
+
+        Some(op)
+    }
+
+    /// Creates a new term `BinOp` from a [`TokenType`]. This function returns
+    /// [`None`] if the [`TokenType`] does not correspond to an term `BinOp`.
+    fn term_from_token_type(token_type: TokenType) -> Option<Self> {
+        let op = match token_type {
+            TokenType::Star => Self::Multiply,
+            TokenType::Slash => Self::Divide,
+            _ => return None,
+        };
+
+        Some(op)
     }
 }
 
