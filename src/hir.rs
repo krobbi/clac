@@ -12,7 +12,7 @@ pub enum Stmt {
     Nop,
 
     /// A block.
-    Block(Vec<Stmt>),
+    Block(Vec<Self>),
 
     /// A global variable assignment.
     AssignGlobal(String, Box<Expr>),
@@ -39,20 +39,20 @@ pub enum Expr {
     Local(DeclId),
 
     /// A block.
-    Block(Vec<Stmt>, Box<Expr>),
+    Block(Vec<Stmt>, Box<Self>),
 
     /// A function.
-    Function(Vec<DeclId>, Box<Expr>),
+    Function(Vec<DeclId>, Box<Self>),
 
     /// A function call.
-    Call(Box<Expr>, Vec<Expr>),
+    Call(Box<Self>, Vec<Self>),
 
     /// A unary operation.
-    Unary(UnOp, Box<Expr>),
+    Unary(UnOp, Box<Self>),
 
     /// A binary operation.
-    Binary(BinOp, Box<Expr>, Box<Expr>),
+    Binary(BinOp, Box<Self>, Box<Self>),
 
     /// A ternary conditional.
-    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
+    Cond(Box<Self>, Box<Self>, Box<Self>),
 }

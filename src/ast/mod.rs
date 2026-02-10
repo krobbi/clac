@@ -24,31 +24,31 @@ pub enum Expr {
     Ident(String),
 
     /// A parenthesized expression.
-    Paren(Box<Expr>),
+    Paren(Box<Self>),
 
     /// A tuple.
-    Tuple(Vec<Expr>),
+    Tuple(Vec<Self>),
 
     /// A block.
     Block(Vec<Stmt>),
 
     /// A function.
-    Function(Vec<Expr>, Box<Expr>),
+    Function(Vec<Self>, Box<Self>),
 
     /// A function call.
-    Call(Box<Expr>, Vec<Expr>),
+    Call(Box<Self>, Vec<Self>),
 
     /// A unary operation.
-    Unary(UnOp, Box<Expr>),
+    Unary(UnOp, Box<Self>),
 
     /// A binary operation.
-    Binary(BinOp, Box<Expr>, Box<Expr>),
+    Binary(BinOp, Box<Self>, Box<Self>),
 
     /// A short-circuiting logical operation.
-    Logic(LogicOp, Box<Expr>, Box<Expr>),
+    Logic(LogicOp, Box<Self>, Box<Self>),
 
     /// A ternary conditional.
-    Cond(Box<Expr>, Box<Expr>, Box<Expr>),
+    Cond(Box<Self>, Box<Self>, Box<Self>),
 }
 
 /// A value that can be represented with a single token.
