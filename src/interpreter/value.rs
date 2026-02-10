@@ -35,7 +35,7 @@ impl Value {
     }
 
     /// Converts the `Value` to its [`ValueType`].
-    fn as_type(&self) -> ValueType {
+    const fn as_type(&self) -> ValueType {
         match self {
             Self::Number(_) => ValueType::Number,
             Self::Bool(_) => ValueType::Bool,

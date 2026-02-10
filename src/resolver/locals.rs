@@ -16,7 +16,7 @@ pub struct Locals<'a> {
 
 impl<'a> Locals<'a> {
     /// Creates new `Locals` from a [`DeclTable`].
-    pub fn new(decls: &'a mut DeclTable) -> Self {
+    pub const fn new(decls: &'a mut DeclTable) -> Self {
         Self {
             decls,
             scopes: Vec::new(),

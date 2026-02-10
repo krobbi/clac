@@ -14,7 +14,7 @@ pub struct LocalStack {
 
 impl LocalStack {
     /// Creates a new `LocalStack` from a call depth.
-    pub fn new(call_depth: usize) -> Self {
+    pub const fn new(call_depth: usize) -> Self {
         Self {
             stack: Vec::new(),
             scope_offsets: Vec::new(),
@@ -23,14 +23,14 @@ impl LocalStack {
     }
 
     /// Returns the number of values in the `LocalStack`.
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.stack.len()
     }
 
     /// Returns the shallowest call depth where an accessed upvalue was defined.
     /// This function returns the `LocalStack`'s own call depth if no upvalues
     /// were accessed.
-    pub fn upvalue_call_depth(&self) -> usize {
+    pub const fn upvalue_call_depth(&self) -> usize {
         self.upvalue_call_depth
     }
 

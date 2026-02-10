@@ -23,7 +23,7 @@ macro_rules! define_tokens {
 
         impl Token {
             #[doc = "Converts the `Token` to its [`TokenType`]."]
-            pub fn as_type(&self) -> TokenType {
+            pub const fn as_type(&self) -> TokenType {
                 match self {
                     $(
                         Self::$name $((wildcard!($field)))? => TokenType::$name
@@ -43,7 +43,7 @@ macro_rules! define_tokens {
 
         impl TokenType {
             #[doc = "Returns a description of the `TokenType`."]
-            fn description(self) -> &'static str {
+            const fn description(self) -> &'static str {
                 match self {
                     $(
                         Self::$name => $description

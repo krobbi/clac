@@ -250,7 +250,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Returns the next [`Token`]'s [`TokenType`].
-    fn peek(&self) -> TokenType {
+    const fn peek(&self) -> TokenType {
         self.next_token.as_type()
     }
 
@@ -299,7 +299,7 @@ impl BinOp {
     /// Creates a new comparison `BinOp` from a [`TokenType`]. This function
     /// returns [`None`] if the [`TokenType`] does not correspond to a
     /// comparison `BinOp`.
-    fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
+    const fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::EqEq => Self::Equal,
             TokenType::BangEq => Self::NotEqual,
@@ -315,7 +315,7 @@ impl BinOp {
 
     /// Creates a new sum `BinOp` from a [`TokenType`]. This function returns
     /// [`None`] if the [`TokenType`] does not correspond to a sum `BinOp`.
-    fn sum_from_token_type(token_type: TokenType) -> Option<Self> {
+    const fn sum_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::Plus => Self::Add,
             TokenType::Minus => Self::Subtract,
@@ -327,7 +327,7 @@ impl BinOp {
 
     /// Creates a new term `BinOp` from a [`TokenType`]. This function returns
     /// [`None`] if the [`TokenType`] does not correspond to an term `BinOp`.
-    fn term_from_token_type(token_type: TokenType) -> Option<Self> {
+    const fn term_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::Star => Self::Multiply,
             TokenType::Slash => Self::Divide,

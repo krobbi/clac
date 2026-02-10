@@ -133,16 +133,16 @@ impl<'a> Lexer<'a> {
 }
 
 /// Returns `true` if a [`char`] is a digit.
-fn is_char_digit(char: char) -> bool {
+const fn is_char_digit(char: char) -> bool {
     char.is_ascii_digit()
 }
 
 /// Returns `true` if a [`char`] is an identifier or keyword start.
-fn is_char_word_start(char: char) -> bool {
+const fn is_char_word_start(char: char) -> bool {
     char.is_ascii_alphabetic() || char == '_'
 }
 
 /// Return `true` if a [`char`] is an identifier or keyword continuation.
-fn is_char_word_continue(char: char) -> bool {
+const fn is_char_word_continue(char: char) -> bool {
     is_char_word_start(char) || is_char_digit(char)
 }

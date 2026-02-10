@@ -1,6 +1,10 @@
 use super::{Globals, InterpretError, value::Value};
 
 /// A native function.
+#[expect(
+    clippy::doc_paragraphs_missing_punctuation,
+    reason = "function signature documentation"
+)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Native {
     /// Prints `f`'s control flow graph as pseudo-assembly and returns `f`.
@@ -22,7 +26,7 @@ impl Native {
     }
 
     /// Returns the `Native`'s name.
-    fn name(self) -> &'static str {
+    const fn name(self) -> &'static str {
         match self {
             Self::Dump => "__dump",
             Self::Sqrt => "sqrt",
