@@ -3,14 +3,12 @@ mod tests;
 
 mod lex_error;
 mod scanner;
-mod token;
 
-pub use self::{
-    lex_error::LexError,
-    token::{Token, TokenType},
-};
+pub use self::lex_error::LexError;
 
-use crate::ast::Literal;
+use crate::{ast::Literal, symbols::Symbol};
+
+use super::tokens::Token;
 
 use self::scanner::Scanner;
 
@@ -48,7 +46,7 @@ impl<'a> Lexer<'a> {
             '+' => Token::Plus,
             '-' => {
                 if self.scanner.eat('>') {
-                    Token::RightArrow
+                    Token::MinusGreater
                 } else {
                     Token::Minus
                 }
@@ -58,30 +56,30 @@ impl<'a> Lexer<'a> {
             '^' => Token::Caret,
             '=' => {
                 if self.scanner.eat('=') {
-                    Token::EqEq
+                    Token::EqualsEquals
                 } else {
-                    Token::Eq
+                    Token::Equals
                 }
             }
             '!' => {
                 if self.scanner.eat('=') {
-                    Token::BangEq
+                    Token::BangEquals
                 } else {
                     Token::Bang
                 }
             }
             '<' => {
                 if self.scanner.eat('=') {
-                    Token::LtEq
+                    Token::LessEquals
                 } else {
-                    Token::Lt
+                    Token::Less
                 }
             }
             '>' => {
                 if self.scanner.eat('=') {
-                    Token::GtEq
+                    Token::GreaterEquals
                 } else {
-                    Token::Gt
+                    Token::Greater
                 }
             }
             '&' => {
@@ -127,7 +125,7 @@ impl<'a> Lexer<'a> {
         match self.scanner.lexeme() {
             "false" => Token::Literal(Literal::Bool(false)),
             "true" => Token::Literal(Literal::Bool(true)),
-            name => Token::Ident(name.to_owned()),
+            name => Token::Ident(Symbol::intern(name)),
         }
     }
 }

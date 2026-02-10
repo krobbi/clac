@@ -3,6 +3,7 @@ mod tests;
 
 mod lexer;
 mod parse_error;
+mod tokens;
 
 pub use self::parse_error::ParseError;
 
@@ -10,7 +11,10 @@ use std::mem;
 
 use crate::ast::{Ast, BinOp, Expr, LogicOp, Stmt, UnOp};
 
-use self::lexer::{LexError, Lexer, Token, TokenType};
+use self::{
+    lexer::{LexError, Lexer},
+    tokens::{Token, TokenType},
+};
 
 /// Parses an [`Ast`] from source code. This function returns a [`ParseError`]
 /// if an [`Ast`] could not be parsed.
@@ -64,10 +68,10 @@ impl<'a> Parser<'a> {
     fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
         let target = self.parse_expr()?;
 
-        let stmt = if self.eat(TokenType::Eq)? {
+        let stmt = if self.eat(TokenType::Equals)? {
             let source = self.parse_expr()?;
 
-            if self.peek() == TokenType::Eq {
+            if self.peek() == TokenType::Equals {
                 return Err(ParseError::ChainedAssignment);
             }
 
@@ -92,7 +96,7 @@ impl<'a> Parser<'a> {
         let mut lhs = self.parse_expr_or()?;
 
         match self.peek() {
-            TokenType::RightArrow => {
+            TokenType::MinusGreater => {
                 self.bump()?; // Consume the operator token.
                 let body = self.parse_expr_mapping()?;
                 lhs = Expr::Function(unwrap_list(lhs), body.into());
@@ -188,7 +192,7 @@ impl<'a> Parser<'a> {
     fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
         let mut lhs = match self.bump()? {
             Token::Literal(literal) => Expr::Literal(literal),
-            Token::Ident(name) => Expr::Ident(name),
+            Token::Ident(symbol) => Expr::Ident(symbol.to_string()),
             Token::OpenParen => self.parse_expr_paren()?,
             Token::OpenBrace => {
                 let stmts = self.parse_sequence(TokenType::CloseBrace)?;
@@ -251,7 +255,7 @@ impl<'a> Parser<'a> {
 
     /// Returns the next [`Token`]'s [`TokenType`].
     const fn peek(&self) -> TokenType {
-        self.next_token.as_type()
+        self.next_token.token_type()
     }
 
     /// Returns `true` if the next [`Token`] matches a terminator [`TokenType`]
@@ -287,7 +291,7 @@ impl<'a> Parser<'a> {
     fn expect(&mut self, expected: TokenType) -> Result<(), ParseError> {
         let actual = self.bump()?;
 
-        if actual.as_type() == expected {
+        if actual.token_type() == expected {
             Ok(())
         } else {
             Err(ParseError::UnexpectedToken(expected, actual))
@@ -301,12 +305,12 @@ impl BinOp {
     /// comparison `BinOp`.
     const fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
-            TokenType::EqEq => Self::Equal,
-            TokenType::BangEq => Self::NotEqual,
-            TokenType::Lt => Self::Less,
-            TokenType::LtEq => Self::LessEqual,
-            TokenType::Gt => Self::Greater,
-            TokenType::GtEq => Self::GreaterEqual,
+            TokenType::EqualsEquals => Self::Equal,
+            TokenType::BangEquals => Self::NotEqual,
+            TokenType::Less => Self::Less,
+            TokenType::LessEquals => Self::LessEqual,
+            TokenType::Greater => Self::Greater,
+            TokenType::GreaterEquals => Self::GreaterEqual,
             _ => return None,
         };
 
@@ -326,7 +330,7 @@ impl BinOp {
     }
 
     /// Creates a new term `BinOp` from a [`TokenType`]. This function returns
-    /// [`None`] if the [`TokenType`] does not correspond to an term `BinOp`.
+    /// [`None`] if the [`TokenType`] does not correspond to a term `BinOp`.
     const fn term_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::Star => Self::Multiply,

@@ -3,7 +3,10 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use super::lexer::{LexError, Token, TokenType};
+use super::{
+    lexer::LexError,
+    tokens::{Token, TokenType},
+};
 
 /// An [`Error`] caught while parsing an [`Ast`][crate::ast::Ast].
 #[derive(Debug)]

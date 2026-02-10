@@ -2,17 +2,13 @@ use super::*;
 
 /// Asserts that source code produces an expected stream of [`Token`]s.
 macro_rules! assert_tokens {
-    ($source:literal, [$($result:pat $(if $guard:expr)?),* $(,)?] $(,)?) => {
-        let mut lexer = Lexer::new($source);
-
-        $(
-            assert!(matches!(lexer.bump(), $result $(if $guard)?));
-        )*
-
+    ($src:literal, [$($tok:pat $(if $guard:expr)?),* $(,)?]) => {
+        let mut lexer = Lexer::new($src);
+        $(assert!(matches!(lexer.bump(), $tok $(if $guard)?));)*
         assert!(matches!(lexer.bump(), Ok(Token::Eof)));
     };
-    ($source:literal, Ok[$($token:pat $(if $guard:expr)?),* $(,)?] $(,)?) => {
-        assert_tokens!($source, [$(Ok($token) $(if $guard)?),*]);
+    ($src:literal, Ok[$($tok:pat $(if $guard:expr)?),* $(,)?]) => {
+        assert_tokens!($src, [$(Ok($tok) $(if $guard)?),*]);
     };
 }
 
@@ -35,29 +31,29 @@ fn whitespace_separates_digraph_tokens() {
         "- >, ->, = =, ==, ! =, !=, < =, <=, > =, >=, & &, &&, | |, ||,",
         [
             Ok(Token::Minus),
-            Ok(Token::Gt),
+            Ok(Token::Greater),
             Ok(Token::Comma),
-            Ok(Token::RightArrow),
+            Ok(Token::MinusGreater),
             Ok(Token::Comma),
-            Ok(Token::Eq),
-            Ok(Token::Eq),
+            Ok(Token::Equals),
+            Ok(Token::Equals),
             Ok(Token::Comma),
-            Ok(Token::EqEq),
+            Ok(Token::EqualsEquals),
             Ok(Token::Comma),
             Ok(Token::Bang),
-            Ok(Token::Eq),
+            Ok(Token::Equals),
             Ok(Token::Comma),
-            Ok(Token::BangEq),
+            Ok(Token::BangEquals),
             Ok(Token::Comma),
-            Ok(Token::Lt),
-            Ok(Token::Eq),
+            Ok(Token::Less),
+            Ok(Token::Equals),
             Ok(Token::Comma),
-            Ok(Token::LtEq),
+            Ok(Token::LessEquals),
             Ok(Token::Comma),
-            Ok(Token::Gt),
-            Ok(Token::Eq),
+            Ok(Token::Greater),
+            Ok(Token::Equals),
             Ok(Token::Comma),
-            Ok(Token::GtEq),
+            Ok(Token::GreaterEquals),
             Ok(Token::Comma),
             Err(LexError::BitwiseAnd),
             Err(LexError::BitwiseAnd),
@@ -69,7 +65,7 @@ fn whitespace_separates_digraph_tokens() {
             Ok(Token::Comma),
             Ok(Token::PipePipe),
             Ok(Token::Comma),
-        ],
+        ]
     );
 }
 
@@ -80,7 +76,7 @@ fn non_ascii_chars_are_scanned() {
         "(Café ☕!)(🦀💻🧮)",
         [
             Ok(Token::OpenParen),
-            Ok(Token::Ident(n)) if n == "Caf",
+            Ok(Token::Ident(s)) if s.to_string() == "Caf",
             Err(LexError::UnexpectedChar('é')),
             Err(LexError::UnexpectedChar('☕')),
             Ok(Token::Bang),
@@ -90,7 +86,7 @@ fn non_ascii_chars_are_scanned() {
             Err(LexError::UnexpectedChar('💻')),
             Err(LexError::UnexpectedChar('🧮')),
             Ok(Token::CloseParen),
-        ],
+        ]
     );
 }
 
@@ -134,68 +130,68 @@ fn all_tokens_are_produced() {
             Token::Literal(Literal::Number(3.0)),
             Token::Slash,
             Token::Literal(Literal::Number(4.0)),
-            Token::EqEq,
+            Token::EqualsEquals,
             Token::Bang,
             Token::OpenBrace,
-            Token::Ident(n) if n == "foo",
-            Token::RightArrow,
-            Token::Ident(n) if n == "_B4R",
-            Token::Eq,
-            Token::Ident(n) if n == "baz",
+            Token::Ident(s) if s.to_string() == "foo",
+            Token::MinusGreater,
+            Token::Ident(s) if s.to_string() == "_B4R",
+            Token::Equals,
+            Token::Ident(s) if s.to_string() == "baz",
             Token::Comma,
             Token::Literal(Literal::Bool(true)),
-            Token::BangEq,
+            Token::BangEquals,
             Token::Literal(Literal::Bool(false)),
             Token::CloseBrace,
-            Token::Ident(n) if n == "min",
-            Token::LtEq,
-            Token::Ident(n) if n == "mid",
-            Token::Lt,
-            Token::Ident(n) if n == "max",
-            Token::Gt,
+            Token::Ident(s) if s.to_string() == "min",
+            Token::LessEquals,
+            Token::Ident(s) if s.to_string() == "mid",
+            Token::Less,
+            Token::Ident(s) if s.to_string() == "max",
+            Token::Greater,
             Token::Literal(Literal::Number(2.0)),
-            Token::GtEq,
+            Token::GreaterEquals,
             Token::Literal(Literal::Number(1.0)),
-        ],
+        ]
     );
 
     assert_tokens!(
         "x ^ 2",
         Ok[
-            Token::Ident(n) if n == "x",
+            Token::Ident(s) if s.to_string() == "x",
             Token::Caret,
             Token::Literal(Literal::Number(2.0)),
-        ],
+        ]
     );
 
     assert_tokens!(
         "foo && bar || baz",
         Ok[
-            Token::Ident(n) if n == "foo",
+            Token::Ident(s) if s.to_string() == "foo",
             Token::AndAnd,
-            Token::Ident(n) if n == "bar",
+            Token::Ident(s) if s.to_string() == "bar",
             Token::PipePipe,
-            Token::Ident(n) if n == "baz",
-        ],
+            Token::Ident(s) if s.to_string() == "baz",
+        ]
     );
 
     assert_tokens!(
         "abs(n) = n < 0 ? -n : n",
         Ok[
-            Token::Ident(n) if n == "abs",
+            Token::Ident(s) if s.to_string() == "abs",
             Token::OpenParen,
-            Token::Ident(n) if n == "n",
+            Token::Ident(s) if s.to_string() == "n",
             Token::CloseParen,
-            Token::Eq,
-            Token::Ident(n) if n == "n",
-            Token::Lt,
+            Token::Equals,
+            Token::Ident(s) if s.to_string() == "n",
+            Token::Less,
             Token::Literal(Literal::Number(0.0)),
             Token::Question,
             Token::Minus,
-            Token::Ident(n) if n == "n",
+            Token::Ident(s) if s.to_string() == "n",
             Token::Colon,
-            Token::Ident(n) if n == "n",
-        ],
+            Token::Ident(s) if s.to_string() == "n",
+        ]
     );
 }
 
@@ -217,18 +213,18 @@ fn integers_tokens_are_produced() {
             Token::Literal(Literal::Number(400.0)),
             Token::Comma,
             Token::Literal(Literal::Number(5.0)),
-            Token::Ident(n) if n == "_000",
+            Token::Ident(s) if s.to_string() == "_000",
             Token::Comma,
             Token::Literal(Literal::Number(0.0)),
-            Token::Ident(n) if n == "b1010",
+            Token::Ident(s) if s.to_string() == "b1010",
             Token::Comma,
             Token::Literal(Literal::Number(0.0)),
-            Token::Ident(n) if n == "o10",
+            Token::Ident(s) if s.to_string() == "o10",
             Token::Comma,
             Token::Literal(Literal::Number(0.0)),
-            Token::Ident(n) if n == "xff",
+            Token::Ident(s) if s.to_string() == "xff",
             Token::Comma,
-        ],
+        ]
     );
 }
 
@@ -256,7 +252,7 @@ fn decimal_tokens_are_produced() {
             Ok(Token::Comma),
             Err(LexError::UnexpectedChar('.')),
             Ok(Token::Comma),
-        ],
+        ]
     );
 }
 
@@ -268,13 +264,13 @@ fn decimal_tokens_are_accurate() {
     // Test pi as it is written in the standard library.
     assert_tokens!(
         "3.14159265358979323846264338327950288",
-        Ok[Token::Literal(Literal::Number(PI))],
+        Ok[Token::Literal(Literal::Number(PI))]
     );
 
     // Test pi with more decimal places than can be represented.
     assert_tokens!(
         "3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628035",
-        Ok[Token::Literal(Literal::Number(PI))],
+        Ok[Token::Literal(Literal::Number(PI))]
     );
 }
 
@@ -284,33 +280,33 @@ fn keywords_are_length_sensitive() {
     assert_tokens!(
         "f, fals, false, false_, falsetto,",
         Ok[
-            Token::Ident(n) if n == "f",
+            Token::Ident(s) if s.to_string() == "f",
             Token::Comma,
-            Token::Ident(n) if n == "fals",
+            Token::Ident(s) if s.to_string() == "fals",
             Token::Comma,
             Token::Literal(Literal::Bool(false)),
             Token::Comma,
-            Token::Ident(n) if n == "false_",
+            Token::Ident(s) if s.to_string() == "false_",
             Token::Comma,
-            Token::Ident(n) if n == "falsetto",
+            Token::Ident(s) if s.to_string() == "falsetto",
             Token::Comma,
-        ],
+        ]
     );
 
     assert_tokens!(
         "t, tru, true, true_, truest,",
         Ok[
-            Token::Ident(n) if n == "t",
+            Token::Ident(s) if s.to_string() == "t",
             Token::Comma,
-            Token::Ident(n) if n == "tru",
+            Token::Ident(s) if s.to_string() == "tru",
             Token::Comma,
             Token::Literal(Literal::Bool(true)),
             Token::Comma,
-            Token::Ident(n) if n == "true_",
+            Token::Ident(s) if s.to_string() == "true_",
             Token::Comma,
-            Token::Ident(n) if n == "truest",
+            Token::Ident(s) if s.to_string() == "truest",
             Token::Comma,
-        ],
+        ]
     );
 }
 
@@ -322,15 +318,15 @@ fn keywords_are_case_sensitive() {
         [
             Ok(Token::Literal(Literal::Bool(false))),
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "False",
+            Ok(Token::Ident(s)) if s.to_string() == "False",
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "FALSE",
+            Ok(Token::Ident(s)) if s.to_string() == "FALSE",
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "f",
+            Ok(Token::Ident(s)) if s.to_string() == "f",
             Err(LexError::UnexpectedChar('á')),
-            Ok(Token::Ident(n)) if n == "lse",
+            Ok(Token::Ident(s)) if s.to_string() == "lse",
             Ok(Token::Comma),
-        ],
+        ]
     );
 
     assert_tokens!(
@@ -338,14 +334,48 @@ fn keywords_are_case_sensitive() {
         [
             Ok(Token::Literal(Literal::Bool(true))),
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "True",
+            Ok(Token::Ident(s)) if s.to_string() == "True",
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "TRUE",
+            Ok(Token::Ident(s)) if s.to_string() == "TRUE",
             Ok(Token::Comma),
-            Ok(Token::Ident(n)) if n == "tr",
+            Ok(Token::Ident(s)) if s.to_string() == "tr",
             Err(LexError::UnexpectedChar('ü')),
-            Ok(Token::Ident(n)) if n == "e",
+            Ok(Token::Ident(s)) if s.to_string() == "e",
             Ok(Token::Comma),
-        ],
+        ]
     );
+}
+
+/// Tests that [`Symbol`]s are reused for equal names and are case-sensitive.
+#[test]
+fn symbols_are_reused_and_case_sensitive() {
+    let mut lexer = Lexer::new("foo foo FOO FOO bar");
+
+    /// Returns the next [`Symbol`] from the [`Lexer`].
+    macro_rules! next_symbol {
+        () => {{
+            let Ok(Token::Ident(symbol)) = lexer.bump() else {
+                unreachable!("token should be an identifier");
+            };
+
+            symbol
+        }};
+    }
+
+    let lower_symbol = next_symbol!();
+    assert_eq!(lower_symbol.to_string(), "foo");
+    assert_eq!(lower_symbol, next_symbol!());
+
+    let upper_symbol = next_symbol!();
+    assert_eq!(upper_symbol.to_string(), "FOO");
+    assert_eq!(upper_symbol, next_symbol!());
+
+    assert_ne!(lower_symbol, upper_symbol);
+
+    let other_symbol = next_symbol!();
+    assert_eq!(other_symbol.to_string(), "bar");
+    assert_ne!(other_symbol, lower_symbol);
+    assert_ne!(other_symbol, upper_symbol);
+
+    assert!(matches!(lexer.bump(), Ok(Token::Eof)));
 }

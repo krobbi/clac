@@ -4,9 +4,9 @@ use super::*;
 
 /// Asserts that an expected [`ParseError`] is produced from source code.
 macro_rules! assert_error {
-    ($source:literal, $error:pat $(if $guard:expr)? $(,)?) => {
-        let error = parse_source($source).expect_err("source code should be invalid");
-        assert!(matches!(error, $error $(if $guard)?));
+    ($src:literal, $err:pat $(if $guard:expr)?) => {
+        let error = parse_source($src).expect_err("test source should be invalid");
+        assert!(matches!(error, $err $(if $guard)?));
     };
 }
 
@@ -29,7 +29,7 @@ fn assignments_are_not_expressions() {
     assert_error!("x = y = 0", ParseError::ChainedAssignment);
     assert_error!(
         "1 + (x = 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Eq),
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Equals)
     );
 }
 
@@ -84,7 +84,7 @@ fn parens_are_parsed() {
     assert_ast("(x, y)", "(a: (t: x y))");
     assert_error!(
         "(z w)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(n)) if n == "w",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "w"
     );
 
     assert_ast("(u, v,)", "(a: (t: u v))");
@@ -119,7 +119,7 @@ fn functions_are_parsed() {
     assert_ast("(a, b) -> c", "(a: (-> a b c))");
     assert_error!(
         "(d e) -> f",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(n)) if n == "e",
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "e"
     );
 
     assert_ast("(g, h,) -> i", "(a: (-> g h i))");
@@ -128,7 +128,7 @@ fn functions_are_parsed() {
 /// Tests that empty function parameters are not parsed.
 #[test]
 fn empty_function_parameters_are_not_parsed() {
-    assert_error!("-> 3.14", ParseError::ExpectedExpr(Token::RightArrow));
+    assert_error!("-> 3.14", ParseError::ExpectedExpr(Token::MinusGreater));
 }
 
 /// Tests that separating commas are required between call arguments.
@@ -138,7 +138,7 @@ fn call_arguments_require_separating_commas() {
     assert_ast("f(1)", "(a: (f 1))");
     assert_error!(
         "f(1 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0))),
+        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0)))
     );
 
     assert_ast("f(1, 2)", "(a: (f 1 2))");

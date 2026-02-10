@@ -7,6 +7,7 @@ mod hir;
 mod interpreter;
 mod parser;
 mod resolver;
+mod symbols;
 
 use std::{
     env,
