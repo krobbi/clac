@@ -4,15 +4,15 @@ use super::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp};
 
 impl Display for Ast {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write_s_expr(f, "a:", &self.0)
+        fmt_s_expr("a:", &self.0, f)
     }
 }
 
 impl Display for Stmt {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Assign(target, source) => write_s_expr(f, "=", &[target, source]),
-            Self::Expr(expr) => expr.fmt(f),
+            Self::Assign(target, source) => fmt_s_expr("=", &[target, source], f),
+            Self::Expr(expr) => Display::fmt(expr, f),
         }
     }
 }
@@ -20,21 +20,23 @@ impl Display for Stmt {
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Literal(literal) => literal.fmt(f),
-            Self::Ident(name) => f.write_str(name),
-            Self::Paren(expr) => write_s_expr(f, "p:", &[expr]),
-            Self::Tuple(exprs) => write_s_expr(f, "t:", exprs),
-            Self::Block(stmts) => write_s_expr(f, "b:", stmts),
+            Self::Literal(literal) => Display::fmt(literal, f),
+            Self::Ident(symbol) => Display::fmt(symbol, f),
+            Self::Paren(expr) => fmt_s_expr("p:", &[expr], f),
+            Self::Tuple(exprs) => fmt_s_expr("t:", exprs, f),
+            Self::Block(stmts) => fmt_s_expr("b:", stmts, f),
             Self::Function(params, body) => {
                 let mut args = params.iter().collect::<Vec<_>>();
                 args.push(body);
-                write_s_expr(f, "->", &args)
+                fmt_s_expr("->", &args, f)
             }
-            Self::Call(callee, args) => write_s_expr(f, callee, args),
-            Self::Unary(op, expr) => write_s_expr(f, op, &[expr]),
-            Self::Binary(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
-            Self::Logic(op, lhs, rhs) => write_s_expr(f, op, &[lhs, rhs]),
-            Self::Cond(cond, then, or) => write_s_expr(f, "?", &[cond, then, or]),
+            Self::Call(callee, args) => fmt_s_expr(callee, args, f),
+            Self::Unary(op, expr) => fmt_s_expr(op, &[expr], f),
+            Self::Binary(op, lhs, rhs) => fmt_s_expr(op, &[lhs, rhs], f),
+            Self::Logic(op, lhs, rhs) => fmt_s_expr(op, &[lhs, rhs], f),
+            Self::Cond(cond, then_expr, else_expr) => {
+                fmt_s_expr("?", &[cond, then_expr, else_expr], f)
+            }
         }
     }
 }
@@ -42,26 +44,26 @@ impl Display for Expr {
 impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(value) => value.fmt(f),
-            Self::Bool(value) => value.fmt(f),
+            Self::Number(value) => Display::fmt(value, f),
+            Self::Bool(value) => Display::fmt(value, f),
         }
     }
 }
 
 impl Display for UnOp {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let symbol = match self {
+        let op = match self {
             Self::Negate => "-",
             Self::Not => "!",
         };
 
-        f.write_str(symbol)
+        f.write_str(op)
     }
 }
 
 impl Display for BinOp {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let symbol = match self {
+        let op = match self {
             Self::Add => "+",
             Self::Subtract => "-",
             Self::Multiply => "*",
@@ -75,24 +77,24 @@ impl Display for BinOp {
             Self::GreaterEqual => ">=",
         };
 
-        f.write_str(symbol)
+        f.write_str(op)
     }
 }
 
 impl Display for LogicOp {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let symbol = match self {
+        let op = match self {
             Self::And => "&&",
             Self::Or => "||",
         };
 
-        f.write_str(symbol)
+        f.write_str(op)
     }
 }
 
-/// Writes an operator and arguments to a [`Formatter`] as an S-expression. This
-/// function returns a [`fmt::Error`] if the S-expression could not be written.
-fn write_s_expr(f: &mut Formatter<'_>, op: impl Display, args: &[impl Display]) -> fmt::Result {
+/// Formats an operator and arguments as an S-expression with a [`Formatter`].
+/// This function returns a [`fmt::Error`] if an error occurred.
+fn fmt_s_expr<O: Display, A: Display>(op: O, args: &[A], f: &mut Formatter<'_>) -> fmt::Result {
     write!(f, "({op}")?;
 
     for arg in args {

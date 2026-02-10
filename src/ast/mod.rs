@@ -1,5 +1,7 @@
 mod display;
 
+use crate::symbols::Symbol;
+
 /// An abstract syntax tree.
 #[derive(Debug)]
 pub struct Ast(pub Vec<Stmt>);
@@ -21,7 +23,7 @@ pub enum Expr {
     Literal(Literal),
 
     /// An identifier.
-    Ident(String),
+    Ident(Symbol),
 
     /// A parenthesized expression.
     Paren(Box<Self>),

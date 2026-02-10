@@ -11,6 +11,7 @@ use crate::{
     decl_table::DeclTable,
     hir::{self, Hir},
     interpreter::Globals,
+    symbols::Symbol,
 };
 
 use self::{locals::Locals, resolve_error::ExprArea, voidable::Voidable};
@@ -91,21 +92,23 @@ impl<'a, 'b> Resolver<'a, 'b> {
         source: &Expr,
         scope_kind: ScopeKind,
     ) -> Result<hir::Stmt> {
-        let (name, value) = match target {
-            Expr::Ident(name) => (name, self.resolve_expr(source, ExprArea::AssignSource)?),
+        let (symbol, value) = match target {
+            Expr::Ident(symbol) => (*symbol, self.resolve_expr(source, ExprArea::AssignSource)?),
             Expr::Call(callee, args) => {
-                let Expr::Ident(name) = callee.as_ref() else {
+                let Expr::Ident(symbol) = callee.as_ref() else {
                     return Err(ResolveError::InvalidFunctionName);
                 };
 
-                (name, self.resolve_expr_function(args, source)?)
+                (*symbol, self.resolve_expr_function(args, source)?)
             }
             _ => return Err(ResolveError::InvalidAssignTarget),
         };
 
+        let name = symbol.to_string();
+
         match scope_kind {
-            ScopeKind::Global => self.define_global(name, value),
-            ScopeKind::Local => self.define_local(name, value),
+            ScopeKind::Global => self.define_global(&name, value),
+            ScopeKind::Local => self.define_local(&name, value),
         }
     }
 
@@ -124,7 +127,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
     fn resolve_expr_voidable(&mut self, expr: &Expr) -> Result<Voidable> {
         let expr = match expr {
             Expr::Literal(literal) => Ok(hir::Expr::Literal(literal.clone())),
-            Expr::Ident(name) => self.resolve_expr_ident(name),
+            Expr::Ident(symbol) => self.resolve_expr_ident(*symbol),
             Expr::Paren(expr) => self.resolve_expr(expr, ExprArea::Paren),
             Expr::Tuple(_) => Err(ResolveError::TupleValue),
             Expr::Block(stmts) => return self.resolve_expr_block(stmts),
@@ -141,14 +144,16 @@ impl<'a, 'b> Resolver<'a, 'b> {
 
     /// Resolves an identifier [`Expr`] to an [`hir::Expr`]. This function
     /// returns a [`ResolveError`] if the identifier is not a defined variable.
-    fn resolve_expr_ident(&mut self, name: &str) -> Result<hir::Expr> {
+    fn resolve_expr_ident(&mut self, symbol: Symbol) -> Result<hir::Expr> {
+        let name = symbol.to_string();
+
         #[expect(clippy::option_if_let_else, reason = "better readability")]
-        if let Some(id) = self.locals.read(name) {
+        if let Some(id) = self.locals.read(&name) {
             Ok(hir::Expr::Local(id))
-        } else if self.is_global_defined(name) {
-            Ok(hir::Expr::Global(name.to_owned()))
+        } else if self.is_global_defined(&name) {
+            Ok(hir::Expr::Global(name))
         } else {
-            Err(ResolveError::UndefinedVariable(name.to_owned()))
+            Err(ResolveError::UndefinedVariable(name))
         }
     }
 
@@ -190,11 +195,13 @@ impl<'a, 'b> Resolver<'a, 'b> {
                 return Err(ResolveError::InvalidParam);
             };
 
-            if param_names.contains(param) {
-                return Err(ResolveError::DuplicateParam(param.to_owned()));
+            let param = param.to_string();
+
+            if param_names.contains(&param) {
+                return Err(ResolveError::DuplicateParam(param));
             }
 
-            param_names.push(param.to_owned());
+            param_names.push(param);
         }
 
         self.locals.begin_function();
