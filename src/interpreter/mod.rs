@@ -156,8 +156,8 @@ impl Interpreter {
             }
             Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
             Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
-            Instruction::LoadGlobal(name) => self.push(globals.read(name).clone()),
-            Instruction::StoreGlobal(name) => globals.assign(name, self.pop()),
+            Instruction::LoadGlobal(symbol) => self.push(globals.read(*symbol).clone()),
+            Instruction::StoreGlobal(symbol) => globals.assign(*symbol, self.pop()),
             Instruction::DefineUpvalue => {
                 let value = self.pop();
                 self.upvalues.push(value.into());

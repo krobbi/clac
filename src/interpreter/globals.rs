@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
+use crate::symbols::Symbol;
+
 use super::value::Value;
 
 /// A map of global variables.
 #[derive(Default)]
 pub struct Globals {
-    /// The map of global variable names to [`Value`]s.
-    values: HashMap<String, Value>,
+    /// The map of [`Symbol`]s to [`Value`]s.
+    values: HashMap<Symbol, Value>,
 }
 
 impl Globals {
@@ -15,18 +17,18 @@ impl Globals {
         Self::default()
     }
 
-    /// Returns `true` if a global variable is defined.
-    pub fn is_defined(&self, name: &str) -> bool {
-        self.values.contains_key(name)
+    /// Returns [`true`] if a [`Symbol`] is defined as a global variable.
+    pub fn is_defined(&self, symbol: Symbol) -> bool {
+        self.values.contains_key(&symbol)
     }
 
-    /// Assigns a [`Value`] to a global variable.
-    pub fn assign(&mut self, name: &str, value: Value) {
-        self.values.insert(name.to_owned(), value);
+    /// Assigns a [`Value`] to a [`Symbol`].
+    pub fn assign(&mut self, symbol: Symbol, value: Value) {
+        self.values.insert(symbol, value);
     }
 
-    /// Returns a reference to a global variable's [`Value`].
-    pub fn read(&self, name: &str) -> &Value {
-        &self.values[name]
+    /// Returns a reference to a [`Value`] from its [`Symbol`].
+    pub fn read(&self, symbol: Symbol) -> &Value {
+        &self.values[&symbol]
     }
 }

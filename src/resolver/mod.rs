@@ -31,8 +31,8 @@ struct Resolver<'a, 'b> {
     /// The [`Globals`].
     globals: &'a Globals,
 
-    /// The set of newly-declared global variable names.
-    new_globals: HashSet<String>,
+    /// The set of newly-declared global variable [`Symbol`]s.
+    new_globals: HashSet<Symbol>,
 
     /// The [`Locals`].
     locals: Locals<'b>,
@@ -150,7 +150,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
         #[expect(clippy::option_if_let_else, reason = "better readability")]
         if let Some(id) = self.locals.read(&name) {
             Ok(hir::Expr::Local(id))
-        } else if self.is_global_defined(&name) {
+        } else if self.is_global_defined(symbol) {
             Ok(hir::Expr::Global(symbol))
         } else {
             Err(ResolveError::UndefinedVariable(name))
@@ -280,21 +280,19 @@ impl<'a, 'b> Resolver<'a, 'b> {
     }
 
     /// Returns `true` if a global variable is defined.
-    fn is_global_defined(&self, name: &str) -> bool {
-        self.globals.is_defined(name) || self.new_globals.contains(name)
+    fn is_global_defined(&self, symbol: Symbol) -> bool {
+        self.globals.is_defined(symbol) || self.new_globals.contains(&symbol)
     }
 
     /// Returns an [`hir::Stmt`] defining a global variable with a name and a
     /// value. This function returns a [`ResolveError`] if a global variable is
     /// already defined with the given name.
     fn define_global(&mut self, symbol: Symbol, value: hir::Expr) -> Result<hir::Stmt> {
-        let name = symbol.to_string();
-
-        if self.is_global_defined(&name) {
-            return Err(ResolveError::AlreadyDefinedVariable(name));
+        if self.is_global_defined(symbol) {
+            return Err(ResolveError::AlreadyDefinedVariable(symbol.to_string()));
         }
 
-        self.new_globals.insert(name);
+        self.new_globals.insert(symbol);
         Ok(hir::Stmt::AssignGlobal(symbol, value.into()))
     }
 

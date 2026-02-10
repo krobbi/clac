@@ -1,3 +1,5 @@
+use crate::symbols::Symbol;
+
 use super::{Globals, InterpretError, value::Value};
 
 /// A native function.
@@ -50,7 +52,7 @@ pub fn install_natives(globals: &mut Globals) {
 
 /// Installs a [`Native`] variable into [`Globals`].
 fn install_native(native: Native, globals: &mut Globals) {
-    globals.assign(native.name(), Value::Native(native));
+    globals.assign(Symbol::intern(native.name()), Value::Native(native));
 }
 
 /// The native `__dump` function.

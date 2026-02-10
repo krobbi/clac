@@ -99,7 +99,7 @@ impl<'a> Compiler<'a> {
     /// Compiles a global variable assignment [`Stmt`].
     fn compile_stmt_assign_global(&mut self, symbol: Symbol, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::StoreGlobal(symbol.to_string()));
+        self.compile(Instruction::StoreGlobal(symbol));
     }
 
     /// Compiles a local variable definition [`Stmt`].
@@ -148,7 +148,7 @@ impl<'a> Compiler<'a> {
 
     /// Compiles a global variable [`Expr`].
     fn compile_expr_global(&mut self, symbol: Symbol) {
-        self.compile(Instruction::LoadGlobal(symbol.to_string()));
+        self.compile(Instruction::LoadGlobal(symbol));
     }
 
     /// Compiles a local variable [`Expr`].

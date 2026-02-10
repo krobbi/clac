@@ -2,7 +2,7 @@ mod display;
 
 use std::rc::Rc;
 
-use crate::ast::Literal;
+use crate::{ast::Literal, symbols::Symbol};
 
 /// A control flow graph.
 pub struct Cfg {
@@ -133,10 +133,10 @@ pub enum Instruction {
     StoreLocal(usize),
 
     /// Loads a value from a global variable and pushes it to the stack.
-    LoadGlobal(String),
+    LoadGlobal(Symbol),
 
     /// Pops a value from the stack and stores it in a global variable.
-    StoreGlobal(String),
+    StoreGlobal(Symbol),
 
     /// Pops a value from the stack and pushes it to the upvalue stack.
     DefineUpvalue,
