@@ -1,6 +1,7 @@
 use crate::{
     ast::{BinOp, Literal, UnOp},
     decl_table::DeclId,
+    symbols::Symbol,
 };
 
 /// A high-level intermediate representation of a program.
@@ -15,7 +16,7 @@ pub enum Stmt {
     Block(Vec<Self>),
 
     /// A global variable assignment.
-    AssignGlobal(String, Box<Expr>),
+    AssignGlobal(Symbol, Box<Expr>),
 
     /// A local variable definition.
     DefineLocal(DeclId, Box<Expr>),
@@ -33,7 +34,7 @@ pub enum Expr {
     Literal(Literal),
 
     /// A global variable.
-    Global(String),
+    Global(Symbol),
 
     /// A local variable.
     Local(DeclId),

@@ -8,6 +8,7 @@ use crate::{
     cfg::{Block, Cfg, Exit, Function, Instruction, Label},
     decl_table::{DeclId, DeclTable},
     hir::{Expr, Hir, Stmt},
+    symbols::Symbol,
 };
 
 use self::{local_stack::LocalStack, upvalue_stack::UpvalueStack};
@@ -75,7 +76,7 @@ impl<'a> Compiler<'a> {
         match stmt {
             Stmt::Nop => (),
             Stmt::Block(stmts) => self.compile_stmt_block(stmts),
-            Stmt::AssignGlobal(name, value) => self.compile_stmt_assign_global(name, value),
+            Stmt::AssignGlobal(symbol, value) => self.compile_stmt_assign_global(*symbol, value),
             Stmt::DefineLocal(id, value) => self.compile_stmt_define_local(*id, value),
             Stmt::Print(value) => self.compile_stmt_print(value),
             Stmt::Expr(expr) => self.compile_stmt_expr(expr),
@@ -96,9 +97,9 @@ impl<'a> Compiler<'a> {
     }
 
     /// Compiles a global variable assignment [`Stmt`].
-    fn compile_stmt_assign_global(&mut self, name: &str, value: &Expr) {
+    fn compile_stmt_assign_global(&mut self, symbol: Symbol, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::StoreGlobal(name.to_owned()));
+        self.compile(Instruction::StoreGlobal(symbol.to_string()));
     }
 
     /// Compiles a local variable definition [`Stmt`].
@@ -129,7 +130,7 @@ impl<'a> Compiler<'a> {
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Literal(literal) => self.compile_expr_literal(literal),
-            Expr::Global(name) => self.compile_expr_global(name),
+            Expr::Global(symbol) => self.compile_expr_global(*symbol),
             Expr::Local(id) => self.compile_expr_local(*id),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
@@ -146,8 +147,8 @@ impl<'a> Compiler<'a> {
     }
 
     /// Compiles a global variable [`Expr`].
-    fn compile_expr_global(&mut self, name: &str) {
-        self.compile(Instruction::LoadGlobal(name.to_owned()));
+    fn compile_expr_global(&mut self, symbol: Symbol) {
+        self.compile(Instruction::LoadGlobal(symbol.to_string()));
     }
 
     /// Compiles a local variable [`Expr`].

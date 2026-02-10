@@ -107,7 +107,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
         let name = symbol.to_string();
 
         match scope_kind {
-            ScopeKind::Global => self.define_global(&name, value),
+            ScopeKind::Global => self.define_global(symbol, value),
             ScopeKind::Local => self.define_local(&name, value),
         }
     }
@@ -151,7 +151,7 @@ impl<'a, 'b> Resolver<'a, 'b> {
         if let Some(id) = self.locals.read(&name) {
             Ok(hir::Expr::Local(id))
         } else if self.is_global_defined(&name) {
-            Ok(hir::Expr::Global(name))
+            Ok(hir::Expr::Global(symbol))
         } else {
             Err(ResolveError::UndefinedVariable(name))
         }
@@ -287,13 +287,15 @@ impl<'a, 'b> Resolver<'a, 'b> {
     /// Returns an [`hir::Stmt`] defining a global variable with a name and a
     /// value. This function returns a [`ResolveError`] if a global variable is
     /// already defined with the given name.
-    fn define_global(&mut self, name: &str, value: hir::Expr) -> Result<hir::Stmt> {
-        if self.is_global_defined(name) {
-            return Err(ResolveError::AlreadyDefinedVariable(name.to_owned()));
+    fn define_global(&mut self, symbol: Symbol, value: hir::Expr) -> Result<hir::Stmt> {
+        let name = symbol.to_string();
+
+        if self.is_global_defined(&name) {
+            return Err(ResolveError::AlreadyDefinedVariable(name));
         }
 
-        self.new_globals.insert(name.to_owned());
-        Ok(hir::Stmt::AssignGlobal(name.to_owned(), value.into()))
+        self.new_globals.insert(name);
+        Ok(hir::Stmt::AssignGlobal(symbol, value.into()))
     }
 
     /// Returns an [`hir::Stmt`] defining a local variable with a name and a
