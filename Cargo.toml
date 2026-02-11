@@ -10,6 +10,7 @@ categories = ["command-line-utilities", "compilers", "mathematics"]
 publish = false
 
 [dependencies]
+thiserror = "2.0.18"
 
 [lints.rust]
 ambiguous_negative_literals = "warn"

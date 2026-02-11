@@ -1,34 +1,35 @@
 use crate::{
     ast::{BinOp, Literal, UnOp},
-    decl_table::DeclId,
     symbols::Symbol,
 };
 
-/// A high-level intermediate representation of a program.
-pub struct Hir(pub Vec<Stmt>);
+use super::locals::Local;
+
+/// An intermediate representation of a program.
+#[derive(Debug)]
+pub struct Ir(pub Box<[Stmt]>);
 
 /// A statement.
+#[derive(Debug)]
 pub enum Stmt {
-    /// No operation.
-    Nop,
-
-    /// A block.
-    Block(Vec<Self>),
+    /// A block `Stmt`.
+    Block(Box<[Self]>),
 
     /// A global variable assignment.
     AssignGlobal(Symbol, Box<Expr>),
 
     /// A local variable definition.
-    DefineLocal(DeclId, Box<Expr>),
+    DefineLocal(Local, Box<Expr>),
 
-    /// A print statement.
+    /// An implicit print.
     Print(Box<Expr>),
 
-    /// An expression statement.
+    /// An `Expr`.
     Expr(Box<Expr>),
 }
 
 /// An expression.
+#[derive(Debug)]
 pub enum Expr {
     /// A [`Literal`].
     Literal(Literal),
@@ -37,16 +38,16 @@ pub enum Expr {
     Global(Symbol),
 
     /// A local variable.
-    Local(DeclId),
+    Local(Local),
 
-    /// A block.
-    Block(Vec<Stmt>, Box<Self>),
+    /// A block `Expr`.
+    Block(Box<[Stmt]>, Box<Self>),
 
     /// A function.
-    Function(Vec<DeclId>, Box<Self>),
+    Function(Box<[Local]>, Box<Self>),
 
     /// A function call.
-    Call(Box<Self>, Vec<Self>),
+    Call(Box<Self>, Box<[Self]>),
 
     /// A unary operation.
     Unary(UnOp, Box<Self>),

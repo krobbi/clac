@@ -33,6 +33,10 @@ clac> 1 + 1
 > For more information about language features, see the
 > [language documentation](docs/README.md).
 
+## Dependencies
+Clac uses the following libraries:
+* [thiserror](https://crates.io/crates/thiserror) - Error handling attributes
+
 ## License
 Clac is released under the MIT License. See [LICENSE.txt](LICENSE.txt) for a
 full copy of the license text.

@@ -68,7 +68,7 @@ fn native_dump(args: &[Value]) -> Result<Value, InterpretError> {
         }
         [Value::Closure(closure)] => {
             println!(
-                "[closure with {} parameter(s) and {} upvalue(s)]",
+                "[closure with {} parameter(s) and {} upvar(s)]",
                 closure.function.arity,
                 closure.upvalues.len()
             );

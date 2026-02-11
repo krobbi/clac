@@ -2,7 +2,6 @@ use std::fmt::{self, Display, Formatter, Write as _};
 
 use super::{Block, Cfg, Exit, Instruction, Label};
 
-// TODO: Add support for functions to CFG dumping.
 impl Display for Cfg {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buffer = String::new();

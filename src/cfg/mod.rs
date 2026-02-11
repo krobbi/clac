@@ -162,7 +162,7 @@ pub struct Function {
 }
 
 /// A [`Block`]'s exit point.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub enum Exit {
     /// Halts execution.
     #[default]

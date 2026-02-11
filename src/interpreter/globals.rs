@@ -17,9 +17,9 @@ impl Globals {
         Self::default()
     }
 
-    /// Returns [`true`] if a [`Symbol`] is defined as a global variable.
-    pub fn is_defined(&self, symbol: Symbol) -> bool {
-        self.values.contains_key(&symbol)
+    /// Returns an [`Iterator`] over the defined global variable [`Symbol`]s.
+    pub fn symbols(&self) -> impl Iterator<Item = Symbol> {
+        self.values.keys().copied()
     }
 
     /// Assigns a [`Value`] to a [`Symbol`].
