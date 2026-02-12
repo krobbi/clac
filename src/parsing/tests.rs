@@ -1,12 +1,10 @@
-use crate::ast::Literal;
+use super::{lexer::LexError, *};
 
-use super::*;
-
-/// Asserts that an expected [`ParseError`] is produced from source code.
+/// Asserts that an expected [`ErrorKind`] is produced from source code.
 macro_rules! assert_error {
     ($src:literal, $err:pat $(if $guard:expr)?) => {
-        let error = parse_source($src).expect_err("test source should be invalid");
-        assert!(matches!(error, $err $(if $guard)?));
+        let error_kind = *parse_source($src).expect_err("test source should be invalid").0;
+        assert!(matches!(error_kind, $err $(if $guard)?));
     };
 }
 
@@ -26,10 +24,10 @@ fn assignments_are_parsed() {
 /// Tests that assignments are not [`Expr`]s.
 #[test]
 fn assignments_are_not_expressions() {
-    assert_error!("x = y = 0", ParseError::ChainedAssignment);
+    assert_error!("x = y = 0", ErrorKind::ChainedAssignment);
     assert_error!(
         "1 + (x = 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Equals)
+        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Equals)
     );
 }
 
@@ -62,12 +60,12 @@ fn blocks_can_be_nested() {
 /// Tests that commas between [`Stmt`]s are optional and may be trailing.
 #[test]
 fn sequence_commas_are_optional() {
-    assert_error!(", 1", ParseError::ExpectedExpr(Token::Comma));
+    assert_error!(", 1", ErrorKind::ExpectedExpr(Token::Comma));
     assert_ast("1 2 3", "(a: 1 2 3)");
     assert_ast("1 2 3,", "(a: 1 2 3)");
     assert_ast("1, 2, 3", "(a: 1 2 3)");
     assert_ast("1, 2, 3,", "(a: 1 2 3)");
-    assert_error!("{, 1}", ParseError::ExpectedExpr(Token::Comma));
+    assert_error!("{, 1}", ErrorKind::ExpectedExpr(Token::Comma));
     assert_ast("{1 2 3}", "(a: (b: 1 2 3))");
     assert_ast("{1 2 3,}", "(a: (b: 1 2 3))");
     assert_ast("{1, 2, 3}", "(a: (b: 1 2 3))");
@@ -78,13 +76,13 @@ fn sequence_commas_are_optional() {
 #[test]
 fn parens_are_parsed() {
     assert_ast("()", "(a: (t:))");
-    assert_error!("(,)", ParseError::ExpectedExpr(Token::Comma));
+    assert_error!("(,)", ErrorKind::ExpectedExpr(Token::Comma));
     assert_ast("(1)", "(a: (p: 1))");
     assert_ast("(2,)", "(a: (t: 2))");
     assert_ast("(x, y)", "(a: (t: x y))");
     assert_error!(
         "(z w)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "w"
+        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "w"
     );
 
     assert_ast("(u, v,)", "(a: (t: u v))");
@@ -119,7 +117,7 @@ fn functions_are_parsed() {
     assert_ast("(a, b) -> c", "(a: (-> a b c))");
     assert_error!(
         "(d e) -> f",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "e"
+        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "e"
     );
 
     assert_ast("(g, h,) -> i", "(a: (-> g h i))");
@@ -128,7 +126,7 @@ fn functions_are_parsed() {
 /// Tests that empty function parameters are not parsed.
 #[test]
 fn empty_function_parameters_are_not_parsed() {
-    assert_error!("-> 3.14", ParseError::ExpectedExpr(Token::MinusGreater));
+    assert_error!("-> 3.14", ErrorKind::ExpectedExpr(Token::MinusGreater));
 }
 
 /// Tests that separating commas are required between call arguments.
@@ -138,7 +136,7 @@ fn call_arguments_require_separating_commas() {
     assert_ast("f(1)", "(a: (f 1))");
     assert_error!(
         "f(1 2)",
-        ParseError::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0)))
+        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0)))
     );
 
     assert_ast("f(1, 2)", "(a: (f 1 2))");
@@ -147,7 +145,7 @@ fn call_arguments_require_separating_commas() {
 /// Tests that trailing commas are allowed after call arguments.
 #[test]
 fn call_arguments_allow_trailing_commas() {
-    assert_error!("f(,)", ParseError::ExpectedExpr(Token::Comma));
+    assert_error!("f(,)", ErrorKind::ExpectedExpr(Token::Comma));
     assert_ast("f(1,)", "(a: (f 1))");
     assert_ast("f(1, 2,)", "(a: (f 1 2))");
 }
@@ -164,31 +162,27 @@ fn mismatched_types_are_unchecked() {
 fn comparisons_cannot_be_chained() {
     // Chained comparisons are not supported for forward compatibility with
     // expressions like `min <= value <= max`.
-    assert_error!("1 == x == y", ParseError::ChainedComparison);
-    assert_error!("x == y != z", ParseError::ChainedComparison);
-    assert_error!("1 != 2 == y", ParseError::ChainedComparison);
-    assert_error!("1 != 2 != 3", ParseError::ChainedComparison);
-    assert_error!("1 < 2 < 3", ParseError::ChainedComparison);
-    assert_error!("1 < 2 <= 3", ParseError::ChainedComparison);
-    assert_error!("1 <= 2 < 3", ParseError::ChainedComparison);
-    assert_error!("1 <= 2 <= 3", ParseError::ChainedComparison);
-    assert_error!("1 > 2 > 3", ParseError::ChainedComparison);
-    assert_error!("1 > 2 >= 3", ParseError::ChainedComparison);
-    assert_error!("1 >= 2 > 3", ParseError::ChainedComparison);
-    assert_error!("1 >= 2 >= 3", ParseError::ChainedComparison);
-    assert_error!("x == y < 10", ParseError::ChainedComparison);
+    assert_error!("1 == x == y", ErrorKind::ChainedComparison);
+    assert_error!("x == y != z", ErrorKind::ChainedComparison);
+    assert_error!("1 != 2 == y", ErrorKind::ChainedComparison);
+    assert_error!("1 != 2 != 3", ErrorKind::ChainedComparison);
+    assert_error!("1 < 2 < 3", ErrorKind::ChainedComparison);
+    assert_error!("1 < 2 <= 3", ErrorKind::ChainedComparison);
+    assert_error!("1 <= 2 < 3", ErrorKind::ChainedComparison);
+    assert_error!("1 <= 2 <= 3", ErrorKind::ChainedComparison);
+    assert_error!("1 > 2 > 3", ErrorKind::ChainedComparison);
+    assert_error!("1 > 2 >= 3", ErrorKind::ChainedComparison);
+    assert_error!("1 >= 2 > 3", ErrorKind::ChainedComparison);
+    assert_error!("1 >= 2 >= 3", ErrorKind::ChainedComparison);
+    assert_error!("x == y < 10", ErrorKind::ChainedComparison);
 
     // Comparisons cannot be chained by mixing precedence levels.
-    assert_error!("1 + 2 == 3 - 0 == 4", ParseError::ChainedComparison);
-    assert_error!("1 * 2 != 0 / 3 == 4 * 0", ParseError::ChainedComparison);
-    assert_error!("1 + 2 >= 3 * 0 < 4", ParseError::ChainedComparison);
-    assert_error!("1 + 2 <= 3 / 1 > 0.5", ParseError::ChainedComparison);
-    assert_error!(
-        "!!true == !false == !!!false",
-        ParseError::ChainedComparison
-    );
-
-    assert_error!("foo() == bar() == baz()", ParseError::ChainedComparison);
+    assert_error!("1 + 2 == 3 - 0 == 4", ErrorKind::ChainedComparison);
+    assert_error!("1 * 2 != 0 / 3 == 4 * 0", ErrorKind::ChainedComparison);
+    assert_error!("1 + 2 >= 3 * 0 < 4", ErrorKind::ChainedComparison);
+    assert_error!("1 + 2 <= 3 / 1 > 0.5", ErrorKind::ChainedComparison);
+    assert_error!("!!true == !false == !!!false", ErrorKind::ChainedComparison);
+    assert_error!("foo() == bar() == baz()", ErrorKind::ChainedComparison);
 }
 
 /// Tests that comparisons can be chained with groupings.
@@ -219,7 +213,7 @@ fn comparisons_can_be_chained_with_groupings() {
 /// Tests that leading plus signs are not parsed.
 #[test]
 fn leading_plus_signs_are_not_parsed() {
-    assert_error!("+1", ParseError::ExpectedExpr(Token::Plus));
+    assert_error!("+1", ErrorKind::ExpectedExpr(Token::Plus));
 }
 
 /// Tests that operators have the expected associativity.
@@ -334,12 +328,16 @@ fn ternary_conditional_has_expected_precedence_level() {
     assert_ast("x ? 1 : y -> z", "(a: (? x 1 (-> y z)))");
 }
 
-/// Tests that [`LexError`]s are caught and encapsulated as [`ParseError`]s.
+/// Tests that [`LexError`]s are caught and encapsulated as [`ErrorKind`]s.
 #[test]
 fn lex_errors_are_caught() {
-    assert_error!("foo + $bar", ParseError::Lex(LexError::UnexpectedChar('$')));
-    assert_error!("foo & bar", ParseError::Lex(LexError::BitwiseAnd));
-    assert_error!("foo | bar", ParseError::Lex(LexError::BitwiseOr));
+    assert_error!(
+        "foo + $bar",
+        ErrorKind::Lexing(LexError::UnexpectedChar('$'))
+    );
+
+    assert_error!("foo & bar", ErrorKind::Lexing(LexError::BitwiseAnd));
+    assert_error!("foo | bar", ErrorKind::Lexing(LexError::BitwiseOr));
 }
 
 /// Asserts that an expected [`Ast`] is parsed from source code.

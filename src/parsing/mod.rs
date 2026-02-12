@@ -1,232 +1,237 @@
 #[cfg(test)]
 mod tests;
 
+mod errors;
 mod lexer;
-mod parse_error;
 mod tokens;
-
-pub use self::parse_error::ParseError;
 
 use std::mem;
 
-use crate::ast::{Ast, BinOp, Expr, LogicOp, Stmt, UnOp};
+use thiserror::Error;
+
+use crate::ast::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp};
 
 use self::{
-    lexer::{LexError, Lexer},
+    errors::ErrorKind,
+    lexer::Lexer,
     tokens::{Token, TokenType},
 };
 
-/// Parses an [`Ast`] from source code. This function returns a [`ParseError`]
+/// An error caught while parsing an [`Ast`] from source code.
+#[derive(Debug, Error)]
+#[repr(transparent)]
+#[error(transparent)]
+pub struct ParsingError(Box<ErrorKind>);
+
+/// Parses an [`Ast`] from source code. This function returns a [`ParsingError`]
 /// if an [`Ast`] could not be parsed.
-pub fn parse_source(source: &str) -> Result<Ast, ParseError> {
-    let mut parser = Parser::try_new(source)?;
-    parser.parse_ast()
+pub fn parse_source(source: &str) -> Result<Ast, ParsingError> {
+    let mut parser = Parser::new(source);
+    let ast = parser.parse_ast();
+    parser.error.map_or(Ok(ast), Err)
 }
 
-/// A structure that parses an [`Ast`] from source code.
-struct Parser<'a> {
+/// A structure which parses an [`Ast`] from source code.
+struct Parser<'src> {
     /// The [`Lexer`] for reading [`Token`]s from source code.
-    lexer: Lexer<'a>,
+    lexer: Lexer<'src>,
 
     /// The next [`Token`].
     next_token: Token,
+
+    /// The first [`ParsingError`], if any.
+    error: Option<ParsingError>,
 }
 
-impl<'a> Parser<'a> {
-    /// Creates a new `Parser` from source code to be parsed. This function
-    /// returns a [`LexError`] if a valid first [`Token`] could not be read.
-    fn try_new(source: &'a str) -> Result<Self, LexError> {
-        let mut lexer = Lexer::new(source);
-        let next_token = lexer.bump()?;
-        Ok(Self { lexer, next_token })
+impl<'src> Parser<'src> {
+    /// Creates a new `Parser` from source code.
+    fn new(source: &'src str) -> Self {
+        let mut parser = Self {
+            lexer: Lexer::new(source),
+            next_token: Token::Eof,
+            error: None,
+        };
+
+        parser.bump();
+        parser
     }
 
-    /// Parses an [`Ast`]. This function returns a [`ParseError`] if an [`Ast`]
-    /// could not be parsed.
-    fn parse_ast(&mut self) -> Result<Ast, ParseError> {
-        let stmts = self.parse_sequence(TokenType::Eof)?;
-        Ok(Ast(stmts))
+    /// Parses an [`Ast`].
+    fn parse_ast(&mut self) -> Ast {
+        Ast(self.parse_sequence(TokenType::Eof))
     }
 
     /// Parses a sequence of [`Stmt`]s until the next [`Token`] matches a
-    /// terminator [`TokenType`]. This function returns a [`ParseError`] if a
-    /// sequence could not be parsed.
-    fn parse_sequence(&mut self, terminator: TokenType) -> Result<Vec<Stmt>, ParseError> {
+    /// terminator [`TokenType`].
+    fn parse_sequence(&mut self, terminator: TokenType) -> Vec<Stmt> {
         let mut stmts = Vec::new();
 
         while !self.is_terminated(terminator) {
-            let stmt = self.parse_stmt()?;
-            self.eat(TokenType::Comma)?;
-            stmts.push(stmt);
+            stmts.push(self.parse_stmt());
+            self.eat(TokenType::Comma);
         }
 
-        Ok(stmts)
+        stmts
     }
 
-    /// Parses a [`Stmt`]. This function returns a [`ParseError`] if a [`Stmt`]
-    /// could not be parsed.
-    fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let target = self.parse_expr()?;
+    /// Parses a [`Stmt`].
+    fn parse_stmt(&mut self) -> Stmt {
+        let target = self.parse_expr();
 
-        let stmt = if self.eat(TokenType::Equals)? {
-            let source = self.parse_expr()?;
+        if self.eat(TokenType::Equals) {
+            let source = self.parse_expr();
 
             if self.peek() == TokenType::Equals {
-                return Err(ParseError::ChainedAssignment);
+                self.report_error(ErrorKind::ChainedAssignment);
+                // TODO: Consume chained assignments. This could provide better
+                // error recovery if support for multiple error messages is
+                // added.
             }
 
             Stmt::Assign(target.into(), source.into())
         } else {
             Stmt::Expr(target.into())
-        };
-
-        Ok(stmt)
+        }
     }
 
-    /// Parses an [`Expr`]. This function returns a [`ParseError`] if an
-    /// [`Expr`] could not be parsed.
-    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+    /// Parses an [`Expr`].
+    fn parse_expr(&mut self) -> Expr {
         self.parse_expr_mapping()
     }
 
-    /// Parses a function [`Expr`] or a ternary conditional [`Expr`]. This
-    /// function returns a [`ParseError`] if a function [`Expr`] or a ternary
-    /// conditional [`Expr`] could not be parsed.
-    fn parse_expr_mapping(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_or()?;
+    /// Parses a function [`Expr`] or a ternary conditional [`Expr`].
+    fn parse_expr_mapping(&mut self) -> Expr {
+        let lhs = self.parse_expr_or();
 
         match self.peek() {
             TokenType::MinusGreater => {
-                self.bump()?; // Consume the operator token.
-                let body = self.parse_expr_mapping()?;
-                lhs = Expr::Function(unwrap_list(lhs), body.into());
+                self.bump(); // Consume the operator token.
+                let body = self.parse_expr_mapping();
+                Expr::Function(unwrap_list(lhs), body.into())
             }
             TokenType::Question => {
-                self.bump()?; // Consume the operator token.
-                let then = self.parse_expr()?;
-                self.expect(TokenType::Colon)?;
-                let or = self.parse_expr_mapping()?;
-                lhs = Expr::Cond(lhs.into(), then.into(), or.into());
+                self.bump(); // Consume the operator token.
+                let then_expr = self.parse_expr();
+                self.expect(TokenType::Colon);
+                let else_expr = self.parse_expr_mapping();
+                Expr::Cond(lhs.into(), then_expr.into(), else_expr.into())
             }
-            _ => (),
+            _ => lhs,
         }
-
-        Ok(lhs)
     }
 
-    /// Parses a logical or [`Expr`]. This function returns a [`ParseError`] if
-    /// a logical or [`Expr`] could not be parsed.
-    fn parse_expr_or(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_and()?;
+    /// Parses a logical or [`Expr`].
+    fn parse_expr_or(&mut self) -> Expr {
+        let mut lhs = self.parse_expr_and();
 
-        while self.eat(TokenType::PipePipe)? {
-            let rhs = self.parse_expr_and()?;
+        while self.eat(TokenType::PipePipe) {
+            let rhs = self.parse_expr_and();
             lhs = Expr::Logic(LogicOp::Or, lhs.into(), rhs.into());
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    /// Parses a logical and [`Expr`]. This function returns a [`ParseError`] if
-    /// a logical and [`Expr`] could not be parsed.
-    fn parse_expr_and(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_comparison()?;
+    /// Parses a logical and [`Expr`].
+    fn parse_expr_and(&mut self) -> Expr {
+        let mut lhs = self.parse_expr_comparison();
 
-        while self.eat(TokenType::AndAnd)? {
-            let rhs = self.parse_expr_comparison()?;
+        while self.eat(TokenType::AndAnd) {
+            let rhs = self.parse_expr_comparison();
             lhs = Expr::Logic(LogicOp::And, lhs.into(), rhs.into());
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    /// Parses a comparison [`Expr`]. This function returns a [`ParseError`] if
-    /// a comparison [`Expr`] could not be parsed.
-    pub fn parse_expr_comparison(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_sum()?;
+    /// Parses a comparison [`Expr`].
+    pub fn parse_expr_comparison(&mut self) -> Expr {
+        let lhs = self.parse_expr_sum();
 
-        if let Some(op) = BinOp::comparison_from_token_type(self.peek()) {
-            self.bump()?; // Consume the operator token.
-            let rhs = self.parse_expr_sum()?;
+        match BinOp::comparison_from_token_type(self.peek()) {
+            None => lhs,
+            Some(op) => {
+                self.bump(); // Consume the operator token.
+                let rhs = self.parse_expr_sum();
 
-            if BinOp::comparison_from_token_type(self.peek()).is_some() {
-                return Err(ParseError::ChainedComparison);
+                if BinOp::comparison_from_token_type(self.peek()).is_some() {
+                    self.report_error(ErrorKind::ChainedComparison);
+                    // TODO: Consume chained comparisons. Same motivation as
+                    // consuming chained assignments.
+                }
+
+                Expr::Binary(op, lhs.into(), rhs.into())
             }
-
-            lhs = Expr::Binary(op, lhs.into(), rhs.into());
         }
-
-        Ok(lhs)
     }
 
-    /// Parses a sum [`Expr`]. This function returns a [`ParseError`] if a sum
-    /// [`Expr`] could not be parsed.
-    pub fn parse_expr_sum(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_term()?;
+    /// Parses a sum [`Expr`].
+    pub fn parse_expr_sum(&mut self) -> Expr {
+        let mut lhs = self.parse_expr_term();
 
         while let Some(op) = BinOp::sum_from_token_type(self.peek()) {
-            self.bump()?; // Consume the operator token.
-            let rhs = self.parse_expr_term()?;
+            self.bump(); // Consume the operator token.
+            let rhs = self.parse_expr_term();
             lhs = Expr::Binary(op, lhs.into(), rhs.into());
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    /// Parses a term [`Expr`]. This function returns a [`ParseError`] if a term
-    /// [`Expr`] could not be parsed.
-    pub fn parse_expr_term(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_expr_prefix()?;
+    /// Parses a term [`Expr`].
+    pub fn parse_expr_term(&mut self) -> Expr {
+        let mut lhs = self.parse_expr_prefix();
 
         while let Some(op) = BinOp::term_from_token_type(self.peek()) {
-            self.bump()?; // Consume the operator token.
-            let rhs = self.parse_expr_prefix()?;
+            self.bump(); // Consume the operator token.
+            let rhs = self.parse_expr_prefix();
             lhs = Expr::Binary(op, lhs.into(), rhs.into());
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    /// Parses a prefix [`Expr`]. This function returns a [`ParseError`] if a
-    /// prefix [`Expr`] could not be parsed.
-    fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
-        let mut lhs = match self.bump()? {
+    /// Parses a prefix [`Expr`].
+    fn parse_expr_prefix(&mut self) -> Expr {
+        let mut lhs = match self.bump() {
             Token::Literal(literal) => Expr::Literal(literal),
             Token::Ident(symbol) => Expr::Ident(symbol),
-            Token::OpenParen => self.parse_expr_paren()?,
+            Token::OpenParen => self.parse_expr_paren(),
             Token::OpenBrace => {
-                let stmts = self.parse_sequence(TokenType::CloseBrace)?;
-                self.expect(TokenType::CloseBrace)?;
+                let stmts = self.parse_sequence(TokenType::CloseBrace);
+                self.expect(TokenType::CloseBrace);
                 Expr::Block(stmts)
             }
             Token::Minus => {
-                let rhs = self.parse_expr_prefix()?;
+                let rhs = self.parse_expr_prefix();
                 Expr::Unary(UnOp::Negate, rhs.into())
             }
             Token::Bang => {
-                let rhs = self.parse_expr_prefix()?;
+                let rhs = self.parse_expr_prefix();
                 Expr::Unary(UnOp::Not, rhs.into())
             }
-            token => return Err(ParseError::ExpectedExpr(token)),
+            token => {
+                self.report_error(ErrorKind::ExpectedExpr(token));
+                default_expr()
+            }
         };
 
-        while self.eat(TokenType::OpenParen)? {
-            let args = self.parse_expr_paren()?;
+        while self.eat(TokenType::OpenParen) {
+            let args = self.parse_expr_paren();
             lhs = Expr::Call(lhs.into(), unwrap_list(args));
         }
 
-        if self.eat(TokenType::Caret)? {
-            let rhs = self.parse_expr_prefix()?;
+        if self.eat(TokenType::Caret) {
+            let rhs = self.parse_expr_prefix();
             lhs = Expr::Binary(BinOp::Power, lhs.into(), rhs.into());
         }
 
-        Ok(lhs)
+        lhs
     }
 
-    /// Parses a parenthesized [`Expr`] or tuple [`Expr`] after consuming its
-    /// opening parenthesis. This function returns a [`ParseError`] if a
-    /// parenthesized [`Expr`] or tuple [`Expr`] could not be parsed.
-    fn parse_expr_paren(&mut self) -> Result<Expr, ParseError> {
+    /// Parses a parenthesized [`Expr`] or a tuple [`Expr`] after consuming its
+    /// opening parenthesis.
+    fn parse_expr_paren(&mut self) -> Expr {
         let mut exprs = Vec::new();
 
         let is_empty_or_has_trailing_comma = loop {
@@ -234,23 +239,20 @@ impl<'a> Parser<'a> {
                 break true;
             }
 
-            let expr = self.parse_expr()?;
-            exprs.push(expr);
+            exprs.push(self.parse_expr());
 
-            if !self.eat(TokenType::Comma)? {
+            if !self.eat(TokenType::Comma) {
                 break false;
             }
         };
 
-        self.expect(TokenType::CloseParen)?;
+        self.expect(TokenType::CloseParen);
 
-        let expr = if is_empty_or_has_trailing_comma || exprs.len() != 1 {
+        if is_empty_or_has_trailing_comma || exprs.len() != 1 {
             Expr::Tuple(exprs)
         } else {
             Expr::Paren(exprs.pop().expect("parentheses should not be empty").into())
-        };
-
-        Ok(expr)
+        }
     }
 
     /// Returns the next [`Token`]'s [`TokenType`].
@@ -265,44 +267,51 @@ impl<'a> Parser<'a> {
         next_token_type == terminator || next_token_type == TokenType::Eof
     }
 
-    /// Consumes the next [`Token`]. This function returns a [`LexError`] if a
-    /// valid following [`Token`] could not be read.
-    fn bump(&mut self) -> Result<Token, LexError> {
-        let following_token = self.lexer.bump()?;
-        Ok(mem::replace(&mut self.next_token, following_token))
+    /// Consumes the next [`Token`].
+    fn bump(&mut self) -> Token {
+        let following_token = loop {
+            match self.lexer.bump() {
+                Ok(token) => break token,
+                Err(error) => self.report_error(ErrorKind::Lexing(error)),
+            }
+        };
+
+        mem::replace(&mut self.next_token, following_token)
     }
 
     /// Consumes the next [`Token`] if it matches an expected [`TokenType`].
-    /// This function returns `true` if a [`Token`] was consumed and returns a
-    /// [`LexError`] if a valid following [`Token`] could not be read.
-    fn eat(&mut self, expected: TokenType) -> Result<bool, LexError> {
+    /// This function returns [`true`] if a [`Token`] was consumed.
+    fn eat(&mut self, expected: TokenType) -> bool {
         let is_match = self.peek() == expected;
 
         if is_match {
-            self.bump()?;
+            self.bump();
         }
 
-        Ok(is_match)
+        is_match
     }
 
-    /// Consumes the next [`Token`] if it matches an expected [`TokenType`].
-    /// This function returns a [`ParseError`] if the next [`Token`] does not
-    /// match the expected [`TokenType`].
-    fn expect(&mut self, expected: TokenType) -> Result<(), ParseError> {
-        let actual = self.bump()?;
+    /// Consumes the next [`Token`] and reports a [`ParsingError`] if it does
+    /// not match an expected [`TokenType`].
+    fn expect(&mut self, expected: TokenType) {
+        let actual = self.bump();
 
-        if actual.token_type() == expected {
-            Ok(())
-        } else {
-            Err(ParseError::UnexpectedToken(expected, actual))
+        if actual.token_type() != expected {
+            self.report_error(ErrorKind::UnexpectedToken(expected, actual));
         }
+    }
+
+    /// Reports an [`ErrorKind`].
+    #[cold]
+    fn report_error(&mut self, error: ErrorKind) {
+        self.error.get_or_insert_with(|| ParsingError(error.into()));
     }
 }
 
 impl BinOp {
-    /// Creates a new comparison `BinOp` from a [`TokenType`]. This function
-    /// returns [`None`] if the [`TokenType`] does not correspond to a
-    /// comparison `BinOp`.
+    /// Returns a comparison `BinOp` from a [`TokenType`]. This function returns
+    /// [`None`] if the [`TokenType`] does not correspond to a comparison
+    /// `BinOp`.
     const fn comparison_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
             TokenType::EqualsEquals => Self::Equal,
@@ -317,7 +326,7 @@ impl BinOp {
         Some(op)
     }
 
-    /// Creates a new sum `BinOp` from a [`TokenType`]. This function returns
+    /// Returns a sum `BinOp` from a [`TokenType`]. This function returns
     /// [`None`] if the [`TokenType`] does not correspond to a sum `BinOp`.
     const fn sum_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
@@ -329,7 +338,7 @@ impl BinOp {
         Some(op)
     }
 
-    /// Creates a new term `BinOp` from a [`TokenType`]. This function returns
+    /// Returns a term `BinOp` from a [`TokenType`]. This function returns
     /// [`None`] if the [`TokenType`] does not correspond to a term `BinOp`.
     const fn term_from_token_type(token_type: TokenType) -> Option<Self> {
         let op = match token_type {
@@ -349,4 +358,9 @@ fn unwrap_list(expr: Expr) -> Vec<Expr> {
         Expr::Tuple(exprs) => exprs,
         expr => vec![expr],
     }
+}
+
+/// Returns a default [`Expr`] for error recovery.
+const fn default_expr() -> Expr {
+    Expr::Literal(Literal::Number(0.0))
 }
