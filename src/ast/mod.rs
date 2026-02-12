@@ -4,7 +4,7 @@ use crate::symbols::Symbol;
 
 /// An abstract syntax tree.
 #[derive(Debug)]
-pub struct Ast(pub Vec<Expr>);
+pub struct Ast(pub Box<[Expr]>);
 
 /// An expression.
 #[derive(Debug)]
@@ -19,19 +19,19 @@ pub enum Expr {
     Paren(Box<Self>),
 
     /// A tuple.
-    Tuple(Vec<Self>),
+    Tuple(Box<[Self]>),
 
     /// A block.
-    Block(Vec<Self>),
+    Block(Box<[Self]>),
 
     /// An assignment.
     Assign(Box<Self>, Box<Self>),
 
     /// A function.
-    Function(Vec<Self>, Box<Self>),
+    Function(Box<[Self]>, Box<Self>),
 
     /// A function call.
-    Call(Box<Self>, Vec<Self>),
+    Call(Box<Self>, Box<[Self]>),
 
     /// A unary operation.
     Unary(UnOp, Box<Self>),

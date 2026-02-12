@@ -63,7 +63,7 @@ impl<'src> Parser<'src> {
 
     /// Parses a sequence of statement [`Expr`]s until the next [`Token`]
     /// matches a terminator [`TokenType`].
-    fn parse_sequence(&mut self, terminator: TokenType) -> Vec<Expr> {
+    fn parse_sequence(&mut self, terminator: TokenType) -> Box<[Expr]> {
         let mut stmts = Vec::new();
 
         while !self.is_terminated(terminator) {
@@ -71,7 +71,7 @@ impl<'src> Parser<'src> {
             self.eat(TokenType::Comma);
         }
 
-        stmts
+        stmts.into()
     }
 
     /// Parses a statement [`Expr`].
@@ -249,7 +249,7 @@ impl<'src> Parser<'src> {
         self.expect(TokenType::CloseParen);
 
         if is_empty_or_has_trailing_comma || exprs.len() != 1 {
-            Expr::Tuple(exprs)
+            Expr::Tuple(exprs.into())
         } else {
             Expr::Paren(exprs.pop().expect("parentheses should not be empty").into())
         }
@@ -352,11 +352,14 @@ impl BinOp {
 }
 
 /// Unwraps a function parameter or call argument list from an [`Expr`].
-fn unwrap_list(expr: Expr) -> Vec<Expr> {
+fn unwrap_list(expr: Expr) -> Box<[Expr]> {
+    // Using `expr.into_boxed_slice()` would avoid a reallocation for
+    // `Expr::Paren`, but this is unstable.
+    // https://github.com/rust-lang/rust/issues/71582
     match expr {
-        Expr::Paren(expr) => vec![*expr],
+        Expr::Paren(expr) => [*expr].into(),
         Expr::Tuple(exprs) => exprs,
-        expr => vec![expr],
+        expr => [expr].into(),
     }
 }
 
