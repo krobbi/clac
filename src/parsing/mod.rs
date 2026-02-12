@@ -9,7 +9,7 @@ use std::mem;
 
 use thiserror::Error;
 
-use crate::ast::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp};
+use crate::ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp};
 
 use self::{
     errors::ErrorKind,
@@ -61,9 +61,9 @@ impl<'src> Parser<'src> {
         Ast(self.parse_sequence(TokenType::Eof))
     }
 
-    /// Parses a sequence of [`Stmt`]s until the next [`Token`] matches a
-    /// terminator [`TokenType`].
-    fn parse_sequence(&mut self, terminator: TokenType) -> Vec<Stmt> {
+    /// Parses a sequence of statement [`Expr`]s until the next [`Token`]
+    /// matches a terminator [`TokenType`].
+    fn parse_sequence(&mut self, terminator: TokenType) -> Vec<Expr> {
         let mut stmts = Vec::new();
 
         while !self.is_terminated(terminator) {
@@ -74,29 +74,31 @@ impl<'src> Parser<'src> {
         stmts
     }
 
-    /// Parses a [`Stmt`].
-    fn parse_stmt(&mut self) -> Stmt {
-        let target = self.parse_expr();
-
-        if self.eat(TokenType::Equals) {
-            let source = self.parse_expr();
-
-            if self.peek() == TokenType::Equals {
-                self.report_error(ErrorKind::ChainedAssignment);
-                // TODO: Consume chained assignments. This could provide better
-                // error recovery if support for multiple error messages is
-                // added.
-            }
-
-            Stmt::Assign(target.into(), source.into())
-        } else {
-            Stmt::Expr(target.into())
-        }
+    /// Parses a statement [`Expr`].
+    fn parse_stmt(&mut self) -> Expr {
+        self.parse_expr()
     }
 
     /// Parses an [`Expr`].
     fn parse_expr(&mut self) -> Expr {
-        self.parse_expr_mapping()
+        self.parse_expr_assignment()
+    }
+
+    /// Parses an assignment [`Expr`].
+    fn parse_expr_assignment(&mut self) -> Expr {
+        let lhs = self.parse_expr_mapping();
+
+        if self.eat(TokenType::Equals) {
+            let source = self.parse_expr_mapping();
+
+            if self.peek() == TokenType::Equals {
+                self.report_error(ErrorKind::ChainedAssignment);
+            }
+
+            Expr::Assign(lhs.into(), source.into())
+        } else {
+            lhs
+        }
     }
 
     /// Parses a function [`Expr`] or a ternary conditional [`Expr`].
@@ -156,8 +158,6 @@ impl<'src> Parser<'src> {
 
                 if BinOp::comparison_from_token_type(self.peek()).is_some() {
                     self.report_error(ErrorKind::ChainedComparison);
-                    // TODO: Consume chained comparisons. Same motivation as
-                    // consuming chained assignments.
                 }
 
                 Expr::Binary(op, lhs.into(), rhs.into())

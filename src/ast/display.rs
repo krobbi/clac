@@ -1,19 +1,10 @@
 use std::fmt::{self, Display, Formatter};
 
-use super::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp};
+use super::{Ast, BinOp, Expr, Literal, LogicOp, UnOp};
 
 impl Display for Ast {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         fmt_s_expr("a:", &self.0, f)
-    }
-}
-
-impl Display for Stmt {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Assign(target, source) => fmt_s_expr("=", &[target, source], f),
-            Self::Expr(expr) => Display::fmt(expr, f),
-        }
     }
 }
 
@@ -25,6 +16,7 @@ impl Display for Expr {
             Self::Paren(expr) => fmt_s_expr("p:", &[expr], f),
             Self::Tuple(exprs) => fmt_s_expr("t:", exprs, f),
             Self::Block(stmts) => fmt_s_expr("b:", stmts, f),
+            Self::Assign(target, source) => fmt_s_expr("=", &[target, source], f),
             Self::Function(params, body) => {
                 let mut args = params.iter().collect::<Vec<_>>();
                 args.push(body);

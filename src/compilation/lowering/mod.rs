@@ -5,7 +5,7 @@ mod scopes;
 use thiserror::Error;
 
 use crate::{
-    ast::{Ast, BinOp, Expr, Literal, LogicOp, Stmt, UnOp},
+    ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp},
     interpreter::Globals,
     symbols::Symbol,
 };
@@ -79,8 +79,8 @@ impl<'loc> Lowerer<'loc> {
         Ir(self.lower_sequence(&ast.0).into())
     }
 
-    /// Lowers a sequence of [`Stmt`]s to a sequence of [`ir::Stmt`]s.
-    fn lower_sequence(&mut self, stmts: &[Stmt]) -> Vec<ir::Stmt> {
+    /// Lowers a sequence of statement [`Expr`]s to a sequence of [`ir::Stmt`]s.
+    fn lower_sequence(&mut self, stmts: &[Expr]) -> Vec<ir::Stmt> {
         let mut lowered_stmts = Vec::with_capacity(stmts.len());
 
         for stmt in stmts {
@@ -90,41 +90,17 @@ impl<'loc> Lowerer<'loc> {
         lowered_stmts
     }
 
-    /// Lowers a [`Stmt`] to an [`ir::Stmt`].
-    fn lower_stmt(&mut self, stmt: &Stmt) -> ir::Stmt {
-        match stmt {
-            Stmt::Assign(target, source) => self.lower_stmt_assign(target, source),
-            Stmt::Expr(expr) => match self.lower_node(expr) {
-                Node::Stmt(stmt) => stmt,
-                Node::Expr(expr) => {
-                    if self.scopes.is_global_scope() {
-                        ir::Stmt::Print(expr.into())
-                    } else {
-                        ir::Stmt::Expr(expr.into())
-                    }
+    /// Lowers a statement [`Expr`] to an [`ir::Stmt`].
+    fn lower_stmt(&mut self, stmt: &Expr) -> ir::Stmt {
+        match self.lower_node(stmt) {
+            Node::Stmt(stmt) => stmt,
+            Node::Expr(expr) => {
+                if self.scopes.is_global_scope() {
+                    ir::Stmt::Print(expr.into())
+                } else {
+                    ir::Stmt::Expr(expr.into())
                 }
-            },
-        }
-    }
-
-    /// Lowers an assignment [`Stmt`] to an [`ir::Stmt`].
-    fn lower_stmt_assign(&mut self, target: &Expr, source: &Expr) -> ir::Stmt {
-        let (symbol, value) = match target {
-            Expr::Ident(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
-            Expr::Call(callee, args) => {
-                let Expr::Ident(symbol) = callee.as_ref() else {
-                    return self.error_stmt(ErrorKind::InvalidFunctionName);
-                };
-
-                (*symbol, self.lower_expr_function(args, source))
             }
-            _ => return self.error_stmt(ErrorKind::InvalidAssignTarget),
-        };
-
-        match self.scopes.declare_variable(symbol) {
-            None => self.error_stmt(ErrorKind::AlreadyDefinedVariable(symbol)),
-            Some(Variable::Global) => ir::Stmt::AssignGlobal(symbol, value.into()),
-            Some(Variable::Local(local)) => ir::Stmt::DefineLocal(local, value.into()),
         }
     }
 
@@ -144,6 +120,7 @@ impl<'loc> Lowerer<'loc> {
             Expr::Paren(expr) => self.lower_expr(expr, ExprArea::Paren),
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),
             Expr::Block(stmts) => return self.lower_expr_block(stmts),
+            Expr::Assign(target, source) => return self.lower_expr_assign(target, source).into(),
             Expr::Function(params, body) => self.lower_expr_function(params, body),
             Expr::Call(callee, args) => self.lower_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.lower_expr_unary(*op, rhs),
@@ -165,7 +142,7 @@ impl<'loc> Lowerer<'loc> {
     }
 
     /// Lowers a block [`Expr`] to a [`Node`].
-    fn lower_expr_block(&mut self, stmts: &[Stmt]) -> Node {
+    fn lower_expr_block(&mut self, stmts: &[Expr]) -> Node {
         self.scopes.push_block_scope();
         let mut stmts = self.lower_sequence(stmts);
         self.scopes.pop_block_scope();
@@ -177,6 +154,27 @@ impl<'loc> Lowerer<'loc> {
                 stmts.push(stmt);
                 ir::Stmt::Block(stmts.into()).into()
             }
+        }
+    }
+
+    /// Lowers an assignment [`Expr`] to an [`ir::Stmt`].
+    fn lower_expr_assign(&mut self, target: &Expr, source: &Expr) -> ir::Stmt {
+        let (symbol, value) = match target {
+            Expr::Ident(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
+            Expr::Call(callee, args) => {
+                let Expr::Ident(symbol) = callee.as_ref() else {
+                    return self.error_stmt(ErrorKind::InvalidFunctionName);
+                };
+
+                (*symbol, self.lower_expr_function(args, source))
+            }
+            _ => return self.error_stmt(ErrorKind::InvalidAssignTarget),
+        };
+
+        match self.scopes.declare_variable(symbol) {
+            None => self.error_stmt(ErrorKind::AlreadyDefinedVariable(symbol)),
+            Some(Variable::Global) => ir::Stmt::AssignGlobal(symbol, value.into()),
+            Some(Variable::Local(local)) => ir::Stmt::DefineLocal(local, value.into()),
         }
     }
 

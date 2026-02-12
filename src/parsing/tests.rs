@@ -21,14 +21,37 @@ fn assignments_are_parsed() {
     assert_ast("f(x) = x * x", "(a: (= (f x) (* x x)))");
 }
 
-/// Tests that assignments are not [`Expr`]s.
+/// Tests that assignments are parsed as [`Expr`]s.
 #[test]
-fn assignments_are_not_expressions() {
+fn assignments_are_parsed_as_exprs() {
+    assert_ast("1 + (x = 2)", "(a: (+ 1 (p: (= x 2))))");
+}
+
+/// Tests that assignments cannot be chained.
+#[test]
+fn assignments_cannot_be_chained() {
     assert_error!("x = y = 0", ErrorKind::ChainedAssignment);
-    assert_error!(
-        "1 + (x = 2)",
-        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Equals)
-    );
+
+    // Assignments cannot be chained by mixing precedence levels.
+    assert_error!("x = y + 1 = z", ErrorKind::ChainedAssignment);
+    assert_error!("x = y -> z = w", ErrorKind::ChainedAssignment);
+
+    // Groupings cannot chain assignments if they do not contain the assignment
+    // operator.
+    assert_error!("(x) = (y,) = {z}", ErrorKind::ChainedAssignment);
+}
+
+/// Tests that assignments can be chained with groupings.
+#[test]
+fn assignments_can_be_chained_with_groupings() {
+    assert_ast("x = (y = z)", "(a: (= x (p: (= y z))))");
+    assert_ast("(x = y) = z", "(a: (= (p: (= x y)) z))");
+    assert_ast("x = (y = z,)", "(a: (= x (t: (= y z))))");
+    assert_ast("(x = y,) = z", "(a: (= (t: (= x y)) z))");
+    assert_ast("x = {y = z}", "(a: (= x (b: (= y z))))");
+    assert_ast("{x = y} = z", "(a: (= (b: (= x y)) z))");
+    assert_ast("x = {y = 0, z = y}", "(a: (= x (b: (= y 0) (= z y))))");
+    assert_ast("(x = y) = (z = w)", "(a: (= (p: (= x y)) (p: (= z w))))");
 }
 
 /// Tests that non-identifier bindings are not checked by the [`Parser`].
@@ -45,7 +68,12 @@ fn empty_blocks_are_parsed() {
     assert_ast("{}", "(a: (b:))");
 }
 
-/// Tests that blocks can contain [`Stmt`]s.
+/// Tests that blocks can contain statements.
+// NOTE: Currently, everything is parsed as an expression. Statement AST nodes
+// will be reintroduced if some statement is added which would not feasibly be
+// misused as an expression (e.g. a while loop). In this case, assignments would
+// still be parsed as expressions because it would provide a better error
+// message.
 #[test]
 fn blocks_can_contain_statements() {
     assert_ast("1 + {x = 2, x}", "(a: (+ 1 (b: (= x 2) x)))");
@@ -57,7 +85,7 @@ fn blocks_can_be_nested() {
     assert_ast("0, {1}, {{2}}", "(a: 0 (b: 1) (b: (b: 2)))");
 }
 
-/// Tests that commas between [`Stmt`]s are optional and may be trailing.
+/// Tests that commas in sequences are optional and may be trailing.
 #[test]
 fn sequence_commas_are_optional() {
     assert_error!(", 1", ErrorKind::ExpectedExpr(Token::Comma));
@@ -183,6 +211,10 @@ fn comparisons_cannot_be_chained() {
     assert_error!("1 + 2 <= 3 / 1 > 0.5", ErrorKind::ChainedComparison);
     assert_error!("!!true == !false == !!!false", ErrorKind::ChainedComparison);
     assert_error!("foo() == bar() == baz()", ErrorKind::ChainedComparison);
+
+    // Groupings cannot chain comparisons if they do not contain the comparison
+    // operator.
+    assert_error!("(a) == (b,) == {c}", ErrorKind::ChainedComparison);
 }
 
 /// Tests that comparisons can be chained with groupings.
@@ -264,7 +296,10 @@ fn unary_operators_have_expected_precedence_levels() {
 /// Tests that binary operators have the expected precedence levels.
 #[test]
 fn binary_operators_have_expected_precedence_levels() {
-    // Functions have the lowest precedence.
+    // Assignments have the lowest precedence.
+    assert_ast("x -> x = y -> y", "(a: (= (-> x x) (-> y y)))");
+
+    // The precedence of functions is lower than `||`.
     assert_ast(
         "true || x -> x || false",
         "(a: (-> (|| true x) (|| x false)))",
@@ -319,7 +354,9 @@ fn binary_operators_have_expected_precedence_levels() {
 /// level.
 #[test]
 fn ternary_conditional_has_expected_precedence_level() {
-    // The middle of ternary conditionals has minimum precedence.
+    // The middle of ternary conditionals can group minimum precedence
+    // expressions.
+    assert_ast("c ? x = 0 : e", "(a: (? c (= x 0) e))");
     assert_ast("c ? x -> 2 * x : e", "(a: (? c (-> x (* 2 x)) e))");
     assert_ast("c ? c2 ? t2 : e2 : e", "(a: (? c (? c2 t2 e2) e))");
 
