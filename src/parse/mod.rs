@@ -15,7 +15,7 @@ use crate::{
 
 use self::errors::ErrorKind;
 
-/// An error caught while parsing an [`Ast`] from source code.
+/// An error caught while parsing an [`Ast`].
 #[derive(Debug, Error)]
 #[repr(transparent)]
 #[error(transparent)]

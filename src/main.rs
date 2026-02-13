@@ -4,7 +4,7 @@ mod compilation;
 mod errors;
 mod interpreter;
 mod lex;
-mod parsing;
+mod parse;
 mod symbols;
 mod tokens;
 
@@ -79,7 +79,7 @@ fn execute_source(source: &str, globals: &mut Globals) {
 /// Executes source code with [`Globals`]. This function returns a [`ClacError`]
 /// if the source code could not be executed.
 fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
-    let ast = parsing::parse_source(source)?;
+    let ast = parse::parse_source(source)?;
     let cfg = compilation::compile_ast(&ast, globals)?;
     interpreter::interpret_cfg(&cfg, globals)?;
     Ok(())
