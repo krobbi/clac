@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::symbols::Symbol;
 
-/// A kind of [`LoweringError`][super::LoweringError].
+/// A kind of [`LowerError`][super::LowerError].
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     /// A statement was used in an area where an expression was expected.

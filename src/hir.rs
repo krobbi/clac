@@ -1,13 +1,12 @@
 use crate::{
     ast::{BinOp, Literal, UnOp},
+    locals::Local,
     symbols::Symbol,
 };
 
-use super::locals::Local;
-
-/// An intermediate representation of a program.
+/// A high-level intermediate representation of a program.
 #[derive(Debug)]
-pub struct Ir(pub Box<[Stmt]>);
+pub struct Hir(pub Box<[Stmt]>);
 
 /// A statement.
 #[derive(Debug)]

@@ -1,9 +1,12 @@
 mod ast;
 mod cfg;
-mod compilation;
+mod compile;
 mod errors;
+mod hir;
 mod interpreter;
 mod lex;
+mod locals;
+mod lower;
 mod parse;
 mod symbols;
 mod tokens;
@@ -13,7 +16,7 @@ use std::{
     io::{self, Write as _},
 };
 
-use crate::{errors::ClacError, interpreter::Globals};
+use crate::{errors::ClacError, interpreter::Globals, locals::LocalTable};
 
 /// Runs Clac.
 fn main() {
@@ -80,7 +83,9 @@ fn execute_source(source: &str, globals: &mut Globals) {
 /// if the source code could not be executed.
 fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacError> {
     let ast = parse::parse_source(source)?;
-    let cfg = compilation::compile_ast(&ast, globals)?;
+    let mut locals = LocalTable::new();
+    let hir = lower::lower_ast(&ast, globals, &mut locals)?;
+    let cfg = compile::compile_hir(&hir, &locals);
     interpreter::interpret_cfg(&cfg, globals)?;
     Ok(())
 }

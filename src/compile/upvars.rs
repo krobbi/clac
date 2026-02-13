@@ -1,4 +1,4 @@
-use super::super::locals::Local;
+use crate::locals::Local;
 
 /// A stack of upvars.
 #[derive(Default)]

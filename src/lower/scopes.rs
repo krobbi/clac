@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::symbols::Symbol;
-
-use super::super::locals::{Local, LocalTable};
+use crate::{
+    locals::{Local, LocalTable},
+    symbols::Symbol,
+};
 
 /// A variable's storage kind.
 #[derive(Clone, Copy)]
@@ -104,20 +105,18 @@ impl<'loc> ScopeStack<'loc> {
     /// This function returns [`None`] if the [`Symbol`] is already declared in
     /// the current scope.
     pub fn declare_variable(&mut self, symbol: Symbol) -> Option<Variable> {
-        match self.local_scopes.last_mut() {
-            None => self
-                .global_symbols
-                .insert(symbol)
-                .then_some(Variable::Global),
-            Some(local_scope) => {
-                if local_scope.contains_key(&symbol) {
-                    return None;
-                }
-
-                let local = self.locals.declare_local(self.function_depth);
-                local_scope.insert(symbol, local);
-                Some(Variable::Local(local))
+        if let Some(local_scope) = self.local_scopes.last_mut() {
+            if local_scope.contains_key(&symbol) {
+                return None;
             }
+
+            let local = self.locals.declare_local(self.function_depth);
+            local_scope.insert(symbol, local);
+            Some(Variable::Local(local))
+        } else {
+            self.global_symbols
+                .insert(symbol)
+                .then_some(Variable::Global)
         }
     }
 }

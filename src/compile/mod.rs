@@ -6,24 +6,21 @@ use std::mem;
 use crate::{
     ast::{BinOp, Literal, UnOp},
     cfg::{Block, Cfg, Exit, Function, Instruction, Label},
-    symbols::Symbol,
-};
-
-use super::{
-    ir::{Expr, Ir, Stmt},
+    hir::{Expr, Hir, Stmt},
     locals::{Local, LocalTable},
+    symbols::Symbol,
 };
 
 use self::{stack::StackFrame, upvars::UpvarStack};
 
-/// Compiles [`Ir`] to a [`Cfg`] with a [`LocalTable`].
-pub fn compile_ir(ir: &Ir, locals: &LocalTable) -> Cfg {
+/// Compiles [`Hir`] to a [`Cfg`] with a [`LocalTable`].
+pub fn compile_hir(hir: &Hir, locals: &LocalTable) -> Cfg {
     let mut compiler = Compiler::new(locals);
-    compiler.compile_ir(ir);
+    compiler.compile_hir(hir);
     compiler.into_cfg()
 }
 
-/// A structure which compiles a [`Cfg`] from [`Ir`].
+/// A structure which compiles [`Hir`] to a [`Cfg`].
 struct Compiler<'loc> {
     /// The [`LocalTable`].
     locals: &'loc LocalTable,
@@ -54,8 +51,8 @@ impl<'loc> Compiler<'loc> {
         self.function.cfg
     }
 
-    /// Compiles [`Ir`].
-    fn compile_ir(&mut self, ir: &Ir) {
+    /// Compiles [`Hir`].
+    fn compile_hir(&mut self, ir: &Hir) {
         self.compile_stmts(&ir.0);
     }
 

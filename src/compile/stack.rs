@@ -1,4 +1,4 @@
-use super::super::locals::Local;
+use crate::locals::Local;
 
 /// A stack frame.
 #[derive(Default)]
