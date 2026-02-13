@@ -1,9 +1,8 @@
 use thiserror::Error;
 
-use super::{
-    lexer::LexError,
-    tokens::{Token, TokenType},
-};
+use crate::tokens::{Token, TokenType};
+
+use super::lexer::LexError;
 
 /// A kind of [`ParsingError`][super::ParsingError].
 #[derive(Debug, Error)]

@@ -3,19 +3,17 @@ mod tests;
 
 mod errors;
 mod lexer;
-mod tokens;
 
 use std::mem;
 
 use thiserror::Error;
 
-use crate::ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp};
-
-use self::{
-    errors::ErrorKind,
-    lexer::Lexer,
+use crate::{
+    ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp},
     tokens::{Token, TokenType},
 };
+
+use self::{errors::ErrorKind, lexer::Lexer};
 
 /// An error caught while parsing an [`Ast`] from source code.
 #[derive(Debug, Error)]

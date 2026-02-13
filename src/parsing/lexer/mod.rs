@@ -6,9 +6,7 @@ mod scanner;
 
 pub use self::lex_error::LexError;
 
-use crate::{ast::Literal, symbols::Symbol};
-
-use super::tokens::Token;
+use crate::{ast::Literal, symbols::Symbol, tokens::Token};
 
 use self::scanner::Scanner;
 

@@ -5,6 +5,7 @@ mod errors;
 mod interpreter;
 mod parsing;
 mod symbols;
+mod tokens;
 
 use std::{
     env,

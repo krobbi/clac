@@ -46,7 +46,8 @@ pub enum Expr {
     Cond(Box<Self>, Box<Self>, Box<Self>),
 }
 
-/// A value that can be represented with a single token.
+/// A value which can be represented with a single
+/// [`Token`][crate::tokens::Token].
 #[derive(Clone, Debug)]
 pub enum Literal {
     /// A number.

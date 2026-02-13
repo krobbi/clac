@@ -3,17 +3,17 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-/// An [`Error`] caught while reading a [`Token`][super::Token].
+/// An [`Error`] caught while reading a [`Token`][crate::tokens::Token].
 #[derive(Debug)]
 pub enum LexError {
-    /// A [`char`] that does not begin a [`Token`][super::Token] was
+    /// A [`char`] which does not begin a [`Token`][crate::tokens::Token] was
     /// encountered.
     UnexpectedChar(char),
 
-    /// A bitwise and (`&`) operator was used.
+    /// A bitwise and (`&`) operator was encountered.
     BitwiseAnd,
 
-    /// A bitwise or (`|`) operator was used.
+    /// A bitwise or (`|`) operator was encountered.
     BitwiseOr,
 }
 
