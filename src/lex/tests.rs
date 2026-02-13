@@ -4,8 +4,8 @@ use super::*;
 macro_rules! assert_tokens {
     ($src:literal, [$($tok:pat $(if $guard:expr)?),* $(,)?]) => {
         let mut lexer = Lexer::new($src);
-        $(assert!(matches!(lexer.bump(), $tok $(if $guard)?));)*
-        assert!(matches!(lexer.bump(), Ok(Token::Eof)));
+        $(assert!(matches!(lexer.next_token(), $tok $(if $guard)?));)*
+        assert!(matches!(lexer.next_token(), Ok(Token::Eof)));
     };
     ($src:literal, Ok[$($tok:pat $(if $guard:expr)?),* $(,)?]) => {
         assert_tokens!($src, [$(Ok($tok) $(if $guard)?),*]);
@@ -55,13 +55,13 @@ fn whitespace_separates_digraph_tokens() {
             Ok(Token::Comma),
             Ok(Token::GreaterEquals),
             Ok(Token::Comma),
-            Err(LexError::BitwiseAnd),
-            Err(LexError::BitwiseAnd),
+            Err(LexError(ErrorKind::BitwiseAnd)),
+            Err(LexError(ErrorKind::BitwiseAnd)),
             Ok(Token::Comma),
             Ok(Token::AndAnd),
             Ok(Token::Comma),
-            Err(LexError::BitwiseOr),
-            Err(LexError::BitwiseOr),
+            Err(LexError(ErrorKind::BitwiseOr)),
+            Err(LexError(ErrorKind::BitwiseOr)),
             Ok(Token::Comma),
             Ok(Token::PipePipe),
             Ok(Token::Comma),
@@ -77,14 +77,14 @@ fn non_ascii_chars_are_scanned() {
         [
             Ok(Token::OpenParen),
             Ok(Token::Ident(s)) if s.to_string() == "Caf",
-            Err(LexError::UnexpectedChar('é')),
-            Err(LexError::UnexpectedChar('☕')),
+            Err(LexError(ErrorKind::UnexpectedChar('é'))),
+            Err(LexError(ErrorKind::UnexpectedChar('☕'))),
             Ok(Token::Bang),
             Ok(Token::CloseParen),
             Ok(Token::OpenParen),
-            Err(LexError::UnexpectedChar('🦀')),
-            Err(LexError::UnexpectedChar('💻')),
-            Err(LexError::UnexpectedChar('🧮')),
+            Err(LexError(ErrorKind::UnexpectedChar('🦀'))),
+            Err(LexError(ErrorKind::UnexpectedChar('💻'))),
+            Err(LexError(ErrorKind::UnexpectedChar('🧮'))),
             Ok(Token::CloseParen),
         ]
     );
@@ -95,22 +95,22 @@ fn non_ascii_chars_are_scanned() {
 fn trailing_eof_tokens_are_produced() {
     let mut lexer = Lexer::new("1 2 3");
     assert!(matches!(
-        lexer.bump(),
+        lexer.next_token(),
         Ok(Token::Literal(Literal::Number(1.0))),
     ));
 
     assert!(matches!(
-        lexer.bump(),
+        lexer.next_token(),
         Ok(Token::Literal(Literal::Number(2.0))),
     ));
 
     assert!(matches!(
-        lexer.bump(),
+        lexer.next_token(),
         Ok(Token::Literal(Literal::Number(3.0))),
     ));
 
     for _ in 0..16 {
-        assert!(matches!(lexer.bump(), Ok(Token::Eof)));
+        assert!(matches!(lexer.next_token(), Ok(Token::Eof)));
     }
 }
 
@@ -245,12 +245,12 @@ fn decimal_tokens_are_produced() {
             Ok(Token::Comma),
             Ok(Token::Literal(Literal::Number(4.0625))),
             Ok(Token::Comma),
-            Err(LexError::UnexpectedChar('.')),
+            Err(LexError(ErrorKind::UnexpectedChar('.'))),
             Ok(Token::Literal(Literal::Number(5.0))),
             Ok(Token::Comma),
             Ok(Token::Literal(Literal::Number(0.03125))),
             Ok(Token::Comma),
-            Err(LexError::UnexpectedChar('.')),
+            Err(LexError(ErrorKind::UnexpectedChar('.'))),
             Ok(Token::Comma),
         ]
     );
@@ -323,7 +323,7 @@ fn keywords_are_case_sensitive() {
             Ok(Token::Ident(s)) if s.to_string() == "FALSE",
             Ok(Token::Comma),
             Ok(Token::Ident(s)) if s.to_string() == "f",
-            Err(LexError::UnexpectedChar('á')),
+            Err(LexError(ErrorKind::UnexpectedChar('á'))),
             Ok(Token::Ident(s)) if s.to_string() == "lse",
             Ok(Token::Comma),
         ]
@@ -339,7 +339,7 @@ fn keywords_are_case_sensitive() {
             Ok(Token::Ident(s)) if s.to_string() == "TRUE",
             Ok(Token::Comma),
             Ok(Token::Ident(s)) if s.to_string() == "tr",
-            Err(LexError::UnexpectedChar('ü')),
+            Err(LexError(ErrorKind::UnexpectedChar('ü'))),
             Ok(Token::Ident(s)) if s.to_string() == "e",
             Ok(Token::Comma),
         ]
@@ -354,7 +354,7 @@ fn symbols_are_reused_and_case_sensitive() {
     /// Returns the next [`Symbol`] from the [`Lexer`].
     macro_rules! next_symbol {
         () => {{
-            let Ok(Token::Ident(symbol)) = lexer.bump() else {
+            let Ok(Token::Ident(symbol)) = lexer.next_token() else {
                 unreachable!("token should be an identifier");
             };
 
@@ -377,5 +377,5 @@ fn symbols_are_reused_and_case_sensitive() {
     assert_ne!(other_symbol, lower_symbol);
     assert_ne!(other_symbol, upper_symbol);
 
-    assert!(matches!(lexer.bump(), Ok(Token::Eof)));
+    assert!(matches!(lexer.next_token(), Ok(Token::Eof)));
 }

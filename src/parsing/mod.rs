@@ -258,8 +258,8 @@ impl<'src> Parser<'src> {
         self.next_token.token_type()
     }
 
-    /// Returns `true` if the next [`Token`] matches a terminator [`TokenType`]
-    /// or is the end of source code.
+    /// Returns [`true`] if the next [`Token`] matches a terminator
+    /// [`TokenType`] or is the end of source code.
     fn is_terminated(&self, terminator: TokenType) -> bool {
         let next_token_type = self.peek();
         next_token_type == terminator || next_token_type == TokenType::Eof
@@ -268,7 +268,7 @@ impl<'src> Parser<'src> {
     /// Consumes the next [`Token`].
     fn bump(&mut self) -> Token {
         let following_token = loop {
-            match self.lexer.bump() {
+            match self.lexer.next_token() {
                 Ok(token) => break token,
                 Err(error) => self.report_error(ErrorKind::Lex(error)),
             }

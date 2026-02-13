@@ -1,5 +1,3 @@
-use crate::lex::LexError;
-
 use super::*;
 
 /// Asserts that an expected [`ErrorKind`] is produced from source code.
@@ -370,9 +368,16 @@ fn ternary_conditional_has_expected_precedence_level() {
 /// Tests that [`LexError`]s are caught and encapsulated as [`ErrorKind`]s.
 #[test]
 fn lex_errors_are_caught() {
-    assert_error!("foo + $bar", ErrorKind::Lex(LexError::UnexpectedChar('$')));
-    assert_error!("foo & bar", ErrorKind::Lex(LexError::BitwiseAnd));
-    assert_error!("foo | bar", ErrorKind::Lex(LexError::BitwiseOr));
+    assert_error!("foo + $bar", ErrorKind::Lex(e) if e.to_string() == "unexpected character '$'");
+    assert_error!(
+        "foo & bar", ErrorKind::Lex(e)
+        if e.to_string() == "the '&' operator is not supported, did you mean '&&'?"
+    );
+
+    assert_error!(
+        "foo | bar", ErrorKind::Lex(e)
+        if e.to_string() == "the '|' operator is not supported, did you mean '||'?"
+    );
 }
 
 /// Asserts that an expected [`Ast`] is parsed from source code.

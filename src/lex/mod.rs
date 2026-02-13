@@ -1,31 +1,38 @@
 #[cfg(test)]
 mod tests;
 
-mod lex_error;
-mod scanner;
+mod errors;
+mod scan;
 
-pub use self::lex_error::LexError;
+use thiserror::Error;
 
 use crate::{ast::Literal, symbols::Symbol, tokens::Token};
 
-use self::scanner::Scanner;
+use self::{errors::ErrorKind, scan::Scanner};
 
-/// A structure that reads a stream of [`Token`]s from source code.
-pub struct Lexer<'a> {
-    /// The [`Scanner`] for reading [`char`]s from source code.
-    scanner: Scanner<'a>,
+/// An error caught while reading a [`Token`].
+#[derive(Debug, Error)]
+#[repr(transparent)]
+#[error(transparent)]
+pub struct LexError(#[from] ErrorKind);
+
+/// A structure which reads a stream of [`Token`]s from source code.
+pub struct Lexer<'src> {
+    /// The [`Scanner`].
+    scanner: Scanner<'src>,
 }
 
-impl<'a> Lexer<'a> {
-    /// Creates a new `Lexer` from source code to be read.
-    pub fn new(source: &'a str) -> Self {
-        let scanner = Scanner::new(source);
-        Self { scanner }
+impl<'src> Lexer<'src> {
+    /// Creates a new `Lexer` from source code.
+    pub fn new(source: &'src str) -> Self {
+        Self {
+            scanner: Scanner::new(source),
+        }
     }
 
-    /// Consumes the next [`Token`] from source code. This function returns a
-    /// [`LexError`] if a valid [`Token`] could not be read.
-    pub fn bump(&mut self) -> Result<Token, LexError> {
+    /// Returns the next [`Token`]. This function returns a [`LexError`] if a
+    /// [`Token`] could not be read.
+    pub fn next_token(&mut self) -> Result<Token, LexError> {
         self.scanner.eat_while(char::is_whitespace);
         self.scanner.begin_lexeme();
 
@@ -34,8 +41,8 @@ impl<'a> Lexer<'a> {
         };
 
         let token = match char {
-            c if is_char_digit(c) => self.read_number(),
-            c if is_char_word_start(c) => self.read_word(),
+            c if is_char_digit(c) => self.next_number_token(),
+            c if is_char_word_start(c) => self.next_word_token(),
             '(' => Token::OpenParen,
             ')' => Token::CloseParen,
             '{' => Token::OpenBrace,
@@ -84,26 +91,26 @@ impl<'a> Lexer<'a> {
                 if self.scanner.eat('&') {
                     Token::AndAnd
                 } else {
-                    return Err(LexError::BitwiseAnd);
+                    return Err(wrap_error(ErrorKind::BitwiseAnd));
                 }
             }
             '|' => {
                 if self.scanner.eat('|') {
                     Token::PipePipe
                 } else {
-                    return Err(LexError::BitwiseOr);
+                    return Err(wrap_error(ErrorKind::BitwiseOr));
                 }
             }
             '?' => Token::Question,
             ':' => Token::Colon,
-            _ => return Err(LexError::UnexpectedChar(char)),
+            _ => return Err(wrap_error(ErrorKind::UnexpectedChar(char))),
         };
 
         Ok(token)
     }
 
-    /// Reads the next number [`Token`] after consuming its first [`char`].
-    fn read_number(&mut self) -> Token {
+    /// Returns the next number [`Token`] after consuming its first [`char`].
+    fn next_number_token(&mut self) -> Token {
         self.scanner.eat_while(is_char_digit);
 
         if self.scanner.eat('.') {
@@ -115,9 +122,9 @@ impl<'a> Lexer<'a> {
         Token::Literal(Literal::Number(value))
     }
 
-    /// Reads the next identifier or keyword [`Token`] after consuming its first
-    /// [`char`].
-    fn read_word(&mut self) -> Token {
+    /// Returns the next keyword or identifier [`Token`] after consuming its
+    /// first [`char`].
+    fn next_word_token(&mut self) -> Token {
         self.scanner.eat_while(is_char_word_continue);
 
         match self.scanner.lexeme() {
@@ -128,17 +135,23 @@ impl<'a> Lexer<'a> {
     }
 }
 
-/// Returns `true` if a [`char`] is a digit.
+/// Returns [`true`] if a [`char`] is a digit.
 const fn is_char_digit(char: char) -> bool {
     char.is_ascii_digit()
 }
 
-/// Returns `true` if a [`char`] is an identifier or keyword start.
+/// Returns [`true`] if a [`char`] is a keyword or identifier start.
 const fn is_char_word_start(char: char) -> bool {
     char.is_ascii_alphabetic() || char == '_'
 }
 
-/// Return `true` if a [`char`] is an identifier or keyword continuation.
+/// Return [`true`] if a [`char`] is a keyword or identifier continuation.
 const fn is_char_word_continue(char: char) -> bool {
     is_char_word_start(char) || is_char_digit(char)
+}
+
+/// Wraps an [`ErrorKind`] in a [`LexError`].
+#[cold]
+const fn wrap_error(error: ErrorKind) -> LexError {
+    LexError(error)
 }

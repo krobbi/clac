@@ -61,9 +61,9 @@ fn eat_while_terminates_at_eof() {
     assert!(scanner.peek().is_none());
 }
 
-/// A [`char`] predicate function that always returns `true`.
+/// A [`char`] predicate function which always returns [`true`].
 fn is_char_not_eof(char: char) -> bool {
     use std::hint::black_box;
 
-    black_box(char) == black_box(char)
+    black_box(black_box(char) == black_box(char))
 }
