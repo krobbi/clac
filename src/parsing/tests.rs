@@ -1,4 +1,6 @@
-use super::{lexer::LexError, *};
+use crate::lex::LexError;
+
+use super::*;
 
 /// Asserts that an expected [`ErrorKind`] is produced from source code.
 macro_rules! assert_error {
@@ -368,13 +370,9 @@ fn ternary_conditional_has_expected_precedence_level() {
 /// Tests that [`LexError`]s are caught and encapsulated as [`ErrorKind`]s.
 #[test]
 fn lex_errors_are_caught() {
-    assert_error!(
-        "foo + $bar",
-        ErrorKind::Lexing(LexError::UnexpectedChar('$'))
-    );
-
-    assert_error!("foo & bar", ErrorKind::Lexing(LexError::BitwiseAnd));
-    assert_error!("foo | bar", ErrorKind::Lexing(LexError::BitwiseOr));
+    assert_error!("foo + $bar", ErrorKind::Lex(LexError::UnexpectedChar('$')));
+    assert_error!("foo & bar", ErrorKind::Lex(LexError::BitwiseAnd));
+    assert_error!("foo | bar", ErrorKind::Lex(LexError::BitwiseOr));
 }
 
 /// Asserts that an expected [`Ast`] is parsed from source code.

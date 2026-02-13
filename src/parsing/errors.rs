@@ -1,15 +1,16 @@
 use thiserror::Error;
 
-use crate::tokens::{Token, TokenType};
+use crate::{
+    lex::LexError,
+    tokens::{Token, TokenType},
+};
 
-use super::lexer::LexError;
-
-/// A kind of [`ParsingError`][super::ParsingError].
+/// A kind of [`ParseError`][super::ParseError].
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     /// A [`LexError`].
     #[error(transparent)]
-    Lexing(#[from] LexError),
+    Lex(#[from] LexError),
 
     /// A [`Token`] which does not match an expected [`TokenType`] was
     /// encountered.

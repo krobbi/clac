@@ -3,6 +3,7 @@ mod cfg;
 mod compilation;
 mod errors;
 mod interpreter;
+mod lex;
 mod parsing;
 mod symbols;
 mod tokens;

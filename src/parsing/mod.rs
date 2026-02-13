@@ -2,7 +2,6 @@
 mod tests;
 
 mod errors;
-mod lexer;
 
 use std::mem;
 
@@ -10,20 +9,21 @@ use thiserror::Error;
 
 use crate::{
     ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp},
+    lex::Lexer,
     tokens::{Token, TokenType},
 };
 
-use self::{errors::ErrorKind, lexer::Lexer};
+use self::errors::ErrorKind;
 
 /// An error caught while parsing an [`Ast`] from source code.
 #[derive(Debug, Error)]
 #[repr(transparent)]
 #[error(transparent)]
-pub struct ParsingError(Box<ErrorKind>);
+pub struct ParseError(Box<ErrorKind>);
 
-/// Parses an [`Ast`] from source code. This function returns a [`ParsingError`]
+/// Parses an [`Ast`] from source code. This function returns a [`ParseError`]
 /// if an [`Ast`] could not be parsed.
-pub fn parse_source(source: &str) -> Result<Ast, ParsingError> {
+pub fn parse_source(source: &str) -> Result<Ast, ParseError> {
     let mut parser = Parser::new(source);
     let ast = parser.parse_ast();
     parser.error.map_or(Ok(ast), Err)
@@ -31,14 +31,14 @@ pub fn parse_source(source: &str) -> Result<Ast, ParsingError> {
 
 /// A structure which parses an [`Ast`] from source code.
 struct Parser<'src> {
-    /// The [`Lexer`] for reading [`Token`]s from source code.
+    /// The [`Lexer`].
     lexer: Lexer<'src>,
 
     /// The next [`Token`].
     next_token: Token,
 
-    /// The first [`ParsingError`], if any.
-    error: Option<ParsingError>,
+    /// The first [`ParseError`], if any.
+    error: Option<ParseError>,
 }
 
 impl<'src> Parser<'src> {
@@ -270,7 +270,7 @@ impl<'src> Parser<'src> {
         let following_token = loop {
             match self.lexer.bump() {
                 Ok(token) => break token,
-                Err(error) => self.report_error(ErrorKind::Lexing(error)),
+                Err(error) => self.report_error(ErrorKind::Lex(error)),
             }
         };
 
@@ -289,8 +289,8 @@ impl<'src> Parser<'src> {
         is_match
     }
 
-    /// Consumes the next [`Token`] and reports a [`ParsingError`] if it does
-    /// not match an expected [`TokenType`].
+    /// Consumes the next [`Token`] and reports a [`ParseError`] if it does not
+    /// match an expected [`TokenType`].
     fn expect(&mut self, expected: TokenType) {
         let actual = self.bump();
 
@@ -302,7 +302,7 @@ impl<'src> Parser<'src> {
     /// Reports an [`ErrorKind`].
     #[cold]
     fn report_error(&mut self, error: ErrorKind) {
-        self.error.get_or_insert_with(|| ParsingError(error.into()));
+        self.error.get_or_insert_with(|| ParseError(error.into()));
     }
 }
 

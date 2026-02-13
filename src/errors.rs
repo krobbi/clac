@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{compilation::CompilationError, interpreter::InterpretError, parsing::ParsingError};
+use crate::{compilation::CompilationError, interpreter::InterpretError, parsing::ParseError};
 
 /// An error caught while running Clac.
 #[derive(Debug, Error)]
@@ -18,9 +18,9 @@ impl<T: Into<Inner>> From<T> for ClacError {
 /// A kind of [`ClacError`].
 #[derive(Debug, Error)]
 enum Inner {
-    /// A [`ParsingError`].
+    /// A [`ParseError`].
     #[error(transparent)]
-    Parsing(#[from] ParsingError),
+    ParseError(#[from] ParseError),
 
     /// A [`CompilationError`].
     #[error(transparent)]
