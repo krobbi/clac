@@ -1,6 +1,8 @@
 use thiserror::Error;
 
-/// A kind of [`LexError`][super::LexError].
+use super::LexError;
+
+/// A kind of [`LexError`].
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     /// A [`char`] which does not begin a [`Token`][crate::tokens::Token] was
@@ -15,4 +17,11 @@ pub enum ErrorKind {
     /// A bitwise or (`|`) operator was encountered.
     #[error("the '|' operator is not supported, did you mean '||'?")]
     BitwiseOr,
+}
+
+impl From<ErrorKind> for LexError {
+    #[cold]
+    fn from(value: ErrorKind) -> Self {
+        Self(value)
+    }
 }

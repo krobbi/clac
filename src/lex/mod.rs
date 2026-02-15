@@ -14,7 +14,7 @@ use self::{errors::ErrorKind, scan::Scanner};
 #[derive(Debug, Error)]
 #[repr(transparent)]
 #[error(transparent)]
-pub struct LexError(#[from] ErrorKind);
+pub struct LexError(ErrorKind);
 
 /// A structure which reads a stream of [`Token`]s from source code.
 pub struct Lexer<'src> {
@@ -91,19 +91,19 @@ impl<'src> Lexer<'src> {
                 if self.scanner.eat('&') {
                     Token::AndAnd
                 } else {
-                    return Err(wrap_error(ErrorKind::BitwiseAnd));
+                    return Err(ErrorKind::BitwiseAnd.into());
                 }
             }
             '|' => {
                 if self.scanner.eat('|') {
                     Token::PipePipe
                 } else {
-                    return Err(wrap_error(ErrorKind::BitwiseOr));
+                    return Err(ErrorKind::BitwiseOr.into());
                 }
             }
             '?' => Token::Question,
             ':' => Token::Colon,
-            _ => return Err(wrap_error(ErrorKind::UnexpectedChar(char))),
+            _ => return Err(ErrorKind::UnexpectedChar(char).into()),
         };
 
         Ok(token)
@@ -148,10 +148,4 @@ const fn is_char_word_start(char: char) -> bool {
 /// Return [`true`] if a [`char`] is a keyword or identifier continuation.
 const fn is_char_word_continue(char: char) -> bool {
     is_char_word_start(char) || is_char_digit(char)
-}
-
-/// Wraps an [`ErrorKind`] in a [`LexError`].
-#[cold]
-const fn wrap_error(error: ErrorKind) -> LexError {
-    LexError(error)
 }
