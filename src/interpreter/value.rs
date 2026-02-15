@@ -28,14 +28,14 @@ pub enum Value {
 }
 
 impl Value {
-    /// Returns [`true`] if the `Value` has the same [`ValueType`] as another
-    /// `Value`.
-    pub fn matches_type(&self, other: &Self) -> bool {
-        self.as_type() == other.as_type()
+    /// Returns [`true`] if the `Value`'s [`ValueType`] matches another
+    /// `Value`'s [`ValueType`].
+    pub fn matches_value_type(&self, other: &Self) -> bool {
+        self.value_type() == other.value_type()
     }
 
-    /// Converts the `Value` to its [`ValueType`].
-    const fn as_type(&self) -> ValueType {
+    /// Returns the `Value`'s [`ValueType`].
+    const fn value_type(&self) -> ValueType {
         match self {
             Self::Number(_) => ValueType::Number,
             Self::Bool(_) => ValueType::Bool,
@@ -44,11 +44,11 @@ impl Value {
     }
 }
 
-impl From<&Literal> for Value {
-    fn from(value: &Literal) -> Self {
+impl From<Literal> for Value {
+    fn from(value: Literal) -> Self {
         match value {
-            Literal::Number(value) => Self::Number(*value),
-            Literal::Bool(value) => Self::Bool(*value),
+            Literal::Number(value) => Self::Number(value),
+            Literal::Bool(value) => Self::Bool(value),
         }
     }
 }
@@ -56,8 +56,8 @@ impl From<&Literal> for Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Number(lhs), Self::Number(rhs)) => *lhs == *rhs,
-            (Self::Bool(lhs), Self::Bool(rhs)) => *lhs == *rhs,
+            (Self::Number(lhs), Self::Number(rhs)) => lhs == rhs,
+            (Self::Bool(lhs), Self::Bool(rhs)) => lhs == rhs,
             (Self::Function(lhs), Self::Function(rhs)) => Rc::ptr_eq(lhs, rhs),
             (Self::Closure(lhs), Self::Closure(rhs)) => {
                 if Rc::ptr_eq(lhs, rhs) {
@@ -69,20 +69,20 @@ impl PartialEq for Value {
                 }
 
                 debug_assert_eq!(
-                    lhs.upvalues.len(),
-                    rhs.upvalues.len(),
-                    "closures with the same function should have the same number of upvalues",
+                    lhs.upvars.len(),
+                    rhs.upvars.len(),
+                    "closures with the same function should have the same number of upvars"
                 );
 
-                for (lhs_upvalue, rhs_upvalue) in lhs.upvalues.iter().zip(rhs.upvalues.iter()) {
-                    if lhs_upvalue != rhs_upvalue {
+                for (lhs_upvar, rhs_upvar) in lhs.upvars.iter().zip(rhs.upvars.iter()) {
+                    if lhs_upvar != rhs_upvar {
                         return false;
                     }
                 }
 
                 true
             }
-            (Self::Native(lhs), Self::Native(rhs)) => *lhs == *rhs,
+            (Self::Native(lhs), Self::Native(rhs)) => lhs == rhs,
             (
                 Self::Number(_)
                 | Self::Bool(_)
@@ -107,20 +107,20 @@ impl PartialOrd for Value {
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(value) => value.fmt(f),
-            Self::Bool(value) => value.fmt(f),
+            Self::Number(value) => Display::fmt(value, f),
+            Self::Bool(value) => Display::fmt(value, f),
             Self::Function(_) | Self::Closure(_) | Self::Native(_) => f.write_str("function"),
         }
     }
 }
 
-/// A [`Function`] with captured upvalues.
+/// A [`Function`] with captured upvars.
 pub struct Closure {
     /// The [`Function`].
     pub function: Rc<Function>,
 
-    /// The upvalues.
-    pub upvalues: Vec<Rc<Value>>,
+    /// The upvars.
+    pub upvars: Vec<Rc<Value>>,
 }
 
 /// A type of [`Value`].

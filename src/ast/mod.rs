@@ -48,7 +48,7 @@ pub enum Expr {
 
 /// A value which can be represented with a single
 /// [`Token`][crate::tokens::Token].
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Literal {
     /// A number.
     Number(f64),

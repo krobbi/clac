@@ -4,7 +4,7 @@ mod upvars;
 use std::mem;
 
 use crate::{
-    ast::{BinOp, Literal, UnOp},
+    ast::{BinOp, UnOp},
     cfg::{BasicBlock, Cfg, Function, Instruction, Label, Terminator},
     hir::{Expr, Hir, Stmt},
     locals::{Local, LocalTable},
@@ -81,16 +81,16 @@ impl<'loc> Compiler<'loc> {
         self.function.stack_frame.push_scope();
         self.compile_stmts(stmts);
         let local_count = self.function.stack_frame.pop_scope();
-        self.compile_drop(local_count);
+        self.append_pop_instruction(local_count);
 
         let upvar_count = self.upvars.pop_scope();
-        self.compile_pop_upvars(upvar_count);
+        self.append_pop_upvars_instruction(upvar_count);
     }
 
     /// Compiles a global variable assignment [`Stmt`].
     fn compile_stmt_assign_global(&mut self, symbol: Symbol, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::StoreGlobal(symbol));
+        self.append_instruction(Instruction::StoreGlobal(symbol));
     }
 
     /// Compiles a local variable definition [`Stmt`].
@@ -98,7 +98,7 @@ impl<'loc> Compiler<'loc> {
         self.compile_expr(value);
 
         if self.locals.data(local).is_upvar {
-            self.compile(Instruction::DefineUpvalue);
+            self.append_instruction(Instruction::DefineUpvar);
             self.upvars.push_upvar(local);
         } else {
             self.function.stack_frame.push_local(local);
@@ -108,20 +108,20 @@ impl<'loc> Compiler<'loc> {
     /// Compiles a print [`Stmt`].
     fn compile_stmt_print(&mut self, value: &Expr) {
         self.compile_expr(value);
-        self.compile(Instruction::Print);
+        self.append_instruction(Instruction::Print);
     }
 
     /// Compiles an expression [`Stmt`].
     fn compile_stmt_expr(&mut self, expr: &Expr) {
         self.compile_expr(expr);
-        self.compile(Instruction::Drop(1));
+        self.append_instruction(Instruction::Pop(1));
     }
 
     /// Compiles an [`Expr`].
     fn compile_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Literal(literal) => self.compile_expr_literal(literal),
-            Expr::Global(symbol) => self.compile_expr_global(*symbol),
+            Expr::Literal(literal) => self.append_instruction(Instruction::PushLiteral(*literal)),
+            Expr::Global(symbol) => self.append_instruction(Instruction::PushGlobal(*symbol)),
             Expr::Local(local) => self.compile_expr_local(*local),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
             Expr::Function(params, body) => self.compile_expr_function(params, body),
@@ -132,27 +132,17 @@ impl<'loc> Compiler<'loc> {
         }
     }
 
-    /// Compiles a literal [`Expr`].
-    fn compile_expr_literal(&mut self, literal: &Literal) {
-        self.compile(Instruction::PushLiteral(literal.clone()));
-    }
-
-    /// Compiles a global variable [`Expr`].
-    fn compile_expr_global(&mut self, symbol: Symbol) {
-        self.compile(Instruction::LoadGlobal(symbol));
-    }
-
     /// Compiles a local variable [`Expr`].
     fn compile_expr_local(&mut self, local: Local) {
         let local_data = self.locals.data(local);
 
         if local_data.is_upvar {
             let offset = self.upvars.upvar_offset(local);
-            self.compile(Instruction::LoadUpvalue(offset));
+            self.append_instruction(Instruction::PushUpvar(offset));
             self.function.access_upvar(local_data.function_depth);
         } else {
             let offset = self.function.stack_frame.local_offset(local);
-            self.compile(Instruction::LoadLocal(offset));
+            self.append_instruction(Instruction::PushLocal(offset));
         }
     }
 
@@ -171,12 +161,12 @@ impl<'loc> Compiler<'loc> {
             // the result into the first local variable and pop any local
             // variables above it.
             let offset = self.function.stack_frame.len();
-            self.compile(Instruction::StoreLocal(offset));
-            self.compile_drop(local_count - 1);
+            self.append_instruction(Instruction::StoreLocal(offset));
+            self.append_pop_instruction(local_count - 1);
         }
 
         let upvar_count = self.upvars.pop_scope();
-        self.compile_pop_upvars(upvar_count);
+        self.append_pop_upvars_instruction(upvar_count);
     }
 
     /// Compiles a function [`Expr`].
@@ -200,8 +190,8 @@ impl<'loc> Compiler<'loc> {
                 // being defined as upvars. The arguments are already on the
                 // stack, so there may be arguments above it which would block
                 // this operation.
-                self.compile(Instruction::LoadLocal(offset));
-                self.compile(Instruction::DefineUpvalue);
+                self.append_instruction(Instruction::PushLocal(offset));
+                self.append_instruction(Instruction::DefineUpvar);
                 self.upvars.push_upvar(local);
             } else {
                 self.function.stack_frame.push_param(local);
@@ -210,7 +200,7 @@ impl<'loc> Compiler<'loc> {
 
         self.compile_expr(body);
         let upvar_count = self.upvars.pop_scope();
-        self.compile_pop_upvars(upvar_count);
+        self.append_pop_upvars_instruction(upvar_count);
         self.basic_block_mut().terminator = Terminator::Return;
 
         mem::swap(&mut self.function, &mut other_function);
@@ -218,7 +208,7 @@ impl<'loc> Compiler<'loc> {
 
         let upvar_function_depth = other_function.min_upvar_function_depth;
 
-        self.compile(Instruction::PushFunction(
+        self.append_instruction(Instruction::PushFunction(
             Function {
                 cfg: other_function.cfg,
                 arity: params.len(),
@@ -229,7 +219,7 @@ impl<'loc> Compiler<'loc> {
         if upvar_function_depth <= self.function_depth {
             // The inner function accesses an upvar which is declared outside of
             // it, so it may need to be a closure.
-            self.compile(Instruction::IntoClosure);
+            self.append_instruction(Instruction::IntoClosure);
 
             // If the accessed upvar is declared outside of the outer function,
             // then the outer function may also need to be a closure.
@@ -268,7 +258,7 @@ impl<'loc> Compiler<'loc> {
             UnOp::Not => Instruction::Not,
         };
 
-        self.compile(instruction);
+        self.append_instruction(instruction);
     }
 
     /// Compiles a binary [`Expr`].
@@ -291,7 +281,7 @@ impl<'loc> Compiler<'loc> {
             BinOp::GreaterEqual => Instruction::GreaterEqual,
         };
 
-        self.compile(instruction);
+        self.append_instruction(instruction);
         self.function.stack_frame.pop_temps(1);
     }
 
@@ -336,22 +326,22 @@ impl<'loc> Compiler<'loc> {
 
     /// Appends an [`Instruction`] to pop multiple values to the current
     /// [`BasicBlock`].
-    fn compile_drop(&mut self, count: usize) {
+    fn append_pop_instruction(&mut self, count: usize) {
         if count > 0 {
-            self.compile(Instruction::Drop(count));
+            self.append_instruction(Instruction::Pop(count));
         }
     }
 
     /// Appends an [`Instruction`] to pop multiple upvars to the current
     /// [`BasicBlock`].
-    fn compile_pop_upvars(&mut self, count: usize) {
+    fn append_pop_upvars_instruction(&mut self, count: usize) {
         if count > 0 {
-            self.compile(Instruction::DropUpvalues(count));
+            self.append_instruction(Instruction::PopUpvars(count));
         }
     }
 
     /// Appends an [`Instruction`] to the current [`BasicBlock`].
-    fn compile(&mut self, instruction: Instruction) {
+    fn append_instruction(&mut self, instruction: Instruction) {
         self.basic_block_mut().instructions.push(instruction);
     }
 }

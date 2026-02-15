@@ -47,33 +47,35 @@ impl Display for BasicBlock {
 
 impl Display for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::PushLiteral(literal) => write!(f, "{:16}{literal}", "push_literal"),
-            Self::PushFunction(_) => write!(f, "{:16}...", "push_function"),
-            Self::Drop(count) => write!(f, "{:16}{count}", "drop"),
-            Self::Print => f.write_str("print"),
-            Self::Negate => f.write_str("negate"),
-            Self::Not => f.write_str("not"),
-            Self::Add => f.write_str("add"),
-            Self::Subtract => f.write_str("subtract"),
-            Self::Multiply => f.write_str("multiply"),
-            Self::Divide => f.write_str("divide"),
-            Self::Power => f.write_str("power"),
-            Self::Equal => f.write_str("equal"),
-            Self::NotEqual => f.write_str("not_equal"),
-            Self::Less => f.write_str("less"),
-            Self::LessEqual => f.write_str("less_equal"),
-            Self::Greater => f.write_str("greater"),
-            Self::GreaterEqual => f.write_str("greater_equal"),
-            Self::LoadLocal(offset) => write!(f, "{:16}[{offset}]", "load_local"),
-            Self::StoreLocal(offset) => write!(f, "{:16}[{offset}]", "store_local"),
-            Self::LoadGlobal(symbol) => write!(f, "{:16}{symbol}", "load_global"),
-            Self::StoreGlobal(symbol) => write!(f, "{:16}{symbol}", "store_global"),
-            Self::DefineUpvalue => f.write_str("define_upvalue"),
-            Self::LoadUpvalue(offset) => write!(f, "{:16}[{offset}]", "load_upvalue"),
-            Self::DropUpvalues(count) => write!(f, "{:16}{count}", "drop_upvalues"),
-            Self::IntoClosure => f.write_str("into_closure"),
-        }
+        let name = match self {
+            Self::PushLiteral(literal) => return write!(f, "{:16}{literal}", "push_literal"),
+            Self::PushFunction(_) => return write!(f, "{:16}...", "push_function"),
+            Self::PushGlobal(symbol) => return write!(f, "{:16}{symbol}", "push_global"),
+            Self::PushLocal(offset) => return write!(f, "{:16}[{offset}]", "push_local"),
+            Self::PushUpvar(offset) => return write!(f, "{:16}[{offset}]", "push_upvar"),
+            Self::Pop(count) => return write!(f, "{:16}({count})", "pop"),
+            Self::Print => "print",
+            Self::Negate => "negate",
+            Self::Not => "not",
+            Self::Add => "add",
+            Self::Subtract => "subtract",
+            Self::Multiply => "multiply",
+            Self::Divide => "divide",
+            Self::Power => "power",
+            Self::Equal => "equal",
+            Self::NotEqual => "not_equal",
+            Self::Less => "less",
+            Self::LessEqual => "less_equal",
+            Self::Greater => "greater",
+            Self::GreaterEqual => "greater_equal",
+            Self::StoreGlobal(symbol) => return write!(f, "{:16}{symbol}", "store_global"),
+            Self::StoreLocal(offset) => return write!(f, "{:16}[{offset}]", "store_local"),
+            Self::DefineUpvar => "define_upvar",
+            Self::PopUpvars(count) => return write!(f, "{:16}({count})", "pop_upvars"),
+            Self::IntoClosure => "into_closure",
+        };
+
+        f.write_str(name)
     }
 }
 

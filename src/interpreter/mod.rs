@@ -7,14 +7,14 @@ pub use self::{globals::Globals, interpret_error::InterpretError, native::instal
 
 use std::{mem, rc::Rc};
 
-use crate::cfg::{Cfg, Function, Instruction, Label, Terminator};
+use crate::cfg::{BasicBlock, Cfg, Function, Instruction, Label, Terminator};
 
 use self::value::{Closure, Value};
 
 /// Interprets a [`Cfg`] with [`Globals`]. This function returns an
 /// [`InterpretError`] if an error occurred.
 pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretError> {
-    let mut interpreter = Interpreter::new();
+    let mut interpreter = Interpreter::new(globals);
     let mut called_functions: Vec<Rc<Function>> = Vec::new();
     let mut label = Label::default();
 
@@ -24,11 +24,9 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
             .map_or(cfg, |f| &f.cfg)
             .basic_block(label);
 
-        for instruction in &basic_block.instructions {
-            interpreter.interpret_instruction(instruction, globals)?;
-        }
+        let flow = interpreter.interpret_basic_block(basic_block)?;
 
-        match interpreter.interpret_terminator(&basic_block.terminator)? {
+        match flow {
             Flow::Halt => break,
             Flow::Jump(target_label) => label = target_label,
             Flow::Call(function) => {
@@ -45,39 +43,60 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
     Ok(())
 }
 
-/// A structure that interprets a [`Cfg`].
-#[derive(Default)]
-struct Interpreter {
+/// A structure which interprets a [`Cfg`].
+struct Interpreter<'glb> {
     /// The stack of [`Value`]s.
     stack: Vec<Value>,
 
     /// The stack offset to the current stack frame.
     frame: usize,
 
-    /// The stack of upvalues.
-    upvalues: Vec<Rc<Value>>,
+    /// The [`Globals`].
+    globals: &'glb mut Globals,
+
+    /// The stack of upvars.
+    upvars: Vec<Rc<Value>>,
 
     /// The stack of [`Return`]s.
     returns: Vec<Return>,
 }
 
-impl Interpreter {
-    /// Creates a new `Interpreter`.
-    fn new() -> Self {
-        Self::default()
+impl<'glb> Interpreter<'glb> {
+    /// Creates a new `Interpreter` from [`Globals`].
+    const fn new(globals: &'glb mut Globals) -> Self {
+        Self {
+            stack: Vec::new(),
+            frame: 0,
+            globals,
+            upvars: Vec::new(),
+            returns: Vec::new(),
+        }
     }
 
-    /// Interprets an [`Instruction`] with [`Globals`]. This function returns an
+    /// Interprets a [`BasicBlock`] and returns a [`Flow`]. This function
+    /// returns an [`InterpretError`] if an error occurred.
+    fn interpret_basic_block(&mut self, basic_block: &BasicBlock) -> Result<Flow, InterpretError> {
+        for instruction in &basic_block.instructions {
+            self.interpret_instruction(instruction)?;
+        }
+
+        self.interpret_terminator(&basic_block.terminator)
+    }
+
+    /// Interprets an [`Instruction`]. This function returns an
     /// [`InterpretError`] if an error occurred.
-    fn interpret_instruction(
-        &mut self,
-        instruction: &Instruction,
-        globals: &mut Globals,
-    ) -> Result<(), InterpretError> {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "function contains a single match expression"
+    )]
+    fn interpret_instruction(&mut self, instruction: &Instruction) -> Result<(), InterpretError> {
         match instruction {
-            Instruction::PushLiteral(literal) => self.push(literal.into()),
+            Instruction::PushLiteral(literal) => self.push((*literal).into()),
             Instruction::PushFunction(function) => self.push(Value::Function(Rc::clone(function))),
-            Instruction::Drop(count) => self.stack.truncate(self.stack.len() - count),
+            Instruction::PushGlobal(symbol) => self.push(self.globals.read(*symbol).clone()),
+            Instruction::PushLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
+            Instruction::PushUpvar(offset) => self.push((*self.upvars[*offset]).clone()),
+            Instruction::Pop(count) => self.stack.truncate(self.stack.len() - count),
             Instruction::Print => println!("{}", self.pop()),
             Instruction::Negate => {
                 let rhs = self.pop_number()?;
@@ -121,7 +140,7 @@ impl Interpreter {
                 let rhs = self.pop();
                 let lhs = self.pop();
 
-                if !lhs.matches_type(&rhs) {
+                if !lhs.matches_value_type(&rhs) {
                     return Err(InterpretError::InvalidType);
                 }
 
@@ -131,7 +150,7 @@ impl Interpreter {
                 let rhs = self.pop();
                 let lhs = self.pop();
 
-                if !lhs.matches_type(&rhs) {
+                if !lhs.matches_value_type(&rhs) {
                     return Err(InterpretError::InvalidType);
                 }
 
@@ -157,16 +176,16 @@ impl Interpreter {
                 let lhs = self.pop_number()?;
                 self.push(Value::Bool(lhs >= rhs));
             }
-            Instruction::LoadLocal(offset) => self.push(self.stack[self.frame + *offset].clone()),
-            Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
-            Instruction::LoadGlobal(symbol) => self.push(globals.read(*symbol).clone()),
-            Instruction::StoreGlobal(symbol) => globals.assign(*symbol, self.pop()),
-            Instruction::DefineUpvalue => {
+            Instruction::StoreGlobal(symbol) => {
                 let value = self.pop();
-                self.upvalues.push(value.into());
+                self.globals.assign(*symbol, value);
             }
-            Instruction::LoadUpvalue(offset) => self.stack.push((*self.upvalues[*offset]).clone()),
-            Instruction::DropUpvalues(count) => self.upvalues.truncate(self.upvalues.len() - count),
+            Instruction::StoreLocal(offset) => self.stack[self.frame + *offset] = self.pop(),
+            Instruction::DefineUpvar => {
+                let value = self.pop();
+                self.upvars.push(value.into());
+            }
+            Instruction::PopUpvars(count) => self.upvars.truncate(self.upvars.len() - count),
             Instruction::IntoClosure => {
                 let Value::Function(function) = self.pop() else {
                     unreachable!("value should be a function");
@@ -174,7 +193,7 @@ impl Interpreter {
 
                 let closure = Closure {
                     function,
-                    upvalues: self.upvalues.clone(),
+                    upvars: self.upvars.clone(),
                 };
 
                 self.push(Value::Closure(closure.into()));
@@ -203,7 +222,7 @@ impl Interpreter {
                 let mut return_data = Return {
                     label: *return_label,
                     frame: self.frame,
-                    upvalues: None,
+                    upvars: None,
                 };
 
                 let arity = *arity;
@@ -212,10 +231,8 @@ impl Interpreter {
                 let function = match &self.stack[self.frame - 1] {
                     Value::Function(function) => Rc::clone(function),
                     Value::Closure(closure) => {
-                        let outer_upvalues =
-                            mem::replace(&mut self.upvalues, closure.upvalues.clone());
-
-                        return_data.upvalues = Some(outer_upvalues);
+                        let outer_upvars = mem::replace(&mut self.upvars, closure.upvars.clone());
+                        return_data.upvars = Some(outer_upvars);
                         Rc::clone(&closure.function)
                     }
                     Value::Native(native) => {
@@ -246,8 +263,8 @@ impl Interpreter {
 
                 self.frame = return_data.frame;
 
-                if let Some(upvalues) = return_data.upvalues {
-                    self.upvalues = upvalues;
+                if let Some(upvars) = return_data.upvars {
+                    self.upvars = upvars;
                 }
 
                 Flow::Return(return_data.label)
@@ -311,6 +328,6 @@ struct Return {
     /// The stack offset of the return stack frame.
     frame: usize,
 
-    /// The optional stack of upvalues to restore.
-    upvalues: Option<Vec<Rc<Value>>>,
+    /// The optional stack of upvars to restore.
+    upvars: Option<Vec<Rc<Value>>>,
 }

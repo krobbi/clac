@@ -107,7 +107,7 @@ impl<'loc> Lowerer<'loc> {
     /// Lowers an [`Expr`] to a [`Node`].
     fn lower_node(&mut self, expr: &Expr) -> Node {
         let expr = match expr {
-            Expr::Literal(literal) => hir::Expr::Literal(literal.clone()),
+            Expr::Literal(literal) => hir::Expr::Literal(*literal),
             Expr::Ident(symbol) => self.lower_expr_ident(*symbol),
             Expr::Paren(expr) => self.lower_expr(expr, ExprArea::Paren),
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),

@@ -85,8 +85,17 @@ pub enum Instruction {
     /// Pushes a [`Function`] value to the stack.
     PushFunction(Rc<Function>),
 
-    /// Drops a number of values from the top of the stack.
-    Drop(usize),
+    /// Loads a value from a global variable and pushes it to the stack.
+    PushGlobal(Symbol),
+
+    /// Loads a value from a stack frame offset and pushes it to the stack.
+    PushLocal(usize),
+
+    /// Loads a value from an upvar stack offset and pushes it to the stack.
+    PushUpvar(usize),
+
+    /// Pops a number of values from the stack and discards them.
+    Pop(usize),
 
     /// Pops a value from the stack and prints it.
     Print,
@@ -103,23 +112,23 @@ pub enum Instruction {
     /// to the stack.
     Add,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// right number is subtracted from the left number and the result is pushed
-    /// to the stack.
+    /// Pops a subtrahend number value from the stack, then a minuend number
+    /// value. The subtrahend is subtracted from the minuend and the result is
+    /// pushed to the stack.
     Subtract,
 
     /// Pops two number values from the stack, multiplies them, and pushes the
     /// result to the stack.
     Multiply,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is divided by the right number and the result is pushed to
-    /// the stack.
+    /// Pops a divisor number value from the stack, then a dividend number
+    /// value. The dividend is divided by the divisor and the result is pushed
+    /// to the stack.
     Divide,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is raised to the power of the right number and the result is
-    /// pushed to the stack.
+    /// Pops an exponent number value from the stack, then a base number value.
+    /// The base is raised to the power of the exponent and the result is pushed
+    /// to the stack.
     Power,
 
     /// Pops two values from the stack, compares them as equal, and pushes the
@@ -130,48 +139,39 @@ pub enum Instruction {
     /// the result to the stack.
     NotEqual,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is compared as less than the right number and the result is
-    /// pushed to the stack.
+    /// Pops a right-hand side number value from the stack, then a left-hand
+    /// side number value. The left-hand is compared as less than the right-hand
+    /// and the result is pushed to the stack.
     Less,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is compared as less than or equal to the right number and
-    /// the result is pushed to the stack.
+    /// Pops a right-hand side number value from the stack, then a left-hand
+    /// side number value. The left-hand is compared as less than or equal to
+    /// the right-hand and the result is pushed to the stack.
     LessEqual,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is compared as greater than the right number and the result
-    /// is pushed to the stack.
+    /// Pops a right-hand side number value from the stack, then a left-hand
+    /// side number value. The left-hand is compared as greater than the
+    /// right-hand and the result is pushed to the stack.
     Greater,
 
-    /// Pops a right number value from the stack, then a left number value. The
-    /// left number is compared as greater than or equal to the right number and
-    /// the result is pushed to the stack.
+    /// Pops a right-hand side number value from the stack, then a left-hand
+    /// side number value. The left-hand is compared as greater than or equal to
+    /// the right-hand and the result is pushed to the stack.
     GreaterEqual,
 
-    /// Loads a value from a local variable and pushes it to the stack.
-    LoadLocal(usize),
-
     /// Pops a value from the stack and stores it in a local variable.
-    StoreLocal(usize),
-
-    /// Loads a value from a global variable and pushes it to the stack.
-    LoadGlobal(Symbol),
-
-    /// Pops a value from the stack and stores it in a global variable.
     StoreGlobal(Symbol),
 
-    /// Pops a value from the stack and pushes it to the upvalue stack.
-    DefineUpvalue,
+    /// Pops a value from the stack and stores it at a stack frame offset.
+    StoreLocal(usize),
 
-    /// Loads an upvalue and pushes it to the stack.
-    LoadUpvalue(usize),
+    /// Pops a value from the stack and pushes it to the upvar stack.
+    DefineUpvar,
 
-    /// Drops a number of upvalues from the top of the upvalue stack.
-    DropUpvalues(usize),
+    /// Pops a number of values from the upvar stack and discards them.
+    PopUpvars(usize),
 
-    /// Pops a function value from the stack, converts it to a closure, and
+    /// Pops a [`Function`] value from the stack, converts it to a closure, and
     /// pushes the result to the stack.
     IntoClosure,
 }

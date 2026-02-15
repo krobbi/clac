@@ -63,30 +63,28 @@ fn native_dump(args: &[Value]) -> Result<Value, InterpretError> {
                 "[function with {} parameter(s)]\n{}",
                 function.arity, function.cfg,
             );
-
-            Ok(args[0].clone())
         }
         [Value::Closure(closure)] => {
             println!(
                 "[closure with {} parameter(s) and {} upvar(s)]",
                 closure.function.arity,
-                closure.upvalues.len()
+                closure.upvars.len()
             );
 
-            for (offset, upvalue) in closure.upvalues.iter().enumerate() {
-                println!("{:8}[{offset}] = {upvalue}", "");
+            for (offset, upvar) in closure.upvars.iter().enumerate() {
+                println!("{:8}[{offset}] = {upvar}", "");
             }
 
             println!("{}", closure.function.cfg);
-            Ok(args[0].clone())
         }
         [Value::Native(native)] => {
             println!("[native '{}' function]", native.name());
-            Ok(args[0].clone())
         }
-        [_] => Err(InterpretError::InvalidType),
-        _ => Err(InterpretError::IncorrectCallArity),
+        [_] => return Err(InterpretError::InvalidType),
+        _ => return Err(InterpretError::IncorrectCallArity),
     }
+
+    Ok(args[0].clone())
 }
 
 /// The native `sqrt` function.
