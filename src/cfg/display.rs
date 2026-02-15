@@ -1,15 +1,20 @@
 use std::fmt::{self, Display, Formatter, Write as _};
 
-use super::{Block, Cfg, Exit, Instruction, Label};
+use super::{BasicBlock, Cfg, Exit, Instruction, Label};
 
 impl Display for Cfg {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buffer = String::new();
 
-        for (label, block) in self.blocks.iter().enumerate().map(|(i, b)| (Label(i), b)) {
+        for (label, basic_block) in self
+            .basic_blocks
+            .iter()
+            .enumerate()
+            .map(|(i, b)| (Label(i), b))
+        {
             let _ = writeln!(buffer, "{label}:");
 
-            for line in block.to_string().lines() {
+            for line in basic_block.to_string().lines() {
                 let _ = writeln!(buffer, "{:8}{line}", "");
             }
         }
@@ -21,13 +26,13 @@ impl Display for Cfg {
 impl Display for Label {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self.0 {
-            0 => f.write_str(".main"),
-            index => write!(f, ".label_{index}"),
+            0 => f.write_str("main"),
+            index => write!(f, ".L{index}"),
         }
     }
 }
 
-impl Display for Block {
+impl Display for BasicBlock {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buffer = String::new();
 

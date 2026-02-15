@@ -19,7 +19,10 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
     let mut label = Label::default();
 
     loop {
-        let block = called_functions.last().map_or(cfg, |f| &f.cfg).block(label);
+        let block = called_functions
+            .last()
+            .map_or(cfg, |f| &f.cfg)
+            .basic_block(label);
 
         for instruction in &block.instructions {
             interpreter.interpret_instruction(instruction, globals)?;

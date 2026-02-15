@@ -5,7 +5,7 @@ use std::mem;
 
 use crate::{
     ast::{BinOp, Literal, UnOp},
-    cfg::{Block, Cfg, Exit, Function, Instruction, Label},
+    cfg::{BasicBlock, Cfg, Exit, Function, Instruction, Label},
     hir::{Expr, Hir, Stmt},
     locals::{Local, LocalTable},
     symbols::Symbol,
@@ -189,16 +189,16 @@ impl<'loc> Compiler<'loc> {
 
         self.upvars.push_scope();
 
-        // A function's parameters are already on the stack when it is called,
-        // but they need to be declared to the compiler.
+        // A function's arguments are already on the stack when it is called,
+        // but they need to be declared to the compiler as parameters or upvars.
         for local in params.iter().copied() {
             if self.locals.data(local).is_upvar {
                 let offset = self.function.stack_frame.len();
                 self.function.stack_frame.push_temp();
 
-                // Upvar parameters are copied to the top of the stack before
-                // being defined as upvars. The parameters are already on the
-                // stack, so there may be parameters above it which would block
+                // Upvar arguments are copied to the top of the stack before
+                // being defined as upvars. The arguments are already on the
+                // stack, so there may be arguments above it which would block
                 // this operation.
                 self.compile(Instruction::LoadLocal(offset));
                 self.compile(Instruction::DefineUpvalue);
@@ -211,7 +211,7 @@ impl<'loc> Compiler<'loc> {
         self.compile_expr(body);
         let upvar_count = self.upvars.pop_scope();
         self.compile_pop_upvars(upvar_count);
-        self.block_mut().exit = Exit::Return;
+        self.basic_block_mut().exit = Exit::Return;
 
         mem::swap(&mut self.function, &mut other_function);
         self.function_depth -= 1;
@@ -248,12 +248,15 @@ impl<'loc> Compiler<'loc> {
         }
 
         let arity = args.len();
-        let return_label = self.cfg_mut().insert_block();
-        let terminator = mem::replace(&mut self.block_mut().exit, Exit::Call(arity, return_label));
+        let return_label = self.cfg_mut().insert_basic_block();
+        let terminator = mem::replace(
+            &mut self.basic_block_mut().exit,
+            Exit::Call(arity, return_label),
+        );
 
         self.set_label(return_label);
         self.function.stack_frame.pop_temps(arity + 1);
-        self.block_mut().exit = terminator;
+        self.basic_block_mut().exit = terminator;
     }
 
     /// Compiles a unary [`Expr`].
@@ -295,24 +298,24 @@ impl<'loc> Compiler<'loc> {
     /// Compiles a ternary conditional [`Expr`].
     fn compile_expr_cond(&mut self, cond: &Expr, then_expr: &Expr, else_expr: &Expr) {
         self.compile_expr(cond);
-        let then_label = self.cfg_mut().insert_block();
-        let else_label = self.cfg_mut().insert_block();
-        let join_label = self.cfg_mut().insert_block();
+        let then_label = self.cfg_mut().insert_basic_block();
+        let else_label = self.cfg_mut().insert_basic_block();
+        let join_label = self.cfg_mut().insert_basic_block();
         let terminator = mem::replace(
-            &mut self.block_mut().exit,
+            &mut self.basic_block_mut().exit,
             Exit::Branch(then_label, else_label),
         );
 
         self.set_label(then_label);
         self.compile_expr(then_expr);
-        self.block_mut().exit = Exit::Jump(join_label);
+        self.basic_block_mut().exit = Exit::Jump(join_label);
 
         self.set_label(else_label);
         self.compile_expr(else_expr);
-        self.block_mut().exit = Exit::Jump(join_label);
+        self.basic_block_mut().exit = Exit::Jump(join_label);
 
         self.set_label(join_label);
-        self.block_mut().exit = terminator;
+        self.basic_block_mut().exit = terminator;
     }
 
     /// Returns a mutable reference to the current [`Cfg`].
@@ -320,10 +323,10 @@ impl<'loc> Compiler<'loc> {
         &mut self.function.cfg
     }
 
-    /// Returns a mutable reference to the current [`Block`].
-    fn block_mut(&mut self) -> &mut Block {
+    /// Returns a mutable reference to the current [`BasicBlock`].
+    fn basic_block_mut(&mut self) -> &mut BasicBlock {
         let label = self.function.label;
-        self.cfg_mut().block_mut(label)
+        self.cfg_mut().basic_block_mut(label)
     }
 
     /// Sets the current [`Label`].
@@ -331,25 +334,25 @@ impl<'loc> Compiler<'loc> {
         self.function.label = label;
     }
 
-    /// Appends [`Instruction`]s to drop multiple values to the current
-    /// [`Block`].
+    /// Appends an [`Instruction`] to pop multiple values to the current
+    /// [`BasicBlock`].
     fn compile_drop(&mut self, count: usize) {
         if count > 0 {
             self.compile(Instruction::Drop(count));
         }
     }
 
-    /// Appends [`Instruction`]s to pop multiple upvalues to the current
-    /// [`Block`].
+    /// Appends an [`Instruction`] to pop multiple upvars to the current
+    /// [`BasicBlock`].
     fn compile_pop_upvars(&mut self, count: usize) {
         if count > 0 {
             self.compile(Instruction::DropUpvalues(count));
         }
     }
 
-    /// Appends an [`Instruction`] to the current [`Block`].
+    /// Appends an [`Instruction`] to the current [`BasicBlock`].
     fn compile(&mut self, instruction: Instruction) {
-        self.block_mut().instructions.push(instruction);
+        self.basic_block_mut().instructions.push(instruction);
     }
 }
 

@@ -10,33 +10,45 @@ pub struct Cfg {
     // NOTE: Any labels in the CFG will break if these blocks are rearranged
     // (e.g. if CFG optimizations are added). This could be changed to a map,
     // but a vector should have a faster lookup time.
-    /// The [`Block`]s.
-    blocks: Vec<Block>,
+    /// The [`BasicBlock`]s.
+    basic_blocks: Vec<BasicBlock>,
 }
 
 impl Cfg {
     /// Creates a new `Cfg`.
     pub fn new() -> Self {
-        let mut cfg = Self { blocks: Vec::new() };
-        cfg.insert_block();
+        let mut cfg = Self {
+            basic_blocks: Vec::new(),
+        };
+
+        let main_label = cfg.insert_basic_block();
+        debug_assert_eq!(
+            main_label,
+            Label::default(),
+            "main basic block should have the default label"
+        );
+
         cfg
     }
 
-    /// Inserts a new [`Block`] into the `Cfg` and returns its [`Label`].
-    pub fn insert_block(&mut self) -> Label {
-        let index = self.blocks.len();
-        self.blocks.push(Block::default());
-        Label(index)
+    /// Inserts a new [`BasicBlock`] into the `Cfg` and returns its [`Label`].
+    pub fn insert_basic_block(&mut self) -> Label {
+        self.basic_blocks.push(BasicBlock {
+            instructions: Vec::new(),
+            exit: Exit::Halt,
+        });
+
+        Label(self.basic_blocks.len() - 1)
     }
 
-    /// Returns a reference to a [`Block`] from its [`Label`].
-    pub fn block(&self, label: Label) -> &Block {
-        &self.blocks[label.0]
+    /// Returns a reference to a [`BasicBlock`] from its [`Label`].
+    pub fn basic_block(&self, label: Label) -> &BasicBlock {
+        &self.basic_blocks[label.0]
     }
 
-    /// Returns a mutable reference to a [`Block`] from its [`Label`].
-    pub fn block_mut(&mut self, label: Label) -> &mut Block {
-        &mut self.blocks[label.0]
+    /// Returns a mutable reference to a [`BasicBlock`] from its [`Label`].
+    pub fn basic_block_mut(&mut self, label: Label) -> &mut BasicBlock {
+        &mut self.basic_blocks[label.0]
     }
 }
 
@@ -50,14 +62,14 @@ pub struct Function {
     pub arity: usize,
 }
 
-/// A label for a [`Block`].
+/// A label for a [`BasicBlock`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct Label(usize);
 
 /// A basic block.
-#[derive(Debug, Default)]
-pub struct Block {
+#[derive(Debug)]
+pub struct BasicBlock {
     /// The [`Instruction`]s.
     pub instructions: Vec<Instruction>,
 
@@ -65,7 +77,7 @@ pub struct Block {
     pub exit: Exit,
 }
 
-/// An instruction that may appear in the middle of a [`Block`].
+/// An instruction which can appear in the middle of a [`BasicBlock`].
 #[derive(Debug)]
 pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
@@ -165,11 +177,10 @@ pub enum Instruction {
     IntoClosure,
 }
 
-/// A [`Block`]'s exit point.
-#[derive(Debug, Default)]
+/// A [`BasicBlock`]'s terminator.
+#[derive(Debug)]
 pub enum Exit {
     /// Halts execution.
-    #[default]
     Halt,
 
     /// Jumps to a [`Label`].
