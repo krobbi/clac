@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter, Write as _};
 
-use super::{BasicBlock, Cfg, Exit, Instruction, Label};
+use super::{BasicBlock, Cfg, Instruction, Label, Terminator};
 
 impl Display for Cfg {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -40,7 +40,7 @@ impl Display for BasicBlock {
             let _ = writeln!(buffer, "{instruction}");
         }
 
-        let _ = write!(buffer, "{}", self.exit);
+        let _ = write!(buffer, "{}", self.terminator);
         f.write_str(&buffer)
     }
 }
@@ -77,7 +77,7 @@ impl Display for Instruction {
     }
 }
 
-impl Display for Exit {
+impl Display for Terminator {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Halt => f.write_str("halt"),

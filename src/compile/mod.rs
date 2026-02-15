@@ -5,7 +5,7 @@ use std::mem;
 
 use crate::{
     ast::{BinOp, Literal, UnOp},
-    cfg::{BasicBlock, Cfg, Exit, Function, Instruction, Label},
+    cfg::{BasicBlock, Cfg, Function, Instruction, Label, Terminator},
     hir::{Expr, Hir, Stmt},
     locals::{Local, LocalTable},
     symbols::Symbol,
@@ -211,7 +211,7 @@ impl<'loc> Compiler<'loc> {
         self.compile_expr(body);
         let upvar_count = self.upvars.pop_scope();
         self.compile_pop_upvars(upvar_count);
-        self.basic_block_mut().exit = Exit::Return;
+        self.basic_block_mut().terminator = Terminator::Return;
 
         mem::swap(&mut self.function, &mut other_function);
         self.function_depth -= 1;
@@ -250,13 +250,13 @@ impl<'loc> Compiler<'loc> {
         let arity = args.len();
         let return_label = self.cfg_mut().insert_basic_block();
         let terminator = mem::replace(
-            &mut self.basic_block_mut().exit,
-            Exit::Call(arity, return_label),
+            &mut self.basic_block_mut().terminator,
+            Terminator::Call(arity, return_label),
         );
 
         self.set_label(return_label);
         self.function.stack_frame.pop_temps(arity + 1);
-        self.basic_block_mut().exit = terminator;
+        self.basic_block_mut().terminator = terminator;
     }
 
     /// Compiles a unary [`Expr`].
@@ -302,20 +302,20 @@ impl<'loc> Compiler<'loc> {
         let else_label = self.cfg_mut().insert_basic_block();
         let join_label = self.cfg_mut().insert_basic_block();
         let terminator = mem::replace(
-            &mut self.basic_block_mut().exit,
-            Exit::Branch(then_label, else_label),
+            &mut self.basic_block_mut().terminator,
+            Terminator::Branch(then_label, else_label),
         );
 
         self.set_label(then_label);
         self.compile_expr(then_expr);
-        self.basic_block_mut().exit = Exit::Jump(join_label);
+        self.basic_block_mut().terminator = Terminator::Jump(join_label);
 
         self.set_label(else_label);
         self.compile_expr(else_expr);
-        self.basic_block_mut().exit = Exit::Jump(join_label);
+        self.basic_block_mut().terminator = Terminator::Jump(join_label);
 
         self.set_label(join_label);
-        self.basic_block_mut().exit = terminator;
+        self.basic_block_mut().terminator = terminator;
     }
 
     /// Returns a mutable reference to the current [`Cfg`].

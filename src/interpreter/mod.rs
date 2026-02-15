@@ -7,7 +7,7 @@ pub use self::{globals::Globals, interpret_error::InterpretError, native::instal
 
 use std::{mem, rc::Rc};
 
-use crate::cfg::{Cfg, Exit, Function, Instruction, Label};
+use crate::cfg::{Cfg, Function, Instruction, Label, Terminator};
 
 use self::value::{Closure, Value};
 
@@ -19,23 +19,23 @@ pub fn interpret_cfg(cfg: &Cfg, globals: &mut Globals) -> Result<(), InterpretEr
     let mut label = Label::default();
 
     loop {
-        let block = called_functions
+        let basic_block = called_functions
             .last()
             .map_or(cfg, |f| &f.cfg)
             .basic_block(label);
 
-        for instruction in &block.instructions {
+        for instruction in &basic_block.instructions {
             interpreter.interpret_instruction(instruction, globals)?;
         }
 
-        match interpreter.interpret_exit(&block.exit)? {
-            Branch::Halt => break,
-            Branch::Jump(target_label) => label = target_label,
-            Branch::Call(function) => {
+        match interpreter.interpret_terminator(&basic_block.terminator)? {
+            Flow::Halt => break,
+            Flow::Jump(target_label) => label = target_label,
+            Flow::Call(function) => {
                 called_functions.push(function);
                 label = Label::default();
             }
-            Branch::Return(return_label) => {
+            Flow::Return(return_label) => {
                 called_functions.truncate(called_functions.len() - 1);
                 label = return_label;
             }
@@ -184,22 +184,22 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Interprets an [`Exit`] and returns the next [`Branch`]. This function
+    /// Interprets an [`Terminator`] and returns a [`Flow`]. This function
     /// returns an [`InterpretError`] if an error occurred.
-    fn interpret_exit(&mut self, exit: &Exit) -> Result<Branch, InterpretError> {
-        let branch = match exit {
-            Exit::Halt => Branch::Halt,
-            Exit::Jump(label) => Branch::Jump(*label),
-            Exit::Branch(then_label, else_label) => {
+    fn interpret_terminator(&mut self, terminator: &Terminator) -> Result<Flow, InterpretError> {
+        let branch = match terminator {
+            Terminator::Halt => Flow::Halt,
+            Terminator::Jump(label) => Flow::Jump(*label),
+            Terminator::Branch(then_label, else_label) => {
                 let label = if self.pop_bool()? {
                     *then_label
                 } else {
                     *else_label
                 };
 
-                Branch::Jump(label)
+                Flow::Jump(label)
             }
-            Exit::Call(arity, return_label) => {
+            Terminator::Call(arity, return_label) => {
                 let mut return_data = Return {
                     label: *return_label,
                     frame: self.frame,
@@ -223,7 +223,7 @@ impl Interpreter {
                         self.stack.truncate(self.frame);
                         self.frame = return_data.frame;
                         *self.stack.last_mut().expect("stack should not be empty") = return_value;
-                        return Ok(Branch::Jump(*return_label));
+                        return Ok(Flow::Jump(*return_label));
                     }
                     _ => return Err(InterpretError::CalledNonFunction),
                 };
@@ -233,9 +233,9 @@ impl Interpreter {
                 }
 
                 self.returns.push(return_data);
-                Branch::Call(function)
+                Flow::Call(function)
             }
-            Exit::Return => {
+            Terminator::Return => {
                 let return_value = self.pop();
                 self.stack.truncate(self.frame);
                 *self.stack.last_mut().expect("stack should not be empty") = return_value;
@@ -250,7 +250,7 @@ impl Interpreter {
                     self.upvalues = upvalues;
                 }
 
-                Branch::Return(return_data.label)
+                Flow::Return(return_data.label)
             }
         };
 
@@ -288,20 +288,8 @@ impl Interpreter {
     }
 }
 
-/// Data for returning from a function.
-struct Return {
-    /// The [`Label`] to return to.
-    label: Label,
-
-    /// The stack offset of the return stack frame.
-    frame: usize,
-
-    /// The optional stack of upvalues to restore.
-    upvalues: Option<Vec<Rc<Value>>>,
-}
-
-/// A branch to take after interpreting an [`Exit`].
-enum Branch {
+/// Control flow after interpreting a [`Terminator`].
+enum Flow {
     /// Halts execution.
     Halt,
 
@@ -313,4 +301,16 @@ enum Branch {
 
     /// Returns to a [`Label`] from a [`Function`].
     Return(Label),
+}
+
+/// Data for returning from a function.
+struct Return {
+    /// The [`Label`] to return to.
+    label: Label,
+
+    /// The stack offset of the return stack frame.
+    frame: usize,
+
+    /// The optional stack of upvalues to restore.
+    upvalues: Option<Vec<Rc<Value>>>,
 }

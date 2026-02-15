@@ -28,7 +28,7 @@ pub enum Value {
 }
 
 impl Value {
-    /// Returns `true` if the `Value` has the same [`ValueType`] as another
+    /// Returns [`true`] if the `Value` has the same [`ValueType`] as another
     /// `Value`.
     pub fn matches_type(&self, other: &Self) -> bool {
         self.as_type() == other.as_type()

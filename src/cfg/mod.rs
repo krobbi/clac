@@ -7,10 +7,9 @@ use crate::{ast::Literal, symbols::Symbol};
 /// A control flow graph.
 #[derive(Debug)]
 pub struct Cfg {
-    // NOTE: Any labels in the CFG will break if these blocks are rearranged
-    // (e.g. if CFG optimizations are added). This could be changed to a map,
-    // but a vector should have a faster lookup time.
-    /// The [`BasicBlock`]s.
+    // NOTE: This should be changed to a hash map or a similar structure if the
+    // basic blocks need to be rearranged (e.g. if CFG optimizations are added),
+    // but a vector has a faster lookup time.
     basic_blocks: Vec<BasicBlock>,
 }
 
@@ -35,7 +34,7 @@ impl Cfg {
     pub fn insert_basic_block(&mut self) -> Label {
         self.basic_blocks.push(BasicBlock {
             instructions: Vec::new(),
-            exit: Exit::Halt,
+            terminator: Terminator::Halt,
         });
 
         Label(self.basic_blocks.len() - 1)
@@ -73,8 +72,8 @@ pub struct BasicBlock {
     /// The [`Instruction`]s.
     pub instructions: Vec<Instruction>,
 
-    /// The [`Exit`].
-    pub exit: Exit,
+    /// The [`Terminator`].
+    pub terminator: Terminator,
 }
 
 /// An instruction which can appear in the middle of a [`BasicBlock`].
@@ -179,15 +178,15 @@ pub enum Instruction {
 
 /// A [`BasicBlock`]'s terminator.
 #[derive(Debug)]
-pub enum Exit {
+pub enum Terminator {
     /// Halts execution.
     Halt,
 
-    /// Jumps to a [`Label`].
+    /// Unconditionally jumps to a [`Label`].
     Jump(Label),
 
     /// Pops a Boolean value from the stack and jumps to a [`Label`] if it is
-    /// `true`, or jumps to another [`Label`] if it is `false`.
+    /// [`true`], or jumps to another [`Label`] if it is [`false`].
     Branch(Label, Label),
 
     /// Performs a call with an arity and returns to a [`Label`].
