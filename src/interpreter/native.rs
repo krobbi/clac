@@ -1,6 +1,6 @@
 use crate::symbols::Symbol;
 
-use super::{Globals, InterpretError, value::Value};
+use super::{Globals, InterpretError, errors::ErrorKind, value::Value};
 
 /// A native function.
 #[expect(
@@ -80,8 +80,8 @@ fn native_dump(args: &[Value]) -> Result<Value, InterpretError> {
         [Value::Native(native)] => {
             println!("[native '{}' function]", native.name());
         }
-        [_] => return Err(InterpretError::InvalidType),
-        _ => return Err(InterpretError::IncorrectCallArity),
+        [_] => return Err(ErrorKind::InvalidType.into()),
+        _ => return Err(ErrorKind::IncorrectCallArity.into()),
     }
 
     Ok(args[0].clone())
@@ -91,7 +91,7 @@ fn native_dump(args: &[Value]) -> Result<Value, InterpretError> {
 fn native_sqrt(args: &[Value]) -> Result<Value, InterpretError> {
     match args {
         [Value::Number(value)] => Ok(Value::Number(value.sqrt())),
-        [_] => Err(InterpretError::InvalidType),
-        _ => Err(InterpretError::IncorrectCallArity),
+        [_] => Err(ErrorKind::InvalidType.into()),
+        _ => Err(ErrorKind::IncorrectCallArity.into()),
     }
 }

@@ -1,15 +1,25 @@
+mod errors;
 mod globals;
-mod interpret_error;
 mod native;
 mod value;
 
-pub use self::{globals::Globals, interpret_error::InterpretError, native::install_natives};
+use thiserror::Error;
+
+pub use self::{globals::Globals, native::install_natives};
 
 use std::{mem, rc::Rc};
 
 use crate::cfg::{BasicBlock, Cfg, Function, Instruction, Label, Terminator};
 
-use self::value::{Closure, Value};
+use self::{
+    errors::ErrorKind,
+    value::{Closure, Value},
+};
+
+#[derive(Debug, Error)]
+#[repr(transparent)]
+#[error(transparent)]
+pub struct InterpretError(ErrorKind);
 
 /// Interprets a [`Cfg`] with [`Globals`]. This function returns an
 /// [`InterpretError`] if an error occurred.
@@ -126,7 +136,7 @@ impl<'glb> Interpreter<'glb> {
                 let lhs = self.pop_number()?;
 
                 if !rhs.is_normal() {
-                    return Err(InterpretError::DivideByZero);
+                    return Err(ErrorKind::DivideByZero.into());
                 }
 
                 self.push(Value::Number(lhs / rhs));
@@ -141,7 +151,7 @@ impl<'glb> Interpreter<'glb> {
                 let lhs = self.pop();
 
                 if !lhs.matches_value_type(&rhs) {
-                    return Err(InterpretError::InvalidType);
+                    return Err(ErrorKind::InvalidType.into());
                 }
 
                 self.push(Value::Bool(lhs == rhs));
@@ -151,7 +161,7 @@ impl<'glb> Interpreter<'glb> {
                 let lhs = self.pop();
 
                 if !lhs.matches_value_type(&rhs) {
-                    return Err(InterpretError::InvalidType);
+                    return Err(ErrorKind::InvalidType.into());
                 }
 
                 self.push(Value::Bool(lhs != rhs));
@@ -242,11 +252,11 @@ impl<'glb> Interpreter<'glb> {
                         *self.stack.last_mut().expect("stack should not be empty") = return_value;
                         return Ok(Flow::Jump(*return_label));
                     }
-                    _ => return Err(InterpretError::CalledNonFunction),
+                    _ => return Err(ErrorKind::CalledNonFunction.into()),
                 };
 
                 if arity != function.arity {
-                    return Err(InterpretError::IncorrectCallArity);
+                    return Err(ErrorKind::IncorrectCallArity.into());
                 }
 
                 self.returns.push(return_data);
@@ -290,7 +300,7 @@ impl<'glb> Interpreter<'glb> {
     fn pop_number(&mut self) -> Result<f64, InterpretError> {
         match self.pop() {
             Value::Number(value) => Ok(value),
-            _ => Err(InterpretError::InvalidType),
+            _ => Err(ErrorKind::InvalidType.into()),
         }
     }
 
@@ -300,7 +310,7 @@ impl<'glb> Interpreter<'glb> {
     fn pop_bool(&mut self) -> Result<bool, InterpretError> {
         match self.pop() {
             Value::Bool(value) => Ok(value),
-            _ => Err(InterpretError::InvalidType),
+            _ => Err(ErrorKind::InvalidType.into()),
         }
     }
 }
