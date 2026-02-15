@@ -3,7 +3,7 @@ mod cfg;
 mod compile;
 mod errors;
 mod hir;
-mod interpreter;
+mod interpret;
 mod lex;
 mod locals;
 mod lower;
@@ -16,12 +16,12 @@ use std::{
     io::{self, Write as _},
 };
 
-use crate::{errors::ClacError, interpreter::Globals, locals::LocalTable};
+use crate::{errors::ClacError, interpret::Globals, locals::LocalTable};
 
 /// Runs Clac.
 fn main() {
     let mut globals = Globals::new();
-    interpreter::install_natives(&mut globals);
+    interpret::install_natives(&mut globals);
 
     let mut args = env::args().skip(1);
 
@@ -86,6 +86,6 @@ fn try_execute_source(source: &str, globals: &mut Globals) -> Result<(), ClacErr
     let mut locals = LocalTable::new();
     let hir = lower::lower_ast(&ast, globals, &mut locals)?;
     let cfg = compile::compile_hir(&hir, &locals);
-    interpreter::interpret_cfg(&cfg, globals)?;
+    interpret::interpret_cfg(&cfg, globals)?;
     Ok(())
 }

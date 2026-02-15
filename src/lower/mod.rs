@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     ast::{Ast, BinOp, Expr, Literal, LogicOp, UnOp},
     hir::{self, Hir},
-    interpreter::Globals,
+    interpret::Globals,
     locals::LocalTable,
     symbols::Symbol,
 };

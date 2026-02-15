@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{interpreter::InterpretError, lower::LowerError, parse::ParseError};
+use crate::{interpret::InterpretError, lower::LowerError, parse::ParseError};
 
 /// An error caught while running Clac.
 #[derive(Debug, Error)]
