@@ -5,6 +5,7 @@ use std::rc::Rc;
 use crate::{ast::Literal, symbols::Symbol};
 
 /// A control flow graph.
+#[derive(Debug)]
 pub struct Cfg {
     // NOTE: Any labels in the CFG will break if these blocks are rearranged
     // (e.g. if CFG optimizations are added). This could be changed to a map,
@@ -39,12 +40,23 @@ impl Cfg {
     }
 }
 
+/// A function.
+#[derive(Debug)]
+pub struct Function {
+    /// The [`Cfg`].
+    pub cfg: Cfg,
+
+    /// The number of parameters.
+    pub arity: usize,
+}
+
 /// A label for a [`Block`].
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct Label(usize);
 
 /// A basic block.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Block {
     /// The [`Instruction`]s.
     pub instructions: Vec<Instruction>,
@@ -54,6 +66,7 @@ pub struct Block {
 }
 
 /// An instruction that may appear in the middle of a [`Block`].
+#[derive(Debug)]
 pub enum Instruction {
     /// Pushes a [`Literal`] value to the stack.
     PushLiteral(Literal),
@@ -152,17 +165,8 @@ pub enum Instruction {
     IntoClosure,
 }
 
-/// A function.
-pub struct Function {
-    /// The [`Cfg`].
-    pub cfg: Cfg,
-
-    /// The number of parameters.
-    pub arity: usize,
-}
-
 /// A [`Block`]'s exit point.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub enum Exit {
     /// Halts execution.
     #[default]
