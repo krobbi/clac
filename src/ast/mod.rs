@@ -12,8 +12,8 @@ pub enum Expr {
     /// A [`Literal`].
     Literal(Literal),
 
-    /// An identifier.
-    Ident(Symbol),
+    /// A variable.
+    Variable(Symbol),
 
     /// A parenthesized expression.
     Paren(Box<Self>),

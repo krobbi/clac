@@ -193,7 +193,7 @@ impl<'src> Parser<'src> {
     fn parse_expr_prefix(&mut self) -> Expr {
         let mut lhs = match self.bump() {
             Token::Literal(literal) => Expr::Literal(literal),
-            Token::Ident(symbol) => Expr::Ident(symbol),
+            Token::Ident(symbol) => Expr::Variable(symbol),
             Token::OpenParen => self.parse_expr_paren(),
             Token::OpenBrace => {
                 let stmts = self.parse_sequence(TokenType::CloseBrace);

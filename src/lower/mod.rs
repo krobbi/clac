@@ -108,7 +108,7 @@ impl<'loc> Lowerer<'loc> {
     fn lower_node(&mut self, expr: &Expr) -> Node {
         let expr = match expr {
             Expr::Literal(literal) => hir::Expr::Literal(*literal),
-            Expr::Ident(symbol) => self.lower_expr_ident(*symbol),
+            Expr::Variable(symbol) => self.lower_expr_variable(*symbol),
             Expr::Paren(expr) => self.lower_expr(expr, ExprArea::Paren),
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),
             Expr::Block(stmts) => return self.lower_expr_block(stmts),
@@ -124,8 +124,8 @@ impl<'loc> Lowerer<'loc> {
         expr.into()
     }
 
-    /// Lowers an identifier [`Expr`] to an [`hir::Expr`].
-    fn lower_expr_ident(&mut self, symbol: Symbol) -> hir::Expr {
+    /// Lowers a variable [`Expr`] to an [`hir::Expr`].
+    fn lower_expr_variable(&mut self, symbol: Symbol) -> hir::Expr {
         match self.scopes.variable(symbol) {
             None => self.error_expr(ErrorKind::UndefinedVariable(symbol)),
             Some(Variable::Global) => hir::Expr::Global(symbol),
@@ -152,9 +152,9 @@ impl<'loc> Lowerer<'loc> {
     /// Lowers an assignment [`Expr`] to an [`hir::Stmt`].
     fn lower_expr_assign(&mut self, target: &Expr, source: &Expr) -> hir::Stmt {
         let (symbol, value) = match target {
-            Expr::Ident(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
+            Expr::Variable(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
             Expr::Call(callee, args) => {
-                let Expr::Ident(symbol) = callee.as_ref() else {
+                let Expr::Variable(symbol) = callee.as_ref() else {
                     return self.error_stmt(ErrorKind::InvalidFunctionName);
                 };
 
@@ -176,7 +176,7 @@ impl<'loc> Lowerer<'loc> {
         let mut lowered_params = Vec::with_capacity(params.len());
 
         for param in params {
-            let Expr::Ident(symbol) = param else {
+            let Expr::Variable(symbol) = param else {
                 self.scopes.pop_function_scope();
                 return self.error_expr(ErrorKind::InvalidParam);
             };

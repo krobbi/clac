@@ -12,7 +12,7 @@ impl Display for Expr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Literal(literal) => Display::fmt(literal, f),
-            Self::Ident(symbol) => Display::fmt(symbol, f),
+            Self::Variable(symbol) => Display::fmt(symbol, f),
             Self::Paren(expr) => fmt_s_expr("p:", &[expr], f),
             Self::Tuple(exprs) => fmt_s_expr("t:", exprs, f),
             Self::Block(stmts) => fmt_s_expr("b:", stmts, f),
