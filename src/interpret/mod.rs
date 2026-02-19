@@ -236,9 +236,9 @@ impl<'glb> Interpreter<'glb> {
                 };
 
                 let arity = *arity;
-                self.frame = self.stack.len() - arity;
+                self.frame = self.stack.len() - arity - 1;
 
-                let function = match &self.stack[self.frame - 1] {
+                let function = match &self.stack[self.frame] {
                     Value::Function(function) => Rc::clone(function),
                     Value::Closure(closure) => {
                         let outer_upvars = mem::replace(&mut self.upvars, closure.upvars.clone());
@@ -246,10 +246,10 @@ impl<'glb> Interpreter<'glb> {
                         Rc::clone(&closure.function)
                     }
                     Value::Native(native) => {
-                        let return_value = native.call(&self.stack[self.frame..])?;
+                        let return_value = native.call(&self.stack[self.frame + 1..])?;
                         self.stack.truncate(self.frame);
+                        self.push(return_value);
                         self.frame = return_data.frame;
-                        *self.stack.last_mut().expect("stack should not be empty") = return_value;
                         return Ok(Flow::Jump(*return_label));
                     }
                     _ => return Err(ErrorKind::CalledNonFunction.into()),
@@ -265,7 +265,7 @@ impl<'glb> Interpreter<'glb> {
             Terminator::Return => {
                 let return_value = self.pop();
                 self.stack.truncate(self.frame);
-                *self.stack.last_mut().expect("stack should not be empty") = return_value;
+                self.push(return_value);
                 let return_data = self
                     .returns
                     .pop()

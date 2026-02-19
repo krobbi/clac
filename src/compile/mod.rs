@@ -179,6 +179,10 @@ impl<'loc> Compiler<'loc> {
 
         self.upvars.push_scope();
 
+        // A stack frame's first element contains the called function or
+        // closure.
+        self.function.stack_frame.push_temp();
+
         // A function's arguments are already on the stack when it is called,
         // but they need to be declared to the compiler as parameters or upvars.
         for local in params.iter().copied() {
