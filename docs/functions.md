@@ -75,7 +75,7 @@ Error: function parameter 'x' is duplicated
 
 ## Recursion
 Named functions can refer to themselves (and any named outer functions) in
-their own definitions. This simplifies how recursive functions are written:
+their own definitions. This simplifies how recursive functions are defined:
 ```
 clac> fib(n) = n < 2 ? n : fib(n - 1) + fib(n - 2)
 
