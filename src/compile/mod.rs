@@ -124,7 +124,7 @@ impl<'loc> Compiler<'loc> {
             Expr::Global(symbol) => self.append_instruction(Instruction::PushGlobal(*symbol)),
             Expr::Local(local) => self.compile_expr_local(*local),
             Expr::Block(stmts, expr) => self.compile_expr_block(stmts, expr),
-            Expr::Function(params, body) => self.compile_expr_function(params, body),
+            Expr::Function(name, params, body) => self.compile_expr_function(*name, params, body),
             Expr::Call(callee, args) => self.compile_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.compile_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.compile_expr_binary(*op, lhs, rhs),
@@ -170,30 +170,38 @@ impl<'loc> Compiler<'loc> {
     }
 
     /// Compiles a function [`Expr`].
-    fn compile_expr_function(&mut self, params: &[Local], body: &Expr) {
+    fn compile_expr_function(&mut self, name: Option<Local>, params: &[Local], body: &Expr) {
         self.function_depth += 1;
         let mut other_function = mem::replace(
             &mut self.function,
             FunctionContext::new(self.function_depth),
         );
 
+        // At this point during runtime, the caller has already placed the
+        // callee and arguments on the stack. These elements must be declared to
+        // the compiler. If any of these are upvars, then 'prologue'
+        // instructions are emitted to define them at runtime. After the
+        // function body, 'epilogue' instructions are also emitted to pop any
+        // upvars defined in the prologue.
         self.upvars.push_scope();
 
-        // A stack frame's first element contains the called function or
-        // closure.
-        self.function.stack_frame.push_temp();
+        if let Some(local) = name {
+            if self.locals.data(local).is_upvar {
+                self.function.stack_frame.push_temp();
+                self.append_instruction(Instruction::PushLocal(0));
+                self.append_instruction(Instruction::DefineUpvar);
+                self.upvars.push_upvar(local);
+            } else {
+                self.function.stack_frame.push_callee(local);
+            }
+        } else {
+            self.function.stack_frame.push_temp();
+        }
 
-        // A function's arguments are already on the stack when it is called,
-        // but they need to be declared to the compiler as parameters or upvars.
         for local in params.iter().copied() {
             if self.locals.data(local).is_upvar {
                 let offset = self.function.stack_frame.len();
                 self.function.stack_frame.push_temp();
-
-                // Upvar arguments are copied to the top of the stack before
-                // being defined as upvars. The arguments are already on the
-                // stack, so there may be arguments above it which would block
-                // this operation.
                 self.append_instruction(Instruction::PushLocal(offset));
                 self.append_instruction(Instruction::DefineUpvar);
                 self.upvars.push_upvar(local);
@@ -209,7 +217,6 @@ impl<'loc> Compiler<'loc> {
 
         mem::swap(&mut self.function, &mut other_function);
         self.function_depth -= 1;
-
         let upvar_function_depth = other_function.min_upvar_function_depth;
 
         self.append_instruction(Instruction::PushFunction(

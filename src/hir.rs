@@ -43,7 +43,7 @@ pub enum Expr {
     Block(Box<[Stmt]>, Box<Self>),
 
     /// A function.
-    Function(Box<[Local]>, Box<Self>),
+    Function(Option<Local>, Box<[Local]>, Box<Self>),
 
     /// A function call.
     Call(Box<Self>, Box<[Self]>),

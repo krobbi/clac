@@ -55,7 +55,7 @@ impl<'loc> ScopeStack<'loc> {
 
                 debug_assert!(
                     local_data.function_depth <= self.function_depth,
-                    "local variables from inner functions should not be accessible"
+                    "local variables from inner functions should not be accessed"
                 );
 
                 // If a local variable is accessed from outside the function
@@ -81,9 +81,21 @@ impl<'loc> ScopeStack<'loc> {
 
     /// Pops the current function scope from the `ScopeStack`.
     pub fn pop_function_scope(&mut self) {
-        debug_assert!(self.function_depth > 0, "function depth should not be zero");
+        debug_assert!(self.function_depth > 0, "there should be a function scope");
         self.pop_block_scope();
         self.function_depth -= 1;
+    }
+
+    /// Pushes a new function parameter scope to the `ScopeStack`.
+    pub fn push_param_scope(&mut self) {
+        debug_assert!(self.function_depth > 0, "there should be a function scope");
+        self.push_block_scope();
+    }
+
+    /// Pops the current function parameter scope from the `ScopeStack`.
+    pub fn pop_param_scope(&mut self) {
+        debug_assert!(self.function_depth > 0, "there should be a function scope");
+        self.pop_block_scope();
     }
 
     /// Pushes a new block scope to the `ScopeStack`.
@@ -95,7 +107,7 @@ impl<'loc> ScopeStack<'loc> {
     pub fn pop_block_scope(&mut self) {
         debug_assert!(
             !self.local_scopes.is_empty(),
-            "scope stack should not be empty"
+            "there should be a local scope"
         );
 
         self.local_scopes.truncate(self.local_scopes.len() - 1);

@@ -27,7 +27,7 @@ pub enum Expr {
     /// An assignment.
     Assign(Box<Self>, Box<Self>),
 
-    /// A function.
+    /// An anonymous function.
     Function(Box<[Self]>, Box<Self>),
 
     /// A function call.

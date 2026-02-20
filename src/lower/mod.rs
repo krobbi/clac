@@ -113,7 +113,7 @@ impl<'loc> Lowerer<'loc> {
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),
             Expr::Block(stmts) => return self.lower_expr_block(stmts),
             Expr::Assign(target, source) => return self.lower_expr_assign(target, source).into(),
-            Expr::Function(params, body) => self.lower_expr_function(params, body),
+            Expr::Function(params, body) => self.lower_expr_function(None, params, body),
             Expr::Call(callee, args) => self.lower_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.lower_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.lower_expr_binary(*op, lhs, rhs),
@@ -158,7 +158,8 @@ impl<'loc> Lowerer<'loc> {
                     return self.error_stmt(ErrorKind::InvalidFunctionName);
                 };
 
-                (*symbol, self.lower_expr_function(args, source))
+                let symbol = *symbol;
+                (symbol, self.lower_expr_function(Some(symbol), args, source))
             }
             _ => return self.error_stmt(ErrorKind::InvalidAssignTarget),
         };
@@ -171,17 +172,34 @@ impl<'loc> Lowerer<'loc> {
     }
 
     /// Lowers a function [`Expr`] to an [`hir::Expr`].
-    fn lower_expr_function(&mut self, params: &[Expr], body: &Expr) -> hir::Expr {
+    fn lower_expr_function(
+        &mut self,
+        name: Option<Symbol>,
+        params: &[Expr],
+        body: &Expr,
+    ) -> hir::Expr {
         self.scopes.push_function_scope();
+
+        let name = name.map(|s| {
+            let Some(Variable::Local(local)) = self.scopes.declare_variable(s) else {
+                unreachable!("there should be an empty function scope");
+            };
+
+            local
+        });
+
+        self.scopes.push_param_scope();
         let mut lowered_params = Vec::with_capacity(params.len());
 
         for param in params {
             let Expr::Variable(symbol) = param else {
+                self.scopes.pop_param_scope();
                 self.scopes.pop_function_scope();
                 return self.error_expr(ErrorKind::InvalidParam);
             };
 
             let Some(Variable::Local(local)) = self.scopes.declare_variable(*symbol) else {
+                self.scopes.pop_param_scope();
                 self.scopes.pop_function_scope();
                 return self.error_expr(ErrorKind::DuplicateParam(*symbol));
             };
@@ -190,8 +208,9 @@ impl<'loc> Lowerer<'loc> {
         }
 
         let body = self.lower_expr(body, ExprArea::FunctionBody);
+        self.scopes.pop_param_scope();
         self.scopes.pop_function_scope();
-        hir::Expr::Function(lowered_params.into(), body.into())
+        hir::Expr::Function(name, lowered_params.into(), body.into())
     }
 
     /// Lowers a function call [`Expr`] to an [`hir::Expr`].

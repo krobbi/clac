@@ -19,8 +19,8 @@ Error: incorrect number of arguments for function call
 
 ## User-defined Functions
 Functions are defined with algebraic syntax. An expression defining the
-function's body can be assigned to a 'call' that defines the function's name
-and parameters:
+function's body is assigned to a 'call' which defines the function's name and
+parameters:
 ```
 clac> f(x) = 2 * x + 1
 
@@ -73,8 +73,18 @@ clac> f(x, x) = x * x
 Error: function parameter 'x' is duplicated
 ```
 
+## Recursion
+Named functions can refer to themselves (and any named outer functions) in
+their own definitions. This simplifies how recursive functions are written:
+```
+clac> fib(n) = n < 2 ? n : fib(n - 1) + fib(n - 2)
+
+clac> fib(10)
+55
+```
+
 ## Functions are Values
-Functions are values that can be stored in [variables](variables.md), and
+Functions are values which can be stored in [variables](variables.md), and
 passed to and returned from functions:
 ```
 clac> sqrt
@@ -90,7 +100,7 @@ clac> apply(get_magic(), 64)
 8
 ```
 
-Because functions are values, named functions are variables that contain a
+Because functions are values, named functions are variables which contain a
 function value:
 ```
 clac> sqrt = -1

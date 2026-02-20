@@ -65,8 +65,20 @@ impl StackFrame {
         self.elems.push(Elem::Local(local));
     }
 
+    /// Marks a callee being pushed to the `StackFrame`.
+    pub fn push_callee(&mut self, local: Local) {
+        debug_assert!(self.elems.is_empty(), "stack frame should be empty");
+        debug_assert!(
+            self.scope_offsets.is_empty(),
+            "there should not be a local scope"
+        );
+
+        self.elems.push(Elem::Local(local));
+    }
+
     /// Marks a function parameter being pushed to the `StackFrame`.
     pub fn push_param(&mut self, local: Local) {
+        debug_assert!(!self.elems.is_empty(), "stack frame should not be empty");
         debug_assert!(
             self.scope_offsets.is_empty(),
             "there should not be a local scope"
