@@ -2,12 +2,12 @@ use thiserror::Error;
 
 use super::LexError;
 
-/// A kind of [`LexError`].
+/// A [`LexError`]'s kind.
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     /// A [`char`] which does not begin a [`Token`][crate::tokens::Token] was
     /// encountered.
-    #[error("unexpected character '{}'", .0.escape_debug())]
+    #[error("unexpected character {0:?}")]
     UnexpectedChar(char),
 
     /// A bitwise and (`&`) operator was encountered.
