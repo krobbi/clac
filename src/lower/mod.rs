@@ -115,8 +115,8 @@ impl<'loc> Lowerer<'loc> {
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),
             Expr::Block(stmts) => return self.lower_expr_block(stmts),
             Expr::Assign(target, source) => return self.lower_expr_assign(target, source).into(),
-            Expr::Function(list, body) => self.lower_expr_function(None, slice_list(list), body),
-            Expr::Call(callee, args) => self.lower_expr_call(callee, args),
+            Expr::Function(list, body) => self.lower_expr_function(None, list, body),
+            Expr::Call(callee, list) => self.lower_expr_call(callee, list),
             Expr::Unary(op, rhs) => self.lower_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.lower_expr_binary(*op, lhs, rhs),
             Expr::Logic(op, lhs, rhs) => self.lower_expr_logic(*op, lhs, rhs),
@@ -155,13 +155,13 @@ impl<'loc> Lowerer<'loc> {
     fn lower_expr_assign(&mut self, target: &Expr, source: &Expr) -> hir::Stmt {
         let (symbol, value) = match target {
             Expr::Variable(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
-            Expr::Call(callee, args) => {
+            Expr::Call(callee, list) => {
                 let Expr::Variable(symbol) = callee.as_ref() else {
                     return self.error_stmt(ErrorKind::InvalidFunctionName);
                 };
 
                 let symbol = *symbol;
-                (symbol, self.lower_expr_function(Some(symbol), args, source))
+                (symbol, self.lower_expr_function(Some(symbol), list, source))
             }
             _ => return self.error_stmt(ErrorKind::InvalidAssignTarget),
         };
@@ -174,12 +174,7 @@ impl<'loc> Lowerer<'loc> {
     }
 
     /// Lowers a function [`Expr`] to an [`hir::Expr`].
-    fn lower_expr_function(
-        &mut self,
-        name: Option<Symbol>,
-        params: &[Expr],
-        body: &Expr,
-    ) -> hir::Expr {
+    fn lower_expr_function(&mut self, name: Option<Symbol>, list: &Expr, body: &Expr) -> hir::Expr {
         self.scopes.push_function_scope();
 
         let name = name.map(|s| {
@@ -191,6 +186,7 @@ impl<'loc> Lowerer<'loc> {
         });
 
         self.scopes.push_param_scope();
+        let params = slice_list(list);
         let mut lowered_params = Vec::with_capacity(params.len());
 
         for param in params {
@@ -216,8 +212,9 @@ impl<'loc> Lowerer<'loc> {
     }
 
     /// Lowers a function call [`Expr`] to an [`hir::Expr`].
-    fn lower_expr_call(&mut self, callee: &Expr, args: &[Expr]) -> hir::Expr {
+    fn lower_expr_call(&mut self, callee: &Expr, list: &Expr) -> hir::Expr {
         let callee = self.lower_expr(callee, ExprArea::Callee);
+        let args = slice_list(list);
         let mut lowered_args = Vec::with_capacity(args.len());
 
         for arg in args {

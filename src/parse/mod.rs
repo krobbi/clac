@@ -202,11 +202,11 @@ impl<'src> Parser<'src> {
             }
             Token::Minus => {
                 let rhs = self.parse_expr_prefix();
-                Expr::Unary(UnOp::Negate, rhs.into())
+                Expr::Unary(UnOp::Negate, Box::new(rhs))
             }
             Token::Bang => {
                 let rhs = self.parse_expr_prefix();
-                Expr::Unary(UnOp::Not, rhs.into())
+                Expr::Unary(UnOp::Not, Box::new(rhs))
             }
             token => {
                 self.report_error(ErrorKind::ExpectedExpr(token));
@@ -215,13 +215,13 @@ impl<'src> Parser<'src> {
         };
 
         while self.eat(TokenType::OpenParen) {
-            let args = self.parse_expr_paren();
-            lhs = Expr::Call(lhs.into(), unwrap_list(args));
+            let list = self.parse_expr_paren();
+            lhs = Expr::Call(Box::new(lhs), Box::new(list));
         }
 
         if self.eat(TokenType::Caret) {
             let rhs = self.parse_expr_prefix();
-            lhs = Expr::Binary(BinOp::Power, lhs.into(), rhs.into());
+            lhs = Expr::Binary(BinOp::Power, Box::new(lhs), Box::new(rhs));
         }
 
         lhs
@@ -347,17 +347,6 @@ impl BinOp {
         };
 
         Some(op)
-    }
-}
-
-// TODO: Preserve call argument list nodes in call expressions instead of using
-// this function.
-/// Unwraps a call argument list from an [`Expr`].
-fn unwrap_list(expr: Expr) -> Box<[Expr]> {
-    match expr {
-        Expr::Paren(expr) => [*expr].into(),
-        Expr::Tuple(exprs) => exprs,
-        expr => [expr].into(),
     }
 }
 

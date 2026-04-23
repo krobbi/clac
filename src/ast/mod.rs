@@ -31,7 +31,7 @@ pub enum Expr {
     Function(Box<Self>, Box<Self>),
 
     /// A function call.
-    Call(Box<Self>, Box<[Self]>),
+    Call(Box<Self>, Box<Self>),
 
     /// A unary operation.
     Unary(UnOp, Box<Self>),

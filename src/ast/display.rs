@@ -18,7 +18,7 @@ impl Display for Expr {
             Self::Block(stmts) => fmt_s_expr(f, "b:", stmts),
             Self::Assign(target, source) => fmt_s_expr(f, "=", &[target, source]),
             Self::Function(list, body) => fmt_s_expr(f, "->", &[list, body]),
-            Self::Call(callee, args) => fmt_s_expr(f, callee, args),
+            Self::Call(callee, list) => fmt_s_expr(f, callee, &[list]),
             Self::Unary(op, expr) => fmt_s_expr(f, op, &[expr]),
             Self::Binary(op, lhs, rhs) => fmt_s_expr(f, op, &[lhs, rhs]),
             Self::Logic(op, lhs, rhs) => fmt_s_expr(f, op, &[lhs, rhs]),
