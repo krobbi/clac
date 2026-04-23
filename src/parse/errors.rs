@@ -5,11 +5,11 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-/// A kind of [`ParseError`][super::ParseError].
+/// A [`ParseError`][super::ParseError]'s kind.
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     /// A [`LexError`].
-    #[error(transparent)]
+    #[error("{0}")]
     Lex(#[from] LexError),
 
     /// A [`Token`] which does not match an expected [`TokenType`] was

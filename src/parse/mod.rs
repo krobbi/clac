@@ -210,7 +210,7 @@ impl<'src> Parser<'src> {
             }
             token => {
                 self.report_error(ErrorKind::ExpectedExpr(token));
-                default_expr()
+                error_expr()
             }
         };
 
@@ -302,7 +302,8 @@ impl<'src> Parser<'src> {
     /// Reports an [`ErrorKind`].
     #[cold]
     fn report_error(&mut self, error: ErrorKind) {
-        self.error.get_or_insert_with(|| ParseError(error.into()));
+        self.error
+            .get_or_insert_with(|| ParseError(Box::new(error)));
     }
 }
 
@@ -361,7 +362,7 @@ fn unwrap_list(expr: Expr) -> Box<[Expr]> {
     }
 }
 
-/// Returns a default [`Expr`] for error recovery.
-const fn default_expr() -> Expr {
+/// Returns a new synthetic [`Expr`] for error recovery.
+const fn error_expr() -> Expr {
     Expr::Literal(Literal::Number(0.0))
 }
