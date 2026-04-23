@@ -5,28 +5,26 @@ use crate::{interpret::InterpretError, lower::LowerError, parse::ParseError};
 /// An error caught while running Clac.
 #[derive(Debug, Error)]
 #[repr(transparent)]
-#[error("Error: {0}")]
-pub struct ClacError(#[source] Box<Inner>);
+#[error(transparent)]
+pub struct ClacError(Box<Kind>);
 
-impl<T: Into<Inner>> From<T> for ClacError {
+impl<E: Into<Kind>> From<E> for ClacError {
     #[cold]
-    fn from(value: T) -> Self {
-        Self(value.into().into())
+    fn from(value: E) -> Self {
+        Self(Box::new(value.into()))
     }
 }
 
-/// A kind of [`ClacError`].
+/// A [`ClacError`]'s kind.
 #[derive(Debug, Error)]
-enum Inner {
+#[error("Error: {0}")]
+enum Kind {
     /// A [`ParseError`].
-    #[error(transparent)]
     Parse(#[from] ParseError),
 
     /// A [`LowerError`].
-    #[error(transparent)]
     Lower(#[from] LowerError),
 
     /// An [`InterpretError`].
-    #[error(transparent)]
     Interpret(#[from] InterpretError),
 }
