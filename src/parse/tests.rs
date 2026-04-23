@@ -59,7 +59,7 @@ fn assignments_can_be_chained_with_groupings() {
 fn non_identifier_bindings_are_unchecked() {
     assert_ast("1 + x = 2", "(a: (= (+ 1 x) 2))");
     assert_ast("3(4 + 5) = 6", "(a: (= (3 (+ 4 5)) 6))");
-    assert_ast("(7, 8) -> 9", "(a: (-> 7 8 9))");
+    assert_ast("(7, 8) -> 9", "(a: (-> (t: 7 8) 9))");
 }
 
 /// Tests that empty blocks are parsed.
@@ -138,17 +138,17 @@ fn parens_and_blocks_can_be_nested() {
 /// Tests that functions are parsed.
 #[test]
 fn functions_are_parsed() {
-    assert_ast("() -> 1", "(a: (-> 1))");
-    assert_ast("(x) -> 2", "(a: (-> x 2))");
-    assert_ast("(y,) -> 3", "(a: (-> y 3))");
+    assert_ast("() -> 1", "(a: (-> (t:) 1))");
+    assert_ast("(x) -> 2", "(a: (-> (p: x) 2))");
+    assert_ast("(y,) -> 3", "(a: (-> (t: y) 3))");
     assert_ast("z -> 4", "(a: (-> z 4))");
-    assert_ast("(a, b) -> c", "(a: (-> a b c))");
+    assert_ast("(a, b) -> c", "(a: (-> (t: a b) c))");
     assert_error!(
         "(d e) -> f",
         ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Ident(s)) if s.to_string() == "e"
     );
 
-    assert_ast("(g, h,) -> i", "(a: (-> g h i))");
+    assert_ast("(g, h,) -> i", "(a: (-> (t: g h) i))");
 }
 
 /// Tests that empty function parameters are not parsed.

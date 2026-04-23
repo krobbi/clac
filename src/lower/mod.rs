@@ -1,6 +1,8 @@
 mod errors;
 mod scopes;
 
+use std::slice;
+
 use thiserror::Error;
 
 use crate::{
@@ -113,7 +115,7 @@ impl<'loc> Lowerer<'loc> {
             Expr::Tuple(_) => self.error_expr(ErrorKind::TupleValue),
             Expr::Block(stmts) => return self.lower_expr_block(stmts),
             Expr::Assign(target, source) => return self.lower_expr_assign(target, source).into(),
-            Expr::Function(params, body) => self.lower_expr_function(None, params, body),
+            Expr::Function(list, body) => self.lower_expr_function(None, slice_list(list), body),
             Expr::Call(callee, args) => self.lower_expr_call(callee, args),
             Expr::Unary(op, rhs) => self.lower_expr_unary(*op, rhs),
             Expr::Binary(op, lhs, rhs) => self.lower_expr_binary(*op, lhs, rhs),
@@ -266,14 +268,16 @@ impl<'loc> Lowerer<'loc> {
         hir::Expr::Cond(cond.into(), then_expr.into(), else_expr.into())
     }
 
-    /// Reports an [`ErrorKind`] and returns a default [`hir::Stmt`].
+    /// Reports an [`ErrorKind`] and returns a new synthetic [`hir::Stmt`] for
+    /// error recovery.
     #[cold]
     fn error_stmt(&mut self, error: ErrorKind) -> hir::Stmt {
         self.report_error(error);
-        hir::Stmt::Block([].into())
+        hir::Stmt::Block(Box::new([]))
     }
 
-    /// Reports an [`ErrorKind`] and returns a default [`hir::Expr`].
+    /// Reports an [`ErrorKind`] and returns a new synthetic [`hir::Expr`] for
+    /// error recovery.
     #[cold]
     fn error_expr(&mut self, error: ErrorKind) -> hir::Expr {
         self.report_error(error);
@@ -305,5 +309,15 @@ impl From<hir::Stmt> for Node {
 impl From<hir::Expr> for Node {
     fn from(value: hir::Expr) -> Self {
         Self::Expr(value)
+    }
+}
+
+/// Returns a function parameter or call argument list [`Expr`] as a slice of
+/// parameter or argument [`Expr`]s.
+const fn slice_list(list: &Expr) -> &[Expr] {
+    match list {
+        Expr::Paren(elem) => slice::from_ref(elem),
+        Expr::Tuple(elems) => elems,
+        elem => slice::from_ref(elem),
     }
 }

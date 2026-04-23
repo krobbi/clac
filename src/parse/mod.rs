@@ -107,14 +107,14 @@ impl<'src> Parser<'src> {
             TokenType::MinusGreater => {
                 self.bump(); // Consume the operator token.
                 let body = self.parse_expr_mapping();
-                Expr::Function(unwrap_list(lhs), body.into())
+                Expr::Function(Box::new(lhs), Box::new(body))
             }
             TokenType::Question => {
                 self.bump(); // Consume the operator token.
                 let then_expr = self.parse_expr();
                 self.expect(TokenType::Colon);
                 let else_expr = self.parse_expr_mapping();
-                Expr::Cond(lhs.into(), then_expr.into(), else_expr.into())
+                Expr::Cond(Box::new(lhs), Box::new(then_expr), Box::new(else_expr))
             }
             _ => lhs,
         }
@@ -350,11 +350,10 @@ impl BinOp {
     }
 }
 
-/// Unwraps a function parameter or call argument list from an [`Expr`].
+// TODO: Preserve call argument list nodes in call expressions instead of using
+// this function.
+/// Unwraps a call argument list from an [`Expr`].
 fn unwrap_list(expr: Expr) -> Box<[Expr]> {
-    // Using `expr.into_boxed_slice()` would avoid a reallocation for
-    // `Expr::Paren`, but this is unstable.
-    // https://github.com/rust-lang/rust/issues/71582
     match expr {
         Expr::Paren(expr) => [*expr].into(),
         Expr::Tuple(exprs) => exprs,
