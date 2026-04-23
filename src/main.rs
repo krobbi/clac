@@ -40,13 +40,12 @@ fn main() {
 
 /// Runs Clac in REPL mode with [`Globals`].
 fn run_repl(globals: &mut Globals) {
-    #[cfg(target_os = "windows")]
-    const EXIT_SHORTCUT: &str = "Ctrl+Z";
+    const EXIT_SHORTCUT: &str = cfg_select! {
+        windows => "Ctrl+Z",
+        _ => "Ctrl+D",
+    };
 
-    #[cfg(not(target_os = "windows"))]
-    const EXIT_SHORTCUT: &str = "Ctrl+D";
-
-    println!("Clac - Command line calculator\nEnter [{EXIT_SHORTCUT}] to exit.");
+    println!("Clac - Functional command line calculator\nEnter [{EXIT_SHORTCUT}] to exit.");
     let mut source = String::new();
 
     loop {

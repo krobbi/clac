@@ -2,7 +2,8 @@
 name = "clac"
 version = "0.1.0"
 edition = "2024"
-description = "Overgrown command line calculator"
+rust-version = "1.95"
+description = "Functional command line calculator"
 repository = "https://github.com/krobbi/clac"
 license = "MIT"
 keywords = ["calculator", "interpreter", "repl"]
