@@ -164,7 +164,10 @@ fn call_arguments_require_separating_commas() {
     assert_ast("f(1)", "(a: (f 1))");
     assert_error!(
         "f(1 2)",
-        ErrorKind::UnexpectedToken(TokenType::CloseParen, Token::Literal(Literal::Number(2.0)))
+        ErrorKind::UnexpectedToken(
+            TokenType::CloseParen,
+            Token::Literal(Literal::Number(2.0_f64))
+        )
     );
 
     assert_ast("f(1, 2)", "(a: (f 1 2))");

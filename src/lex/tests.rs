@@ -96,20 +96,20 @@ fn trailing_eof_tokens_are_produced() {
     let mut lexer = Lexer::new("1 2 3");
     assert!(matches!(
         lexer.next_token(),
-        Ok(Token::Literal(Literal::Number(1.0))),
+        Ok(Token::Literal(Literal::Number(1.0_f64))),
     ));
 
     assert!(matches!(
         lexer.next_token(),
-        Ok(Token::Literal(Literal::Number(2.0))),
+        Ok(Token::Literal(Literal::Number(2.0_f64))),
     ));
 
     assert!(matches!(
         lexer.next_token(),
-        Ok(Token::Literal(Literal::Number(3.0))),
+        Ok(Token::Literal(Literal::Number(3.0_f64))),
     ));
 
-    for _ in 0..16 {
+    for _ in 0..16_u8 {
         assert!(matches!(lexer.next_token(), Ok(Token::Eof)));
     }
 }
@@ -122,14 +122,14 @@ fn all_tokens_are_produced() {
         Ok[
             Token::Minus,
             Token::OpenParen,
-            Token::Literal(Literal::Number(1.0)),
+            Token::Literal(Literal::Number(1.0_f64)),
             Token::Plus,
-            Token::Literal(Literal::Number(2.5)),
+            Token::Literal(Literal::Number(2.5_f64)),
             Token::CloseParen,
             Token::Star,
-            Token::Literal(Literal::Number(3.0)),
+            Token::Literal(Literal::Number(3.0_f64)),
             Token::Slash,
-            Token::Literal(Literal::Number(4.0)),
+            Token::Literal(Literal::Number(4.0_f64)),
             Token::EqualsEquals,
             Token::Bang,
             Token::OpenBrace,
@@ -149,9 +149,9 @@ fn all_tokens_are_produced() {
             Token::Less,
             Token::Ident(s) if s.to_string() == "max",
             Token::Greater,
-            Token::Literal(Literal::Number(2.0)),
+            Token::Literal(Literal::Number(2.0_f64)),
             Token::GreaterEquals,
-            Token::Literal(Literal::Number(1.0)),
+            Token::Literal(Literal::Number(1.0_f64)),
         ]
     );
 
@@ -160,7 +160,7 @@ fn all_tokens_are_produced() {
         Ok[
             Token::Ident(s) if s.to_string() == "x",
             Token::Caret,
-            Token::Literal(Literal::Number(2.0)),
+            Token::Literal(Literal::Number(2.0_f64)),
         ]
     );
 
@@ -185,7 +185,7 @@ fn all_tokens_are_produced() {
             Token::Equals,
             Token::Ident(s) if s.to_string() == "n",
             Token::Less,
-            Token::Literal(Literal::Number(0.0)),
+            Token::Literal(Literal::Number(0.0_f64)),
             Token::Question,
             Token::Minus,
             Token::Ident(s) if s.to_string() == "n",
@@ -201,27 +201,27 @@ fn integers_tokens_are_produced() {
     assert_tokens!(
         "0, -1, 002, 300, 00400, 5_000, 0b1010, 0o10, 0xff,",
         Ok[
-            Token::Literal(Literal::Number(0.0)),
+            Token::Literal(Literal::Number(0.0_f64)),
             Token::Comma,
             Token::Minus,
-            Token::Literal(Literal::Number(1.0)),
+            Token::Literal(Literal::Number(1.0_f64)),
             Token::Comma,
-            Token::Literal(Literal::Number(2.0)),
+            Token::Literal(Literal::Number(2.0_f64)),
             Token::Comma,
-            Token::Literal(Literal::Number(300.0)),
+            Token::Literal(Literal::Number(300.0_f64)),
             Token::Comma,
-            Token::Literal(Literal::Number(400.0)),
+            Token::Literal(Literal::Number(400.0_f64)),
             Token::Comma,
-            Token::Literal(Literal::Number(5.0)),
+            Token::Literal(Literal::Number(5.0_f64)),
             Token::Ident(s) if s.to_string() == "_000",
             Token::Comma,
-            Token::Literal(Literal::Number(0.0)),
+            Token::Literal(Literal::Number(0.0_f64)),
             Token::Ident(s) if s.to_string() == "b1010",
             Token::Comma,
-            Token::Literal(Literal::Number(0.0)),
+            Token::Literal(Literal::Number(0.0_f64)),
             Token::Ident(s) if s.to_string() == "o10",
             Token::Comma,
-            Token::Literal(Literal::Number(0.0)),
+            Token::Literal(Literal::Number(0.0_f64)),
             Token::Ident(s) if s.to_string() == "xff",
             Token::Comma,
         ]
@@ -234,21 +234,21 @@ fn decimal_tokens_are_produced() {
     assert_tokens!(
         "0.0, 1., -2.5, 00300.12500, 4.0625, .5, 0.03125, .,",
         [
-            Ok(Token::Literal(Literal::Number(0.0))),
+            Ok(Token::Literal(Literal::Number(0.0_f64))),
             Ok(Token::Comma),
-            Ok(Token::Literal(Literal::Number(1.0))),
+            Ok(Token::Literal(Literal::Number(1.0_f64))),
             Ok(Token::Comma),
             Ok(Token::Minus),
-            Ok(Token::Literal(Literal::Number(2.5))),
+            Ok(Token::Literal(Literal::Number(2.5_f64))),
             Ok(Token::Comma),
-            Ok(Token::Literal(Literal::Number(300.125))),
+            Ok(Token::Literal(Literal::Number(300.125_f64))),
             Ok(Token::Comma),
-            Ok(Token::Literal(Literal::Number(4.0625))),
+            Ok(Token::Literal(Literal::Number(4.0625_f64))),
             Ok(Token::Comma),
             Err(LexError(ErrorKind::UnexpectedChar('.'))),
-            Ok(Token::Literal(Literal::Number(5.0))),
+            Ok(Token::Literal(Literal::Number(5.0_f64))),
             Ok(Token::Comma),
-            Ok(Token::Literal(Literal::Number(0.03125))),
+            Ok(Token::Literal(Literal::Number(0.03125_f64))),
             Ok(Token::Comma),
             Err(LexError(ErrorKind::UnexpectedChar('.'))),
             Ok(Token::Comma),

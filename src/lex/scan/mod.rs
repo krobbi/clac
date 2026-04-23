@@ -25,6 +25,11 @@ impl<'src> Scanner<'src> {
     /// Returns the current lexeme.
     pub fn lexeme(&self) -> &'src str {
         let length = self.rest.len() - self.chars.as_str().len();
+
+        #[expect(
+            clippy::string_slice,
+            reason = "length is always on a code point boundary"
+        )]
         &self.rest[..length]
     }
 
