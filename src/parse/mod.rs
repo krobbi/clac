@@ -56,7 +56,8 @@ impl<'src> Parser<'src> {
 
     /// Parses an [`Ast`].
     fn parse_ast(&mut self) -> Ast {
-        Ast(self.parse_sequence(TokenType::Eof))
+        let stmts = self.parse_sequence(TokenType::Eof);
+        Ast(stmts)
     }
 
     /// Parses a sequence of statement [`Expr`]s until the next [`Token`]
@@ -65,11 +66,12 @@ impl<'src> Parser<'src> {
         let mut stmts = Vec::new();
 
         while !self.is_terminated(terminator) {
-            stmts.push(self.parse_stmt());
+            let stmt = self.parse_stmt();
+            stmts.push(stmt);
             self.eat(TokenType::Comma);
         }
 
-        stmts.into()
+        stmts.into_boxed_slice()
     }
 
     /// Parses a statement [`Expr`].
@@ -93,7 +95,7 @@ impl<'src> Parser<'src> {
                 self.report_error(ErrorKind::ChainedAssignment);
             }
 
-            Expr::Assign(lhs.into(), source.into())
+            Expr::Assign(Box::new(lhs), Box::new(source))
         } else {
             lhs
         }
@@ -126,7 +128,7 @@ impl<'src> Parser<'src> {
 
         while self.eat(TokenType::PipePipe) {
             let rhs = self.parse_expr_and();
-            lhs = Expr::Logic(LogicOp::Or, lhs.into(), rhs.into());
+            lhs = Expr::Logic(LogicOp::Or, Box::new(lhs), Box::new(rhs));
         }
 
         lhs
@@ -138,7 +140,7 @@ impl<'src> Parser<'src> {
 
         while self.eat(TokenType::AndAnd) {
             let rhs = self.parse_expr_comparison();
-            lhs = Expr::Logic(LogicOp::And, lhs.into(), rhs.into());
+            lhs = Expr::Logic(LogicOp::And, Box::new(lhs), Box::new(rhs));
         }
 
         lhs
@@ -148,18 +150,17 @@ impl<'src> Parser<'src> {
     pub fn parse_expr_comparison(&mut self) -> Expr {
         let lhs = self.parse_expr_sum();
 
-        match BinOp::comparison_from_token_type(self.peek()) {
-            None => lhs,
-            Some(op) => {
-                self.bump(); // Consume the operator token.
-                let rhs = self.parse_expr_sum();
+        if let Some(op) = BinOp::comparison_from_token_type(self.peek()) {
+            self.bump(); // Consume the operator token.
+            let rhs = self.parse_expr_sum();
 
-                if BinOp::comparison_from_token_type(self.peek()).is_some() {
-                    self.report_error(ErrorKind::ChainedComparison);
-                }
-
-                Expr::Binary(op, lhs.into(), rhs.into())
+            if BinOp::comparison_from_token_type(self.peek()).is_some() {
+                self.report_error(ErrorKind::ChainedComparison);
             }
+
+            Expr::Binary(op, Box::new(lhs), Box::new(rhs))
+        } else {
+            lhs
         }
     }
 
@@ -170,7 +171,7 @@ impl<'src> Parser<'src> {
         while let Some(op) = BinOp::sum_from_token_type(self.peek()) {
             self.bump(); // Consume the operator token.
             let rhs = self.parse_expr_term();
-            lhs = Expr::Binary(op, lhs.into(), rhs.into());
+            lhs = Expr::Binary(op, Box::new(lhs), Box::new(rhs));
         }
 
         lhs
@@ -183,7 +184,7 @@ impl<'src> Parser<'src> {
         while let Some(op) = BinOp::term_from_token_type(self.peek()) {
             self.bump(); // Consume the operator token.
             let rhs = self.parse_expr_prefix();
-            lhs = Expr::Binary(op, lhs.into(), rhs.into());
+            lhs = Expr::Binary(op, Box::new(lhs), Box::new(rhs));
         }
 
         lhs
@@ -237,7 +238,8 @@ impl<'src> Parser<'src> {
                 break true;
             }
 
-            exprs.push(self.parse_expr());
+            let expr = self.parse_expr();
+            exprs.push(expr);
 
             if !self.eat(TokenType::Comma) {
                 break false;
@@ -247,9 +249,13 @@ impl<'src> Parser<'src> {
         self.expect(TokenType::CloseParen);
 
         if is_empty_or_has_trailing_comma || exprs.len() != 1 {
-            Expr::Tuple(exprs.into())
+            Expr::Tuple(exprs.into_boxed_slice())
         } else {
-            Expr::Paren(exprs.pop().expect("parentheses should not be empty").into())
+            let expr = exprs
+                .pop()
+                .expect("parentheses should contain one expression");
+
+            Expr::Paren(Box::new(expr))
         }
     }
 
@@ -350,7 +356,7 @@ impl BinOp {
     }
 }
 
-/// Returns a new synthetic [`Expr`] for error recovery.
+/// Creates a new synthetic [`Expr`] for error recovery.
 const fn error_expr() -> Expr {
     Expr::Literal(Literal::Number(0.0))
 }

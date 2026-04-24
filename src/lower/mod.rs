@@ -265,7 +265,7 @@ impl<'loc> Lowerer<'loc> {
         hir::Expr::Cond(cond.into(), then_expr.into(), else_expr.into())
     }
 
-    /// Reports an [`ErrorKind`] and returns a new synthetic [`hir::Stmt`] for
+    /// Reports an [`ErrorKind`] and creates a new synthetic [`hir::Stmt`] for
     /// error recovery.
     #[cold]
     fn error_stmt(&mut self, error: ErrorKind) -> hir::Stmt {
@@ -273,7 +273,7 @@ impl<'loc> Lowerer<'loc> {
         hir::Stmt::Block(Box::new([]))
     }
 
-    /// Reports an [`ErrorKind`] and returns a new synthetic [`hir::Expr`] for
+    /// Reports an [`ErrorKind`] and creates a new synthetic [`hir::Expr`] for
     /// error recovery.
     #[cold]
     fn error_expr(&mut self, error: ErrorKind) -> hir::Expr {
