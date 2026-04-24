@@ -69,7 +69,8 @@ impl<'loc> Lowerer<'loc> {
 
     /// Lowers an [`Ast`] to [`Hir`].
     fn lower_ast(&mut self, ast: &Ast) -> Hir {
-        Hir(self.lower_sequence(&ast.0).into())
+        let stmts = self.lower_sequence(&ast.0);
+        Hir(stmts.into_boxed_slice())
     }
 
     /// Lowers a sequence of statement [`Expr`]s to a sequence of
@@ -78,7 +79,8 @@ impl<'loc> Lowerer<'loc> {
         let mut lowered_stmts = Vec::with_capacity(stmts.len());
 
         for stmt in stmts {
-            lowered_stmts.push(self.lower_stmt(stmt));
+            let stmt = self.lower_stmt(stmt);
+            lowered_stmts.push(stmt);
         }
 
         lowered_stmts
@@ -90,9 +92,9 @@ impl<'loc> Lowerer<'loc> {
             Node::Stmt(stmt) => stmt,
             Node::Expr(expr) => {
                 if self.scopes.is_global_scope() {
-                    hir::Stmt::Print(expr.into())
+                    hir::Stmt::Print(Box::new(expr))
                 } else {
-                    hir::Stmt::Expr(expr.into())
+                    hir::Stmt::Expr(Box::new(expr))
                 }
             }
         }
@@ -101,7 +103,7 @@ impl<'loc> Lowerer<'loc> {
     /// Lowers an [`Expr`] to an [`hir::Expr`] in an [`ExprArea`].
     fn lower_expr(&mut self, expr: &Expr, area: ExprArea) -> hir::Expr {
         match self.lower_node(expr) {
-            Node::Stmt(_) => self.error_expr(area.into()),
+            Node::Stmt(_) => self.error_expr(ErrorKind::UsedStmt(area)),
             Node::Expr(expr) => expr,
         }
     }
@@ -142,11 +144,11 @@ impl<'loc> Lowerer<'loc> {
         self.scopes.pop_block_scope();
 
         match stmts.pop() {
-            None => hir::Stmt::Block([].into()).into(),
-            Some(hir::Stmt::Expr(expr)) => hir::Expr::Block(stmts.into(), expr).into(),
+            None => hir::Stmt::Block(Box::new([])).into(),
+            Some(hir::Stmt::Expr(expr)) => hir::Expr::Block(stmts.into_boxed_slice(), expr).into(),
             Some(stmt) => {
                 stmts.push(stmt);
-                hir::Stmt::Block(stmts.into()).into()
+                hir::Stmt::Block(stmts.into_boxed_slice()).into()
             }
         }
     }
@@ -154,22 +156,26 @@ impl<'loc> Lowerer<'loc> {
     /// Lowers an assignment [`Expr`] to an [`hir::Stmt`].
     fn lower_expr_assign(&mut self, target: &Expr, source: &Expr) -> hir::Stmt {
         let (symbol, value) = match target {
-            Expr::Variable(symbol) => (*symbol, self.lower_expr(source, ExprArea::AssignSource)),
+            Expr::Variable(symbol) => {
+                let value = self.lower_expr(source, ExprArea::AssignSource);
+                (*symbol, value)
+            }
             Expr::Call(callee, list) => {
                 let Expr::Variable(symbol) = callee.as_ref() else {
                     return self.error_stmt(ErrorKind::InvalidFunctionName);
                 };
 
                 let symbol = *symbol;
-                (symbol, self.lower_expr_function(Some(symbol), list, source))
+                let value = self.lower_expr_function(Some(symbol), list, source);
+                (symbol, value)
             }
             _ => return self.error_stmt(ErrorKind::InvalidAssignTarget),
         };
 
         match self.scopes.declare_variable(symbol) {
             None => self.error_stmt(ErrorKind::AlreadyDefinedVariable(symbol)),
-            Some(Variable::Global) => hir::Stmt::AssignGlobal(symbol, value.into()),
-            Some(Variable::Local(local)) => hir::Stmt::DefineLocal(local, value.into()),
+            Some(Variable::Global) => hir::Stmt::AssignGlobal(symbol, Box::new(value)),
+            Some(Variable::Local(local)) => hir::Stmt::DefineLocal(local, Box::new(value)),
         }
     }
 
@@ -208,7 +214,7 @@ impl<'loc> Lowerer<'loc> {
         let body = self.lower_expr(body, ExprArea::FunctionBody);
         self.scopes.pop_param_scope();
         self.scopes.pop_function_scope();
-        hir::Expr::Function(name, lowered_params.into(), body.into())
+        hir::Expr::Function(name, lowered_params.into_boxed_slice(), Box::new(body))
     }
 
     /// Lowers a function call [`Expr`] to an [`hir::Expr`].
@@ -218,23 +224,24 @@ impl<'loc> Lowerer<'loc> {
         let mut lowered_args = Vec::with_capacity(args.len());
 
         for arg in args {
-            lowered_args.push(self.lower_expr(arg, ExprArea::Arg));
+            let arg = self.lower_expr(arg, ExprArea::Arg);
+            lowered_args.push(arg);
         }
 
-        hir::Expr::Call(callee.into(), lowered_args.into())
+        hir::Expr::Call(Box::new(callee), lowered_args.into_boxed_slice())
     }
 
     /// Lowers a unary [`Expr`] to an [`hir::Expr`].
     fn lower_expr_unary(&mut self, op: UnOp, rhs: &Expr) -> hir::Expr {
         let rhs = self.lower_expr(rhs, ExprArea::Operand);
-        hir::Expr::Unary(op, rhs.into())
+        hir::Expr::Unary(op, Box::new(rhs))
     }
 
     /// Lowers a binary [`Expr`] to an [`hir::Expr`].
     fn lower_expr_binary(&mut self, op: BinOp, lhs: &Expr, rhs: &Expr) -> hir::Expr {
         let lhs = self.lower_expr(lhs, ExprArea::Operand);
         let rhs = self.lower_expr(rhs, ExprArea::Operand);
-        hir::Expr::Binary(op, lhs.into(), rhs.into())
+        hir::Expr::Binary(op, Box::new(lhs), Box::new(rhs))
     }
 
     /// Lowers a short-circuiting logical [`Expr`] to an [`hir::Expr`].
@@ -242,11 +249,11 @@ impl<'loc> Lowerer<'loc> {
         let lhs = self.lower_expr(lhs, ExprArea::Operand);
         let rhs = self.lower_expr(rhs, ExprArea::Operand);
 
-        // Compare the right-hand side with [`true`] for dynamic type checking.
+        // HACK: Dynamic type check for right-hand side.
         let rhs = hir::Expr::Binary(
             BinOp::Equal,
-            rhs.into(),
-            hir::Expr::Literal(Literal::Bool(true)).into(),
+            Box::new(rhs),
+            Box::new(hir::Expr::Literal(Literal::Bool(true))),
         );
 
         let (then_expr, else_expr) = match op {
@@ -254,7 +261,7 @@ impl<'loc> Lowerer<'loc> {
             LogicOp::Or => (hir::Expr::Literal(Literal::Bool(true)), rhs),
         };
 
-        hir::Expr::Cond(lhs.into(), then_expr.into(), else_expr.into())
+        hir::Expr::Cond(Box::new(lhs), Box::new(then_expr), Box::new(else_expr))
     }
 
     /// Lowers a ternary conditional [`Expr`] to an [`hir::Expr`].
@@ -262,12 +269,11 @@ impl<'loc> Lowerer<'loc> {
         let cond = self.lower_expr(cond, ExprArea::Condition);
         let then_expr = self.lower_expr(then_expr, ExprArea::Operand);
         let else_expr = self.lower_expr(else_expr, ExprArea::Operand);
-        hir::Expr::Cond(cond.into(), then_expr.into(), else_expr.into())
+        hir::Expr::Cond(Box::new(cond), Box::new(then_expr), Box::new(else_expr))
     }
 
     /// Reports an [`ErrorKind`] and creates a new synthetic [`hir::Stmt`] for
     /// error recovery.
-    #[cold]
     fn error_stmt(&mut self, error: ErrorKind) -> hir::Stmt {
         self.report_error(error);
         hir::Stmt::Block(Box::new([]))
@@ -275,7 +281,6 @@ impl<'loc> Lowerer<'loc> {
 
     /// Reports an [`ErrorKind`] and creates a new synthetic [`hir::Expr`] for
     /// error recovery.
-    #[cold]
     fn error_expr(&mut self, error: ErrorKind) -> hir::Expr {
         self.report_error(error);
         hir::Expr::Literal(Literal::Number(0.0))
@@ -284,7 +289,8 @@ impl<'loc> Lowerer<'loc> {
     /// Reports an [`ErrorKind`].
     #[cold]
     fn report_error(&mut self, error: ErrorKind) {
-        self.error.get_or_insert_with(|| LowerError(error.into()));
+        self.error
+            .get_or_insert_with(|| LowerError(Box::new(error)));
     }
 }
 

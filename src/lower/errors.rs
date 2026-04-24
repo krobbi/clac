@@ -5,9 +5,9 @@ use crate::symbols::Symbol;
 /// A kind of [`LowerError`][super::LowerError].
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    /// A statement was used in an area where an expression was expected.
-    #[error(transparent)]
-    UsedStmt(#[from] ExprArea),
+    /// A statement was used in an area where an expression is expected.
+    #[error("{0}")]
+    UsedStmt(ExprArea),
 
     /// A tuple was used as a standalone value.
     #[error("tuple values are not supported")]
